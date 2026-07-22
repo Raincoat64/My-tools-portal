@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>保安法令ツール</title>
+
+<link rel="manifest" href="./manifest.json" />
+<meta name="theme-color" content="#2f6b3a" />
+
+<!-- iOS Safari: ホーム画面に追加した際にアプリらしく動かすためのメタタグ -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="法令ツール" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+<link rel="icon" href="./icons/icon-192.png" />
+
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f5f6f4;
+    --panel-bg: #ffffff;
+    --border: #d8dcd4;
+    --text: #1f2a20;
+    --text-muted: #5c6b5e;
+    --accent: #2f6b3a;
+    --accent-contrast: #ffffff;
+    --chip-bg: #eef3ec;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141814;
+      --panel-bg: #1b201b;
+      --border: #333c33;
+      --text: #e7ece6;
+      --text-muted: #a3ada2;
+      --accent: #6bb37a;
+      --accent-contrast: #0d140e;
+      --chip-bg: #232b23;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  }
+  body {
+    padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+    min-height: 100vh;
+  }
+  header {
+    padding: 28px 20px 8px;
+    text-align: center;
+  }
+  header h1 {
+    margin: 0 0 4px;
+    font-size: 1.3rem;
+  }
+  header p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 12px 16px 40px;
+  }
+  .card-grid {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  a.pick-card {
+    display: block;
+    padding: 16px 18px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    text-decoration: none;
+    color: var(--text);
+    transition: transform 0.08s ease, border-color 0.08s ease;
+  }
+  a.pick-card:active {
+    transform: scale(0.98);
+    border-color: var(--accent);
+  }
+  .pick-card .title {
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .pick-card .title .arrow {
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .pick-card .help {
+    margin-top: 4px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .pick-card.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .badge {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--chip-bg);
+    color: var(--text-muted);
+  }
+  footer {
+    text-align: center;
+    padding: 24px 16px 12px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  #install-hint {
+    margin: 0 16px 4px;
+    max-width: 608px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 10px 14px;
+    background: var(--chip-bg);
+    border-radius: 10px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    display: none;
+  }
+  #install-hint.show { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <h1>保安法令ツール</h1>
+  <p>法令ビューア・設問診断ツールのランチャー</p>
+</header>
+
+<main>
+  <div id="install-hint">
+    このページを共有ボタン(<span aria-hidden="true">□↑</span>)から「ホーム画面に追加」すると、アプリのようにアイコンから起動できます。
+  </div>
+
+  <div class="card-grid">
+    <a class="pick-card" href="./tools/kouatsu-gas-law-viewer.html">
+      <div class="title"><span>高圧ガス保安法ツール</span><span class="arrow">›</span></div>
+      <div class="help">一般則・液石則・冷凍則・容器則。行為(製造/貯蔵/消費/販売)ごとの設問診断と条文ブラウザ。</div>
+    </a>
+
+    <a class="pick-card" href="./tools/lp-law-viewer.html">
+      <div class="title"><span>LP法ツール</span><span class="arrow">›</span></div>
+      <div class="help">液化石油ガス法。販売登録・保安機関認定・供給設備技術基準・設備工事届出の診断と条文ブラウザ。</div>
+      <span class="badge">Beta</span>
+    </a>
+
+    <div class="pick-card disabled">
+      <div class="title"><span>準備中のツール</span></div>
+      <div class="help">今後追加するツールはここに表示されます。</div>
+    </div>
+  </div>
+</main>
+
+<footer>個人利用向けツールです。判定は参考情報であり、最終的な要否は所管行政庁にご確認ください。</footer>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    });
+  }
+  // すでにホーム画面から起動(standalone)されている場合はヒントを出さない
+  const isStandalone =
+    window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  if (!isStandalone) {
+    document.getElementById("install-hint").classList.add("show");
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,3559 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>高圧ガス保安法 法令ビューア</title>
+  <style>
+:root {
+  color-scheme: light dark;
+  --bg: #f5f6f4;
+  --panel-bg: #ffffff;
+  --border: #d8dcd4;
+  --text: #1f2a20;
+  --text-muted: #5c6b5e;
+  --accent: #2f6b3a;
+  --accent-contrast: #ffffff;
+  --chip-bg: #eef3ec;
+  --danger: #a5342a;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141814;
+    --panel-bg: #1b201b;
+    --border: #333c33;
+    --text: #e7ece6;
+    --text-muted: #a3ada2;
+    --accent: #6bb37a;
+    --accent-contrast: #0d140e;
+    --chip-bg: #232b23;
+    --danger: #e08579;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+}
+
+a {
+  color: var(--accent);
+}
+
+.app-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+}
+
+.app-header h1 {
+  margin: 0 0 6px;
+  font-size: 1.4rem;
+}
+
+.app-sub {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.app-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+  max-width: 1280px;
+  margin: 16px auto;
+  padding: 0 16px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.main-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  min-height: 60vh;
+  overflow: hidden;
+}
+
+.mode-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 10px 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.mode-tab {
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  padding: 10px 16px;
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+}
+
+.mode-tab:hover {
+  background: var(--chip-bg);
+}
+
+.mode-tab.active {
+  color: var(--accent);
+  font-weight: 700;
+  background: var(--chip-bg);
+}
+
+.disclaimer {
+  margin: 0 16px 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--chip-bg);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.diag-help {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: -6px 0 12px;
+}
+
+.diag-number-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.diag-number-row input[type="number"] {
+  font: inherit;
+  font-size: 1rem;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  color: var(--text);
+  width: 160px;
+}
+
+.diag-number-row .unit {
+  color: var(--text-muted);
+}
+
+.diag-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-primary {
+  font: inherit;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  cursor: pointer;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.verdict-banner {
+  padding: 14px 16px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+}
+
+.verdict-banner.permit {
+  background: color-mix(in srgb, #c0392b 12%, var(--panel-bg));
+  border-color: #c0392b;
+}
+
+.verdict-banner.notification {
+  background: color-mix(in srgb, #2f6b8f 12%, var(--panel-bg));
+  border-color: #2f6b8f;
+}
+
+.verdict-banner.none {
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel-bg));
+  border-color: var(--accent);
+}
+
+.verdict-banner.other_law {
+  background: color-mix(in srgb, #8a6d3b 12%, var(--panel-bg));
+  border-color: #8a6d3b;
+}
+
+.verdict-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+
+.verdict-summary {
+  color: var(--text-muted);
+}
+
+.result-block {
+  margin: 14px 0;
+}
+
+.result-block h3 {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+
+.citation-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.citation-toggle {
+  width: 100%;
+  text-align: left;
+  background: var(--panel-bg);
+  border: none;
+  font: inherit;
+  padding: 10px 12px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.citation-toggle:hover {
+  background: var(--chip-bg);
+}
+
+.citation-body {
+  padding: 4px 12px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.note-box {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--chip-bg);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 10px 0;
+}
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.breadcrumb button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.breadcrumb button:hover {
+  background: var(--chip-bg);
+}
+
+.breadcrumb .crumb-current {
+  color: var(--text-muted);
+  padding: 4px 6px;
+}
+
+.breadcrumb .crumb-sep {
+  color: var(--text-muted);
+}
+
+.stage {
+  padding: 16px;
+}
+
+.stage h2 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.pick-card {
+  text-align: left;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.pick-card:hover {
+  border-color: var(--accent);
+  background: var(--chip-bg);
+}
+
+.pick-card .pick-title {
+  font-weight: 600;
+  display: block;
+}
+
+.pick-card .pick-sub {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pick-list .pick-card {
+  padding: 10px 14px;
+}
+
+.loading,
+.error-box,
+.empty-box {
+  padding: 24px 8px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.error-box {
+  color: var(--danger);
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 4px 6px;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
+/* --- 条文表示 --- */
+
+.article {
+  padding: 4px 4px 20px;
+}
+
+.article-head {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--accent);
+}
+
+.article-caption {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.article-title {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.paragraph {
+  margin: 10px 0;
+}
+
+.paragraph-caption {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.paragraph-line {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.para-num {
+  min-width: 1.6em;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.para-text,
+.item-text,
+.list-line {
+  white-space: pre-wrap;
+}
+
+.item-list,
+.subitem-list {
+  margin: 4px 0 4px 1.8em;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subitem-list.level-2 {
+  margin-left: 1.6em;
+}
+
+.subitem-list.level-3 {
+  margin-left: 1.6em;
+}
+
+.item-line {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.item-title {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.list-block {
+  margin: 6px 0 6px 1.8em;
+  color: var(--text);
+}
+
+.remarks {
+  margin: 10px 0 10px 1.2em;
+  padding: 8px 12px;
+  border-left: 3px solid var(--border);
+  background: var(--chip-bg);
+  border-radius: 0 6px 6px 0;
+}
+
+.remarks-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.generic-block {
+  margin: 6px 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.law-table {
+  border-collapse: collapse;
+  margin: 10px 0 10px 1.2em;
+  font-size: 0.88rem;
+}
+
+.law-table td {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  vertical-align: top;
+}
+
+/* --- 履歴パネル --- */
+
+.history-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 14px;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: sticky;
+  top: 16px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.history-header h2 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  position: relative;
+}
+
+.history-item:hover {
+  border-color: var(--accent);
+  background: var(--chip-bg);
+}
+
+.history-item .h-law {
+  display: inline-block;
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--chip-bg);
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.history-item .h-title {
+  display: block;
+  font-weight: 600;
+}
+
+.history-item .h-time {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  margin-top: 2px;
+}
+
+.history-item .h-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 2px 4px;
+}
+
+.history-item .h-delete:hover {
+  color: var(--danger);
+}
+
+.history-empty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--bg);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  box-shadow: var(--shadow);
+}
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <a href="../index.html" style="display:inline-block;margin-bottom:6px;font-size:0.85rem;color:var(--accent,#2f6b3a);text-decoration:none;">‹ ツール一覧</a>
+    <h1>高圧ガス保安法 法令ビューア</h1>
+    <p class="app-sub">
+      対象法令: 一般高圧ガス保安規則(一般則) / 液化石油ガス保安規則(液石則) / 冷凍保安規則(冷凍則) / 容器保安規則(容器則)
+      <br />データ出典: <a href="https://laws.e-gov.go.jp/" target="_blank" rel="noopener">e-Gov法令検索</a>
+      (<a href="https://laws.e-gov.go.jp/api/2/swagger-ui" target="_blank" rel="noopener">法令API Version 2</a>)
+    </p>
+  </header>
+
+  <div class="app-layout">
+    <main class="main-panel">
+      <div class="mode-tabs" id="mode-tabs" role="tablist">
+        <button type="button" class="mode-tab" data-mode="diagnosis" role="tab">設問で調べる</button>
+        <button type="button" class="mode-tab" data-mode="browse" role="tab">条文を直接みる</button>
+      </div>
+      <nav class="breadcrumb" id="breadcrumb" aria-label="選択パンくず"></nav>
+      <section class="stage" id="stage"></section>
+    </main>
+
+    <aside class="history-panel">
+      <div class="history-header">
+        <h2>照会履歴</h2>
+        <button id="clear-history-btn" class="btn-link" type="button">すべて削除</button>
+      </div>
+      <ul class="history-list" id="history-list"></ul>
+    </aside>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script>
+"use strict";
+
+/* =========================================================
+   constants.js
+   ========================================================= */
+
+// 対象4法令(高圧ガス保安法関係省令)の law_id は e-Gov 法令API v2 の
+// GET /laws?law_title=... で事前に確認済みの値。
+const TARGET_LAWS = [
+  {
+    lawId: "341M50000400053",
+    shortName: "一般則",
+    title: "一般高圧ガス保安規則",
+  },
+  {
+    lawId: "341M50000400052",
+    shortName: "液石則",
+    title: "液化石油ガス保安規則",
+  },
+  {
+    lawId: "341M50000400051",
+    shortName: "冷凍則",
+    title: "冷凍保安規則",
+  },
+  {
+    lawId: "341M50000400050",
+    shortName: "容器則",
+    title: "容器保安規則",
+  },
+];
+
+// 設問モードの判定根拠として条文を引用するために参照する法令(政令・法律本体)。
+// 対象4法令(省令)とは別に、根拠条文の原文表示のためだけに使う。
+const REFERENCE_LAWS = [
+  {
+    lawId: "326AC0000000204",
+    shortName: "法",
+    title: "高圧ガス保安法",
+  },
+  {
+    lawId: "409CO0000000020",
+    shortName: "施行令",
+    title: "高圧ガス保安法施行令",
+  },
+];
+
+const ALL_LAWS = [...TARGET_LAWS, ...REFERENCE_LAWS];
+
+function findLawMeta(lawId) {
+  return ALL_LAWS.find((l) => l.lawId === lawId) || null;
+}
+
+const API_BASE = "https://laws.e-gov.go.jp/api/2";
+
+/* =========================================================
+   api.js
+   ========================================================= */
+
+// 法令本文全体を取得する。e-Gov 法令API v2 /law_data/{law_id_or_num}
+// レスポンスは { law_info, revision_info, law_full_text, ... } の形。
+async function fetchLawData(lawId) {
+  const url = `${API_BASE}/law_data/${encodeURIComponent(lawId)}?response_format=json`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`法令データの取得に失敗しました (HTTP ${res.status}): ${lawId}`);
+  }
+  return res.json();
+}
+
+/* =========================================================
+   storage.js
+   ========================================================= */
+
+// ブラウザの IndexedDB を使った法令データキャッシュと照会履歴の永続化。
+// サーバーは一切使わず、この端末・このブラウザ内にのみ保存される。
+
+const DB_NAME = "kouatsu-gas-law-db";
+const DB_VERSION = 1;
+const STORE_LAW_CACHE = "lawCache";
+const STORE_HISTORY = "history";
+
+let dbPromise = null;
+
+function openDb() {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE_LAW_CACHE)) {
+        db.createObjectStore(STORE_LAW_CACHE, { keyPath: "lawId" });
+      }
+      if (!db.objectStoreNames.contains(STORE_HISTORY)) {
+        const store = db.createObjectStore(STORE_HISTORY, {
+          keyPath: "id",
+          autoIncrement: true,
+        });
+        store.createIndex("timestamp", "timestamp");
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return dbPromise;
+}
+
+function tx(storeName, mode) {
+  return openDb().then(
+    (db) => db.transaction(storeName, mode).objectStore(storeName)
+  );
+}
+
+// --- 法令データキャッシュ ---
+
+async function getCachedLaw(lawId) {
+  const store = await tx(STORE_LAW_CACHE, "readonly");
+  return new Promise((resolve, reject) => {
+    const req = store.get(lawId);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function putCachedLaw(lawId, data, updated) {
+  const store = await tx(STORE_LAW_CACHE, "readwrite");
+  return new Promise((resolve, reject) => {
+    const req = store.put({
+      lawId,
+      data,
+      updated: updated || null,
+      fetchedAt: new Date().toISOString(),
+    });
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function clearCachedLaw(lawId) {
+  const store = await tx(STORE_LAW_CACHE, "readwrite");
+  return new Promise((resolve, reject) => {
+    const req = store.delete(lawId);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// --- 照会履歴 ---
+
+const MAX_HISTORY = 200;
+
+async function addHistoryEntry(entry) {
+  const store = await tx(STORE_HISTORY, "readwrite");
+  return new Promise((resolve, reject) => {
+    const req = store.add({
+      ...entry,
+      timestamp: new Date().toISOString(),
+    });
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function listHistory(limit = MAX_HISTORY) {
+  const store = await tx(STORE_HISTORY, "readonly");
+  return new Promise((resolve, reject) => {
+    const results = [];
+    const req = store.index("timestamp").openCursor(null, "prev");
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor && results.length < limit) {
+        results.push(cursor.value);
+        cursor.continue();
+      } else {
+        resolve(results);
+      }
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function clearHistory() {
+  const store = await tx(STORE_HISTORY, "readwrite");
+  return new Promise((resolve, reject) => {
+    const req = store.clear();
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function deleteHistoryEntry(id) {
+  const store = await tx(STORE_HISTORY, "readwrite");
+  return new Promise((resolve, reject) => {
+    const req = store.delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/* =========================================================
+   lawTree.js
+   ========================================================= */
+
+// e-Gov 法令API v2 の law_full_text (tag/attr/children のXML由来ツリー) から
+// 法令 → 章 → 節(あれば) → 条 のナビゲーション構造を組み立てるユーティリティ。
+
+// ノード配下の文字列を再帰的に連結して取り出す(タグに関わらず安全に使える)。
+function extractText(node) {
+  if (typeof node === "string") return node;
+  if (!node || !Array.isArray(node.children)) return "";
+  return node.children.map(extractText).join("");
+}
+
+// 指定タグの直接の子ノードを1つ取得。
+function findChild(node, tag) {
+  if (!node || !Array.isArray(node.children)) return null;
+  return node.children.find((c) => c && c.tag === tag) || null;
+}
+
+function findChildren(node, tag) {
+  if (!node || !Array.isArray(node.children)) return [];
+  return node.children.filter((c) => c && c.tag === tag);
+}
+
+function getChildText(node, tag) {
+  const child = findChild(node, tag);
+  return child ? extractText(child).trim() : "";
+}
+
+// Column を持つ文(定義規定などで「用語」「意義」のように列が分かれる場合)を
+// 読みやすく全角スペース区切りで連結する。Column が無ければ通常のテキスト抽出。
+function extractSentenceText(node) {
+  if (!node) return "";
+  const columns = findChildren(node, "Column");
+  if (columns.length > 0) {
+    return columns.map((c) => extractText(c).trim()).join("　");
+  }
+  return extractText(node).trim();
+}
+
+function makeArticleSummary(articleNode) {
+  const num = articleNode.attr && articleNode.attr.Num;
+  const title = getChildText(articleNode, "ArticleTitle") || `第${num}条`;
+  const caption = getChildText(articleNode, "ArticleCaption");
+  return { num, title, caption, node: articleNode };
+}
+
+// Section/Subsection など入れ子構造の中から Article を出現順にすべて収集する。
+function collectArticlesDeep(nodes) {
+  let result = [];
+  for (const n of nodes || []) {
+    if (!n || typeof n !== "object") continue;
+    if (n.tag === "Article") {
+      result.push(makeArticleSummary(n));
+    } else if (Array.isArray(n.children)) {
+      result = result.concat(collectArticlesDeep(n.children));
+    }
+  }
+  return result;
+}
+
+// LawBody.MainProvision から 章(Chapter) → 節(Section) → 条(Article) の
+// ナビゲーションツリーを構築する。章が無い法令は単一の仮想章にまとめる。
+function buildChapters(mainProvisionNode) {
+  const topChildren = (mainProvisionNode && mainProvisionNode.children) || [];
+  const hasChapters = topChildren.some((c) => c && c.tag === "Chapter");
+
+  if (!hasChapters) {
+    const articles = collectArticlesDeep(topChildren);
+    if (articles.length === 0) return [];
+    return [
+      {
+        key: "c-single",
+        num: null,
+        title: null,
+        sections: [],
+        articles,
+      },
+    ];
+  }
+
+  const chapters = [];
+  topChildren
+    .filter((c) => c && c.tag === "Chapter")
+    .forEach((chapterNode, ci) => {
+      const num = (chapterNode.attr && chapterNode.attr.Num) || String(ci);
+      const title = getChildText(chapterNode, "ChapterTitle") || `第${num}章`;
+      const sections = [];
+      const directArticles = [];
+
+      for (const child of chapterNode.children || []) {
+        if (!child || typeof child !== "object") continue;
+        if (child.tag === "Section") {
+          const sNum = (child.attr && child.attr.Num) || String(sections.length);
+          const sTitle = getChildText(child, "SectionTitle") || `第${sNum}節`;
+          const sArticles = collectArticlesDeep(child.children || []);
+          if (sArticles.length > 0) {
+            sections.push({
+              key: `c${num}-s${sNum}`,
+              num: sNum,
+              title: sTitle,
+              articles: sArticles,
+            });
+          }
+        } else if (child.tag === "Article") {
+          directArticles.push(makeArticleSummary(child));
+        }
+      }
+
+      if (sections.length > 0 || directArticles.length > 0) {
+        chapters.push({
+          key: `c${num}`,
+          num,
+          title,
+          sections,
+          articles: directArticles,
+        });
+      }
+    });
+
+  return chapters;
+}
+
+function getLawTitle(lawData) {
+  const lawBody = findChild(lawData.law_full_text, "LawBody");
+  return getChildText(lawBody, "LawTitle") || lawData.revision_info?.law_title || "";
+}
+
+function getMainProvision(lawData) {
+  const lawBody = findChild(lawData.law_full_text, "LawBody");
+  return findChild(lawBody, "MainProvision");
+}
+
+// 条番号(例: "5", "3_2")を指定して、法令内から該当条文ノードを1件検索する。
+// 設問モードの判定根拠(引用条文)を表示するために使う。
+function findArticleByNum(mainProvisionNode, num) {
+  const stack = [mainProvisionNode];
+  while (stack.length > 0) {
+    const node = stack.pop();
+    if (!node || typeof node !== "object") continue;
+    if (node.tag === "Article" && node.attr && node.attr.Num === num) {
+      return makeArticleSummary(node);
+    }
+    for (const c of node.children || []) {
+      if (c && typeof c === "object") stack.push(c);
+    }
+  }
+  return null;
+}
+
+/* =========================================================
+   render.js
+   ========================================================= */
+
+// 条文(Article)ノードを人間が読みやすいHTMLに変換する再帰レンダラー。
+// e-Gov法令標準XMLスキーマの主要タグ(Paragraph/Item/Subitem1-3/List/Table等)を
+// 明示的に扱い、未対応タグはテキストのみ安全に抽出するフォールバックを持つ。
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function findChild(node, tag) {
+  if (!node || !Array.isArray(node.children)) return null;
+  return node.children.find((c) => c && c.tag === tag) || null;
+}
+function findChildren(node, tag) {
+  if (!node || !Array.isArray(node.children)) return [];
+  return node.children.filter((c) => c && c.tag === tag);
+}
+function textOf(node, tag) {
+  const c = findChild(node, tag);
+  return c ? extractText(c).trim() : "";
+}
+
+function renderArticle(articleNode) {
+  const title = textOf(articleNode, "ArticleTitle");
+  const caption = textOf(articleNode, "ArticleCaption");
+
+  let html = '<div class="article">';
+  html += '<div class="article-head">';
+  if (caption) {
+    html += `<span class="article-caption">${escapeHtml(caption)}</span>`;
+  }
+  html += `<span class="article-title">${escapeHtml(title)}</span>`;
+  html += "</div>";
+
+  for (const child of articleNode.children || []) {
+    if (!child || typeof child !== "object") continue;
+    if (child.tag === "Paragraph") {
+      html += renderParagraph(child);
+    } else if (child.tag === "ArticleCaption" || child.tag === "ArticleTitle") {
+      // 見出しとして既に表示済み
+    } else if (typeof child !== "string") {
+      html += renderGenericBlock(child);
+    }
+  }
+
+  html += "</div>";
+  return html;
+}
+
+function renderParagraph(p) {
+  const numText = textOf(p, "ParagraphNum"); // 第1項は空、第2項以降は全角数字
+  const caption = textOf(p, "ParagraphCaption");
+  const sentenceNode = findChild(p, "ParagraphSentence");
+  const sentenceText = sentenceNode ? extractSentenceText(sentenceNode) : "";
+
+  let html = '<div class="paragraph">';
+  if (caption) {
+    html += `<div class="paragraph-caption">${escapeHtml(caption)}</div>`;
+  }
+  html += '<div class="paragraph-line">';
+  html += `<span class="para-num">${escapeHtml(numText)}</span>`;
+  html += `<span class="para-text">${escapeHtml(sentenceText)}</span>`;
+  html += "</div>";
+
+  const items = findChildren(p, "Item");
+  if (items.length > 0) {
+    html += '<div class="item-list">' + items.map(renderItem).join("") + "</div>";
+  }
+
+  const lists = findChildren(p, "List");
+  if (lists.length > 0) {
+    html += lists.map(renderList).join("");
+  }
+
+  const tables = findChildren(p, "TableStruct");
+  if (tables.length > 0) {
+    html += tables.map(renderTableStruct).join("");
+  }
+
+  const remarks = findChildren(p, "Remarks");
+  if (remarks.length > 0) {
+    html += remarks.map(renderRemarks).join("");
+  }
+
+  html += "</div>";
+  return html;
+}
+
+function renderItem(item) {
+  const title = textOf(item, "ItemTitle");
+  const sentenceNode = findChild(item, "ItemSentence");
+  const sentenceText = sentenceNode ? extractSentenceText(sentenceNode) : "";
+
+  let html = '<div class="item">';
+  html += '<div class="item-line">';
+  html += `<span class="item-title">${escapeHtml(title)}</span>`;
+  html += `<span class="item-text">${escapeHtml(sentenceText)}</span>`;
+  html += "</div>";
+
+  html += renderSubitems(item, 1);
+
+  const tables = findChildren(item, "TableStruct");
+  if (tables.length > 0) {
+    html += tables.map(renderTableStruct).join("");
+  }
+
+  html += "</div>";
+  return html;
+}
+
+function renderSubitems(node, level) {
+  const tag = `Subitem${level}`;
+  const subs = findChildren(node, tag);
+  if (subs.length === 0) return "";
+
+  const titleTag = `${tag}Title`;
+  const sentenceTag = `${tag}Sentence`;
+
+  let html = `<div class="subitem-list level-${level}">`;
+  for (const sub of subs) {
+    const title = textOf(sub, titleTag);
+    const sentenceNode = findChild(sub, sentenceTag);
+    const sentenceText = sentenceNode ? extractSentenceText(sentenceNode) : "";
+    html += `<div class="subitem level-${level}">`;
+    html += '<div class="item-line">';
+    html += `<span class="item-title">${escapeHtml(title)}</span>`;
+    html += `<span class="item-text">${escapeHtml(sentenceText)}</span>`;
+    html += "</div>";
+    html += renderSubitems(sub, level + 1);
+    html += "</div>";
+  }
+  html += "</div>";
+  return html;
+}
+
+function renderList(listNode) {
+  const sentences = findChildren(listNode, "ListSentence");
+  if (sentences.length === 0) {
+    return `<div class="list-block">${escapeHtml(extractText(listNode).trim())}</div>`;
+  }
+  return (
+    '<div class="list-block">' +
+    sentences.map((s) => `<div class="list-line">${escapeHtml(extractSentenceText(s))}</div>`).join("") +
+    "</div>"
+  );
+}
+
+function renderRemarks(remarksNode) {
+  const label = textOf(remarksNode, "RemarksLabel") || "備考";
+  const paragraphs = findChildren(remarksNode, "Paragraph");
+  let html = '<div class="remarks">';
+  html += `<div class="remarks-label">${escapeHtml(label)}</div>`;
+  if (paragraphs.length > 0) {
+    html += paragraphs.map(renderParagraph).join("");
+  } else {
+    html += `<div class="remarks-text">${escapeHtml(extractText(remarksNode).trim())}</div>`;
+  }
+  html += "</div>";
+  return html;
+}
+
+function renderTableStruct(tableStructNode) {
+  const table = findChild(tableStructNode, "Table");
+  if (!table) {
+    return `<div class="table-fallback">${escapeHtml(extractText(tableStructNode).trim())}</div>`;
+  }
+  const rows = findChildren(table, "TableRow");
+  let html = '<table class="law-table"><tbody>';
+  for (const row of rows) {
+    html += "<tr>";
+    const cols = findChildren(row, "TableColumn");
+    for (const col of cols) {
+      const attr = col.attr || {};
+      const attrs = [];
+      if (attr.colspan) attrs.push(`colspan="${escapeHtml(attr.colspan)}"`);
+      if (attr.rowspan) attrs.push(`rowspan="${escapeHtml(attr.rowspan)}"`);
+      html += `<td ${attrs.join(" ")}>${escapeHtml(extractSentenceText(col))}</td>`;
+    }
+    html += "</tr>";
+  }
+  html += "</tbody></table>";
+  return html;
+}
+
+// 上記で明示的に扱っていないタグに対する安全なフォールバック。
+// 内容は失わず、プレーンテキストとして表示する。
+function renderGenericBlock(node) {
+  const text = extractText(node).trim();
+  if (!text) return "";
+  return `<div class="generic-block">${escapeHtml(text)}</div>`;
+}
+
+/* =========================================================
+   diagnosis.js
+   ========================================================= */
+
+// 「設問モード」の分岐ロジック。
+//
+// パイロット範囲: 一般則・冷凍則・液石則それぞれが管轄する「製造」。
+//
+// 各法令の許可・届出基準はすべて高圧ガス保安法第5条に由来するが、
+// 政令(施行令)・省令(各則)で具体的な数値・算式が個別に定められている。
+// 処理能力そのものを利用者が把握していない場合が多いため、可能な限り
+// 「基準値以上か未満か」を選択させる形式にし、自由数値入力は算式が
+// 必要な場合(一般則の混合ガス)に限定している。
+//
+// 参照した一次資料:
+//  - 高圧ガス保安法(326AC0000000204) 第2条(定義)・第5条(製造の許可等)
+//  - 高圧ガス保安法施行令(409CO0000000020) 第3条(一般則向けガス種・値)、第4条(冷凍則向けガス種・値)
+//  - 一般高圧ガス保安規則(341M50000400053) 第3条・第4条(許可申請・届出)、第102条(混合時の算式)、
+//    第11条・第12条(処理能力30立方メートルでの技術基準の切り分け)
+//  - 冷凍保安規則(341M50000400051) 第3条・第4条(許可申請・届出)、第5条(冷凍能力の算定基準)
+//  - 液化石油ガス保安規則(341M50000400052) 第3条・第4条(許可申請・届出) ※法第5条第1項第1号を直接引用
+//
+// 「処理能力」は圧縮・液化のほか、高圧ガスを減圧して製造する場合も対象となり、
+// この場合の処理能力算定上の数値は0となる(高圧ガス保安法上「製造」に該当する)。
+// 処理能力0であっても、事業として反復・継続して行えば第二種製造者の届出対象となりうる。
+
+const ACTION_TYPES = [
+  { id: "manufacture", label: "製造", available: true },
+  { id: "storage", label: "貯蔵", available: true },
+  { id: "consumption", label: "消費", available: true },
+  { id: "sales", label: "販売", available: true },
+];
+
+const IPPAN = "341M50000400053"; // 一般高圧ガス保安規則
+const REITOU = "341M50000400051"; // 冷凍保安規則
+const EKISEKI = "341M50000400052"; // 液化石油ガス保安規則
+const ACT = "326AC0000000204"; // 高圧ガス保安法
+const ORDER = "409CO0000000020"; // 高圧ガス保安法施行令
+
+const GAS_CATEGORIES = [
+  {
+    id: "general",
+    label: "一般の高圧ガス(不活性・可燃性・毒性ガスなど)",
+    help: "冷凍のための製造、液化石油ガスの製造を除く高圧ガス全般。一般高圧ガス保安規則(一般則)が適用されます。",
+  },
+  {
+    id: "refrigeration",
+    label: "冷凍のための製造(冷凍設備でガスを圧縮・液化)",
+    help: "冷凍保安規則(冷凍則)が適用されます。",
+  },
+  {
+    id: "lpgas",
+    label: "液化石油ガス(LPガス、プロパン・ブタン等)の製造",
+    help: "液化石油ガス保安規則(液石則)が適用されます。一般消費者向け供給設備への充塡は対象外です(下記注記参照)。",
+  },
+];
+
+const SALES_CATEGORIES = [
+  {
+    id: "general",
+    label: "一般の高圧ガス(不活性・可燃性・毒性ガスなど)",
+    help: "冷凍のための高圧ガス、液化石油ガスを除く高圧ガス全般。一般高圧ガス保安規則(一般則)が適用されます。",
+  },
+  {
+    id: "refrigeration",
+    label: "冷凍のための高圧ガス(冷媒ガス等)",
+    help: "冷凍保安規則(冷凍則)が適用されます。",
+  },
+  {
+    id: "lpgas",
+    label: "液化石油ガス(LPガス、プロパン・ブタン等)",
+    help: "液化石油ガス保安規則(液石則)が適用されます。一般消費者向け供給は対象外です(次の設問で確認します)。",
+  },
+];
+
+const STORAGE_CATEGORIES = [
+  {
+    id: "general",
+    label: "一般の高圧ガス(不活性・可燃性・毒性ガスなど)",
+    help: "冷凍のための高圧ガス、液化石油ガスを除く高圧ガス全般。一般高圧ガス保安規則(一般則)の貯蔵所規定が適用されます。",
+  },
+  {
+    id: "refrigeration",
+    label: "冷凍のための高圧ガス(冷媒ガス等)",
+    help: "冷凍保安規則には貯蔵所固有の基準がないため、一般高圧ガス保安規則(一般則)の貯蔵所規定が適用されます。",
+  },
+  {
+    id: "lpgas",
+    label: "液化石油ガス(LPガス、プロパン・ブタン等)",
+    help: "液化石油ガス保安規則(液石則)の貯蔵所規定が適用されます。",
+  },
+];
+
+function getCategoriesForAction(actionType) {
+  if (actionType === "sales") return SALES_CATEGORIES;
+  if (actionType === "storage") return STORAGE_CATEGORIES;
+  if (actionType === "consumption") return CONSUMPTION_CATEGORIES;
+  return GAS_CATEGORIES;
+}
+
+/* ---------- 共通設問 ---------- */
+
+const BUSINESS_STEP = {
+  id: "isBusiness",
+  prompt: "事業として反復・継続して製造を行いますか?",
+  type: "choice",
+  help:
+    "許可基準未満であっても、事業として反復・継続して高圧ガスを製造する場合は届出の対象となります(高圧ガス保安法第5条第2項)。" +
+    "高圧ガスを減圧して製造する場合(この場合、処理能力は0として扱われます)も対象です。",
+  options: [
+    { value: "yes", label: "はい(事業として反復・継続して行う)" },
+    { value: "no", label: "いいえ(自家消費など、事業ではない)" },
+  ],
+};
+
+function makeCapacityBandStep(threshold, extraHelp) {
+  return {
+    id: "capacityBand",
+    prompt: `処理能力は ${threshold} 立方メートル/日 以上ですか?`,
+    type: "choice",
+    help:
+      "圧縮・液化その他の方法で処理できるガスの容積を、温度0℃・圧力0Paの状態に換算した1日あたりの値です。" +
+      "高圧ガスを減圧して製造する場合、処理能力は0として扱われます。" +
+      (extraHelp ? " " + extraHelp : ""),
+    options: [
+      { value: "over", label: `${threshold} 立方メートル/日 以上` },
+      { value: "under", label: `${threshold} 立方メートル/日 未満(減圧のみを行う場合を含む)` },
+    ],
+  };
+}
+
+/* ---------- 一般則: 製造 ---------- */
+
+const GENERAL_GAS_SCOPE_STEP = {
+  id: "gasScope",
+  prompt: "製造する高圧ガスの種類は?",
+  type: "choice",
+  options: [
+    {
+      value: "type1only",
+      label: "不活性ガス等(第一種ガス)のみ",
+      help: "ヘリウム・ネオン・アルゴン・クリプトン・キセノン・ラドン・窒素・二酸化炭素・難燃性フルオロカーボン・空気",
+    },
+    {
+      value: "otherOnly",
+      label: "可燃性ガス・毒性ガスなど(第一種ガス以外)のみ",
+      help: "上記以外のガス。高圧ガスを減圧して製造する場合も含みます",
+    },
+    {
+      value: "mixed",
+      label: "第一種ガスと、それ以外のガスの両方を扱う",
+      help: "同一事業所で両方の処理設備を持つ場合",
+    },
+  ],
+};
+
+const GENERAL_TYPE1_BAND_STEP = makeCapacityBandStep(300);
+const GENERAL_OTHER_BAND_STEP = makeCapacityBandStep(100);
+
+const GENERAL_S1_STEP = {
+  id: "s1",
+  prompt: "不活性ガス等(第一種ガス)の処理能力は?",
+  type: "number",
+  unit: "立方メートル/日",
+  help: "第一種ガスの処理能力を、温度0℃・圧力0Paの状態に換算した1日あたりの値で入力してください。",
+  min: 0,
+};
+
+const GENERAL_S2_STEP = {
+  id: "s2",
+  prompt: "それ以外(可燃性ガス・毒性ガスなど)の処理能力は?",
+  type: "number",
+  unit: "立方メートル/日",
+  help: "圧縮・液化その他の方法で処理できるガスの容積を、温度0℃・圧力0Paの状態に換算した1日あたりの値(一般則第2条第9号)",
+  min: 0,
+};
+
+function getGeneralSteps(answers) {
+  const steps = [GENERAL_GAS_SCOPE_STEP];
+  if (answers.gasScope === "type1only") {
+    steps.push(GENERAL_TYPE1_BAND_STEP);
+  } else if (answers.gasScope === "otherOnly") {
+    steps.push(GENERAL_OTHER_BAND_STEP);
+  } else if (answers.gasScope === "mixed") {
+    steps.push(GENERAL_S1_STEP, GENERAL_S2_STEP);
+  }
+  steps.push(BUSINESS_STEP);
+  return steps;
+}
+
+// 一般則: 施行令第3条・一般則第102条による算式。
+// T(許可基準, m3/日) = 100 + (2/3)×S1 (0<=S1<=300の範囲で線形補間)
+// S1=0(第一種ガスなし)のとき T=100、S1>=300(第一種ガスのみで既に300以上)のとき T=300 に自然に収束する。
+function calcGeneralThreshold(s1) {
+  const clamped = Math.max(0, Math.min(s1, 300));
+  return 100 + (2 / 3) * clamped;
+}
+
+function evaluateGeneral(answers) {
+  const { gasScope, isBusiness } = answers;
+  if (!gasScope || !isBusiness) {
+    return { verdict: "invalid", message: "すべての設問に回答してください。" };
+  }
+
+  const citations = [
+    { lawId: ACT, num: "5", label: "高圧ガス保安法 第5条(製造の許可等)" },
+    { lawId: ORDER, num: "3", label: "高圧ガス保安法施行令 第3条(政令で定めるガスの種類等)" },
+  ];
+
+  let overThreshold;
+  let thresholdLabel;
+  let note = null;
+
+  if (gasScope === "type1only") {
+    if (!answers.capacityBand) return { verdict: "invalid", message: "すべての設問に回答してください。" };
+    overThreshold = answers.capacityBand === "over";
+    thresholdLabel = "300立方メートル/日";
+  } else if (gasScope === "otherOnly") {
+    if (!answers.capacityBand) return { verdict: "invalid", message: "すべての設問に回答してください。" };
+    overThreshold = answers.capacityBand === "over";
+    thresholdLabel = "100立方メートル/日";
+  } else if (gasScope === "mixed") {
+    const s1 = Number(answers.s1);
+    const s2 = Number(answers.s2);
+    if (!Number.isFinite(s1) || !Number.isFinite(s2) || s1 < 0 || s2 < 0) {
+      return { verdict: "invalid", message: "すべての設問に回答してください。" };
+    }
+    const total = s1 + s2;
+    const threshold = calcGeneralThreshold(s1);
+    overThreshold = total >= threshold;
+    thresholdLabel = `約${threshold.toFixed(1)}立方メートル/日(第一種ガス処理能力${s1}m³/日から算式で算出)`;
+    citations.push({ lawId: IPPAN, num: "102", label: "一般高圧ガス保安規則 第102条(第一種製造者に係るガス処理容積の算定方法)" });
+    if (s1 > 0 && s2 > 0) {
+      note =
+        "不活性ガス(第一種ガス)と可燃性ガス・毒性ガスなどを併せて扱うため、施行令第3条・一般則第102条の算式" +
+        "(T=100+(2/3)×第一種ガスの処理能力)により許可基準を計算しています。";
+    }
+  } else {
+    return { verdict: "invalid", message: "ガスの種類を選択してください。" };
+  }
+
+  if (overThreshold) {
+    return {
+      verdict: "permit",
+      title: "第一種製造者に該当する可能性があります",
+      summary: `処理能力が許可基準(${thresholdLabel})以上です。都道府県知事の許可が必要です。`,
+      citations,
+      procedures: IPPAN_PROCEDURES.permit,
+      note,
+    };
+  }
+
+  if (answers.isBusiness === "yes") {
+    return {
+      verdict: "notification",
+      title: "第二種製造者に該当する可能性があります",
+      summary: `処理能力は許可基準(${thresholdLabel})未満ですが、事業として行うため届出が必要です。`,
+      citations,
+      procedures: IPPAN_PROCEDURES.notification,
+      note,
+    };
+  }
+
+  return {
+    verdict: "none",
+    title: "許可・届出の対象とならない可能性があります",
+    summary: "事業として行わない場合、高圧ガス保安法第5条に基づく許可・届出は不要となる可能性があります。",
+    citations,
+    procedures: [],
+    note: "貯蔵・消費など高圧ガス保安法の他の規定が別途適用される場合があります。",
+  };
+}
+
+/* ---------- 冷凍則: 製造 ---------- */
+
+// 法第5条第1項第2号・第2項第2号は、冷凍のための製造すべてに適用される基準値そのもの(許可20トン/届出3トン)を
+// 条文本体に定めており、施行令第4条はこの値を特定のガス種(第一種ガス、フルオロカーボン+アンモニア)についてのみ
+// 「20トン(届出は3トン)を超える政令で定める値」(=50トン/20トン、50トン/5トン)に引き上げる規定に過ぎない。
+// したがって施行令第4条の表(2行)に該当しない冷媒ガス(プロパン等)は、一般則にまわるのではなく、法本体の
+// デフォルト値(許可20トン/届出3トン)がそのまま適用される。
+// フルオロカーボンが「第一種ガス」側(50t/20t)に含まれるのは、施行令第2条第5項第4号の難燃性基準に適合する
+// ものに限られ、その基準に適合しないもの(=可燃性・微燃性のフルオロカーボン)はフルオロカーボン+アンモニア側
+// (50t/5t)に該当する。
+// 出典: 高圧ガス保安法令解説(セーフティー・マネジメント・サービス株式会社)掲載の区分図により、上記3区分・
+// 閾値(20/3, 50/20, 50/5トン)を2026-07-17に再確認した。
+const REFRIGERATION_GAS_TYPE_STEP = {
+  id: "gasType",
+  prompt: "使用する冷媒ガスの種類は?",
+  type: "choice",
+  options: [
+    {
+      value: "type1",
+      label: "不活性ガス等(第一種ガス): 二酸化炭素・不活性のフルオロカーボンなど",
+      help:
+        "ヘリウム・ネオン・アルゴン・クリプトン・キセノン・ラドン・窒素・二酸化炭素・空気、及び難燃性の基準" +
+        "(経済産業省令で定める燃焼性の基準)に適合するフルオロカーボン",
+    },
+    {
+      value: "fluorocarbon_ammonia",
+      label: "フルオロカーボン(不活性でないもの)またはアンモニア",
+      help:
+        "難燃性の基準(経済産業省令で定める燃焼性の基準)に適合しない、可燃性・微燃性のフルオロカーボン、及び" +
+        "アンモニアが該当します。",
+    },
+    {
+      value: "other",
+      label: "フルオロカーボン又はアンモニア以外の冷媒ガス(プロパンなど)",
+      help: "上記いずれにも該当しない冷媒ガスには、法第5条本体に定める基準値がそのまま適用されます。",
+    },
+  ],
+};
+
+function getRefrigerationThresholds(gasType) {
+  if (gasType === "type1") {
+    return { permitThreshold: 50, notifyThreshold: 20, gasLabel: "第一種ガス" };
+  }
+  if (gasType === "fluorocarbon_ammonia") {
+    return { permitThreshold: 50, notifyThreshold: 5, gasLabel: "フルオロカーボン(不活性でないもの)又はアンモニア" };
+  }
+  return { permitThreshold: 20, notifyThreshold: 3, gasLabel: "フルオロカーボン又はアンモニア以外の冷媒ガス" };
+}
+
+function makeRefrigerationBandStep(gasType) {
+  const { permitThreshold, notifyThreshold } = getRefrigerationThresholds(gasType);
+  return {
+    id: "capacityBand",
+    prompt: "1日の冷凍能力の区分は?",
+    type: "choice",
+    help: "冷凍則第5条で定める算定基準による換算値です。設備の仕様書・メーカー資料でご確認ください。",
+    options: [
+      { value: "over", label: `${permitThreshold} トン/日 以上` },
+      { value: "between", label: `${notifyThreshold} トン/日 以上 ${permitThreshold} トン/日 未満` },
+      { value: "under", label: `${notifyThreshold} トン/日 未満` },
+    ],
+  };
+}
+
+function getRefrigerationSteps(answers) {
+  const steps = [REFRIGERATION_GAS_TYPE_STEP];
+  if (answers.gasType) {
+    steps.push(makeRefrigerationBandStep(answers.gasType));
+  }
+  return steps;
+}
+
+function evaluateRefrigeration(answers) {
+  if (!answers.gasType || !answers.capacityBand) {
+    return { verdict: "invalid", message: "すべての設問に回答してください。" };
+  }
+
+  const citations = [
+    { lawId: ACT, num: "5", label: "高圧ガス保安法 第5条(製造の許可等)" },
+    { lawId: ORDER, num: "4", label: "高圧ガス保安法施行令 第4条(政令で定めるガスの種類等)" },
+  ];
+
+  const { permitThreshold, notifyThreshold, gasLabel } = getRefrigerationThresholds(answers.gasType);
+
+  if (answers.capacityBand === "over") {
+    return {
+      verdict: "permit",
+      title: "第一種製造者に該当する可能性があります",
+      summary: `${gasLabel}の許可基準 ${permitThreshold} トン/日 以上に該当します。都道府県知事の許可が必要です。`,
+      citations,
+      procedures: REITOU_PROCEDURES.permit,
+      note: null,
+    };
+  }
+
+  if (answers.capacityBand === "between") {
+    return {
+      verdict: "notification",
+      title: "第二種製造者に該当する可能性があります",
+      summary: `${gasLabel}の届出基準 ${notifyThreshold} トン/日 以上、許可基準 ${permitThreshold} トン/日 未満に該当します。都道府県知事への届出が必要です。`,
+      citations,
+      procedures: REITOU_PROCEDURES.notification,
+      note: "高圧ガス保安法第5条第2項第2号の冷凍能力による届出基準には、一般則のような事業性(事業として行うか)の要件は明記されていません。",
+    };
+  }
+
+  return {
+    verdict: "none",
+    title: "許可・届出の対象とならない可能性があります",
+    summary: `${gasLabel}の届出基準 ${notifyThreshold} トン/日 未満です。`,
+    citations,
+    procedures: [],
+    note: "貯蔵・消費など高圧ガス保安法の他の規定が別途適用される場合があります。",
+  };
+}
+
+/* ---------- 液石則: 製造 ---------- */
+
+const LPGAS_CAPACITY_STEP = makeCapacityBandStep(
+  100,
+  "液化石油ガス法上の供給設備へ一般消費者向けに充塡する場合は対象外です(判定結果の注記を参照)。"
+);
+
+function getLpgasSteps() {
+  return [LPGAS_CAPACITY_STEP, BUSINESS_STEP];
+}
+
+function evaluateLpgas(answers) {
+  if (!answers.capacityBand || !answers.isBusiness) {
+    return { verdict: "invalid", message: "すべての設問に回答してください。" };
+  }
+
+  const citations = [
+    { lawId: ACT, num: "5", label: "高圧ガス保安法 第5条(製造の許可等)" },
+    { lawId: ORDER, num: "3", label: "高圧ガス保安法施行令 第3条(政令で定めるガスの種類等)" },
+  ];
+  const lpgasNote =
+    "液化石油ガスの保安の確保及び取引の適正化に関する法律(液化石油ガス法)上の供給設備へ一般消費者向けにガスを充塡する行為は、" +
+    "高圧ガス保安法第5条第1項第1号のかっこ書きにより本条の対象外です。該当する場合は液化石油ガス法上の規制(別途登録等)をご確認ください。";
+
+  if (answers.capacityBand === "over") {
+    return {
+      verdict: "permit",
+      title: "第一種製造者に該当する可能性があります",
+      summary: "処理能力が許可基準(100立方メートル/日)以上です。都道府県知事の許可が必要です。",
+      citations,
+      procedures: EKISEKI_PROCEDURES.permit,
+      note: lpgasNote,
+    };
+  }
+
+  if (answers.isBusiness === "yes") {
+    return {
+      verdict: "notification",
+      title: "第二種製造者に該当する可能性があります",
+      summary: "処理能力は許可基準(100立方メートル/日)未満ですが、事業として行うため届出が必要です。",
+      citations,
+      procedures: EKISEKI_PROCEDURES.notification,
+      note: lpgasNote,
+    };
+  }
+
+  return {
+    verdict: "none",
+    title: "許可・届出の対象とならない可能性があります",
+    summary: "事業として行わない場合、高圧ガス保安法第5条に基づく許可・届出は不要となる可能性があります。",
+    citations,
+    procedures: [],
+    note: lpgasNote,
+  };
+}
+
+/* ---------- 販売事業 ---------- */
+//
+// 高圧ガス保安法第20条の4(販売事業の届出)は、処理能力のような数値基準を持たず、
+// 「販売所ごとに事業開始の20日前までに届出」が原則。以下の場合は届出不要:
+//  一号: 第一種製造者(法第5条第1項第1号=一般則・液石則の許可)が、自ら製造した高圧ガスを
+//        その製造事業所内で販売するとき。※冷凍(法第5条第1項第2号)の第一種製造者は
+//        この号の対象外(条文上「第五条第一項第一号に規定する者」に限定されているため)。
+//  二号: 医療用ガス等(政令で定めるもの)を、貯蔵数量が常時5立方メートル未満の販売所で
+//        販売するとき(施行令第6条)。※対象ガスが限定的なため、本ツールでは注記のみで案内。
+// また、LPガスの一般消費者向け供給(液化石油ガス法上の供給設備への充塡・供給)は、
+// 同条本文かっこ書きにより高圧ガス保安法の届出対象外(液化石油ガス法の管轄)。
+
+const SALES_LPGAS_CONSUMER_STEP = {
+  id: "lpgasConsumer",
+  prompt: "一般消費者向けに液化石油ガスを供給しますか?",
+  type: "choice",
+  help:
+    "家庭用LPガスボンベの配達など、一般消費者への直接供給を指します。この場合は高圧ガス保安法ではなく、" +
+    "液化石油ガスの保安の確保及び取引の適正化に関する法律(液化石油ガス法)の登録対象です。",
+  options: [
+    { value: "yes", label: "はい(一般消費者向けに供給する)" },
+    { value: "no", label: "いいえ(業務用・産業用などへの販売)" },
+  ],
+};
+
+const SALES_SELF_STEP = {
+  id: "selfSale",
+  prompt: "自ら製造した高圧ガスを、その製造事業所内で販売しますか?",
+  type: "choice",
+  help:
+    "第一種製造者が、自社の製造事業所内で自ら製造した高圧ガスを販売する場合、販売事業の届出は不要です" +
+    "(高圧ガス保安法第20条の4第1号)。",
+  options: [
+    { value: "yes", label: "はい(自社製造事業所内での自社販売のみ)" },
+    { value: "no", label: "いいえ(他社からの仕入れ、または事業所外での販売を含む)" },
+  ],
+};
+
+function getSalesSteps(gasCategoryId, answers) {
+  const steps = [];
+  if (gasCategoryId === "lpgas") {
+    steps.push(SALES_LPGAS_CONSUMER_STEP);
+    if (answers.lpgasConsumer === "yes") return steps;
+  }
+  if (gasCategoryId !== "refrigeration") {
+    steps.push(SALES_SELF_STEP);
+  }
+  return steps;
+}
+
+function evaluateSales(gasCategoryId, answers) {
+  if (!gasCategoryId) {
+    return { verdict: "invalid", message: "ガスの種類を選択してください。" };
+  }
+
+  const baseCitation = { lawId: ACT, num: "20_4", label: "高圧ガス保安法 第20条の4(販売事業の届出)" };
+
+  if (gasCategoryId === "lpgas") {
+    if (!answers.lpgasConsumer) {
+      return { verdict: "invalid", message: "すべての設問に回答してください。" };
+    }
+    if (answers.lpgasConsumer === "yes") {
+      return {
+        verdict: "other_law",
+        title: "液化石油ガス法の対象となる可能性があります",
+        summary:
+          "一般消費者向けの液化石油ガス供給は、高圧ガス保安法第20条の4のかっこ書きにより本条の対象外です。" +
+          "液化石油ガス法上の販売事業登録が必要です。",
+        citations: [baseCitation],
+        procedures: [],
+        note:
+          "液化石油ガスの保安の確保及び取引の適正化に関する法律(液化石油ガス法)上の登録等の要否・手続きについては、" +
+          "本ツールの対象外です。事業所所在地を管轄する都道府県にご確認ください。",
+      };
+    }
+  }
+
+  if (gasCategoryId === "refrigeration") {
+    return {
+      verdict: "notification",
+      title: "販売事業の届出が必要な可能性があります",
+      summary: "事業開始の日の20日前までに、販売所ごとに都道府県知事への届出が必要です(高圧ガス保安法第20条の4)。",
+      citations: [
+        baseCitation,
+        { lawId: ACT, num: "20_5", label: "高圧ガス保安法 第20条の5(周知させる義務等)" },
+        { lawId: ACT, num: "20_6", label: "高圧ガス保安法 第20条の6(販売の方法)" },
+      ],
+      procedures: SALES_PROCEDURES.refrigeration,
+      note:
+        "冷凍のための製造に係る第一種製造者(高圧ガス保安法第5条第1項第2号)は、自ら製造した高圧ガスを自社事業所内で" +
+        "販売する場合であっても、第20条の4第1号の届出免除の対象外です(同号は第5条第1項第1号の第一種製造者に限定)。",
+    };
+  }
+
+  if (!answers.selfSale) {
+    return { verdict: "invalid", message: "すべての設問に回答してください。" };
+  }
+
+  if (answers.selfSale === "yes") {
+    return {
+      verdict: "none",
+      title: "販売事業の届出は不要となる可能性があります",
+      summary:
+        "第一種製造者が自ら製造した高圧ガスをその製造事業所内で販売する場合、販売事業の届出は不要です" +
+        "(高圧ガス保安法第20条の4第1号)。",
+      citations: [baseCitation],
+      procedures: [],
+      note: "貯蔵・製造など高圧ガス保安法の他の規定が別途適用される場合があります。",
+    };
+  }
+
+  return {
+    verdict: "notification",
+    title: "販売事業の届出が必要な可能性があります",
+    summary: "事業開始の日の20日前までに、販売所ごとに都道府県知事への届出が必要です(高圧ガス保安法第20条の4)。",
+    citations: [
+      baseCitation,
+      { lawId: ACT, num: "20_5", label: "高圧ガス保安法 第20条の5(周知させる義務等)" },
+      { lawId: ACT, num: "20_6", label: "高圧ガス保安法 第20条の6(販売の方法)" },
+    ],
+    procedures: SALES_PROCEDURES[gasCategoryId],
+    note:
+      "医療用の高圧ガス等を貯蔵数量が常時5立方メートル未満の販売所で販売する場合は、届出が不要となることがあります" +
+      "(高圧ガス保安法第20条の4第2号、施行令第6条)。該当する可能性がある場合は都道府県窓口にご確認ください。",
+  };
+}
+
+/* ---------- 貯蔵 ---------- */
+//
+// 貯蔵所の許可・届出は高圧ガス保安法第16条(第一種貯蔵所・許可)・第17条の2(第二種貯蔵所・届出)に基づく。
+// 閾値は施行令第5条の表による: 第一種ガス(不活性ガス等)のみ3000m³、第一種ガス以外(第二種ガス)のみ1000m³、
+// 両方混在する場合は一般則第102条と同様の算式(一般則第103条 N=1000+(2/3)×M、M=第一種ガスの貯蔵容積)で
+// 許可基準を算出する。第二種貯蔵所(届出)の基準は一律300m³以上(ただし第一種貯蔵所の許可基準に該当する場合を除く)。
+// 液化ガスは10kg=容積1m³とみなして算定する(法第16条第3項)。
+// 経済産業省令で定める容積(0.15m³、液化ガスは10kg)以下の高圧ガスは貯蔵の技術基準(法第15条)自体が適用除外となる
+// (一般則第19条・液石則第20条)が、この差は許可・届出の要否には影響しないため設問では扱わない。
+//
+// 冷凍則には貯蔵所固有の閾値規定がなく(冷凍則第20条は貯蔵の技術基準を一般則相当の基準に委ねるのみ)、
+// 冷凍のための高圧ガスの貯蔵所も一般則の第16条・第17条の2・施行令第5条がそのまま適用されるため、
+// 「一般」「冷凍」の両カテゴリーで同一の設問・算式・一般則の手続きを用いる。
+// 液化石油ガスは液石則が独自の貯蔵所規定(液石則第19条〜第43条)を持つため、液石則の手続きを用いる。
+//
+// なお、施行令第5条には「第三種ガス」(一般則第2条第1項第3号の特殊高圧ガス: アルシン・ジシラン・ジボラン・
+// セレン化水素・ホスフィン・モノゲルマン・モノシラン)を含む場合の別表(4〜6号、300m³超からの算式)があるが、
+// 極めて限定的なガスのため、本ツールでは対象外の注記のみで案内する。
+//
+// 参照した一次資料:
+//  - 高圧ガス保安法 第15条(貯蔵)・第16条(貯蔵所)・第17条の2(第二種貯蔵所)
+//  - 高圧ガス保安法施行令 第5条(貯蔵所に係る政令で定めるガスの種類等)
+//  - 一般高圧ガス保安規則 第19条(貯蔵の規制を受けない容積)・第20条〜第30条(貯蔵所の許可・届出・変更等)・
+//    第43条(廃止届)・第95条(帳簿)・第103条(第一種貯蔵所に係る貯蔵容積の算定方法)
+//  - 冷凍保安規則 第20条(貯蔵の方法に係る技術上の基準)
+//  - 液化石油ガス保安規則 第19条・第20条・第21条〜第32条・第43条・第93条
+
+const STORAGE_SELF_MANUFACTURE_STEP = {
+  id: "selfManufactureStorage",
+  prompt: "自ら製造した高圧ガスを、その製造許可を受けたところに従って、同じ事業所内でそのまま貯蔵しますか?",
+  type: "choice",
+  help:
+    "第一種製造者が高圧ガス保安法第5条第1項の許可を受けたところに従って貯蔵する高圧ガスについては、" +
+    "貯蔵の技術基準(法第15条)や貯蔵所の許可・届出(法第16条・第17条の2)は適用されません" +
+    "(製造許可の技術基準の中に含まれるため)。",
+  options: [
+    { value: "yes", label: "はい(自社の製造許可の範囲内で、その事業所内で貯蔵するのみ)" },
+    { value: "no", label: "いいえ(他社から仕入れた高圧ガスの貯蔵、製造許可の範囲を超える貯蔵など)" },
+  ],
+};
+
+const STORAGE_LPGAS_SUPPLY_STEP = {
+  id: "lpgasSupply",
+  prompt: "液化石油ガス法上の供給設備又は貯蔵施設(液化石油ガス販売事業者としての設備)で貯蔵しますか?",
+  type: "choice",
+  help:
+    "液化石油ガスの保安の確保及び取引の適正化に関する法律(液化石油ガス法)第6条の液化石油ガス販売事業者が、" +
+    "同法上の供給設備又は貯蔵施設で貯蔵する液化石油ガスは、高圧ガス保安法第15条・第16条・第17条の2の" +
+    "対象外です(液化石油ガス法の管轄)。",
+  options: [
+    { value: "yes", label: "はい(液化石油ガス法上の供給設備・貯蔵施設での貯蔵)" },
+    { value: "no", label: "いいえ(業務用ボンベの保管など、それ以外の貯蔵)" },
+  ],
+};
+
+const STORAGE_GAS_SCOPE_STEP = {
+  id: "storageGasScope",
+  prompt: "貯蔵する高圧ガスの種類は?",
+  type: "choice",
+  options: [
+    {
+      value: "type1only",
+      label: "不活性ガス等(第一種ガス)のみ",
+      help: "ヘリウム・ネオン・アルゴン・クリプトン・キセノン・ラドン・窒素・二酸化炭素・難燃性フルオロカーボン・空気",
+    },
+    {
+      value: "otherOnly",
+      label: "可燃性ガス・毒性ガスなど(第一種ガス以外)のみ",
+      help:
+        "上記以外のガス。ただしアルシン・ジシラン・ジボラン・セレン化水素・ホスフィン・モノゲルマン・モノシラン" +
+        "(特殊高圧ガス)を貯蔵する場合は、施行令第5条の別表により基準が異なるため、都道府県窓口にご確認ください。",
+    },
+    {
+      value: "mixed",
+      label: "第一種ガスと、それ以外のガスの両方を貯蔵する",
+      help: "同一の貯蔵所で両方を貯蔵する場合",
+    },
+  ],
+};
+
+function makeStorageBandStep(permitThreshold, gasLabel) {
+  return {
+    id: "storageCapacityBand",
+    prompt: `${gasLabel}の貯蔵容積は?`,
+    type: "choice",
+    help:
+      "圧縮ガスは温度0℃・圧力0Paの状態に換算した容積、液化ガスは10キログラムを容積1立方メートルとみなして算定します" +
+      "(高圧ガス保安法第16条第3項)。",
+    options: [
+      { value: "over", label: `${permitThreshold} 立方メートル以上` },
+      { value: "between", label: `300 立方メートル以上 ${permitThreshold} 立方メートル未満` },
+      { value: "under", label: "300 立方メートル未満" },
+    ],
+  };
+}
+
+const STORAGE_M_STEP = {
+  id: "storageM",
+  prompt: "不活性ガス等(第一種ガス)の貯蔵容積は?",
+  type: "number",
+  unit: "立方メートル",
+  help: "液化ガスの場合は、10キログラムを容積1立方メートルとみなして換算した数値を入力してください。",
+  min: 0,
+};
+
+const STORAGE_S2_STEP = {
+  id: "storageS2",
+  prompt: "それ以外(可燃性ガス・毒性ガスなど)の貯蔵容積は?",
+  type: "number",
+  unit: "立方メートル",
+  help: "液化ガスの場合は、10キログラムを容積1立方メートルとみなして換算した数値を入力してください。",
+  min: 0,
+};
+
+// 一般則第103条による算式。N(許可基準, m3) = 1000 + (2/3)×M (0<=M<=3000の範囲で線形補間)
+function calcStorageThreshold(m) {
+  const clamped = Math.max(0, Math.min(m, 3000));
+  return 1000 + (2 / 3) * clamped;
+}
+
+function getStorageSteps(gasCategoryId, answers) {
+  const steps = [STORAGE_SELF_MANUFACTURE_STEP];
+  if (answers.selfManufactureStorage === "yes") return steps;
+  if (answers.selfManufactureStorage !== "no") return steps;
+
+  if (gasCategoryId === "lpgas") {
+    steps.push(STORAGE_LPGAS_SUPPLY_STEP);
+    if (answers.lpgasSupply === "yes") return steps;
+    if (answers.lpgasSupply !== "no") return steps;
+    steps.push(makeStorageBandStep(1000, "液化石油ガス"));
+    return steps;
+  }
+
+  steps.push(STORAGE_GAS_SCOPE_STEP);
+  if (answers.storageGasScope === "type1only") {
+    steps.push(makeStorageBandStep(3000, "不活性ガス等(第一種ガス)"));
+  } else if (answers.storageGasScope === "otherOnly") {
+    steps.push(makeStorageBandStep(1000, "第一種ガス以外のガス"));
+  } else if (answers.storageGasScope === "mixed") {
+    steps.push(STORAGE_M_STEP, STORAGE_S2_STEP);
+  }
+  return steps;
+}
+
+function evaluateStorage(gasCategoryId, answers) {
+  if (!answers.selfManufactureStorage) {
+    return { verdict: "invalid", message: "すべての設問に回答してください。" };
+  }
+
+  if (answers.selfManufactureStorage === "yes") {
+    return {
+      verdict: "none",
+      title: "貯蔵所の許可・届出は不要となる可能性があります",
+      summary:
+        "第一種製造者が製造許可を受けたところに従って、その事業所内でそのまま貯蔵する場合、" +
+        "貯蔵の技術基準・貯蔵所の許可/届出は製造許可の技術基準に含まれます。",
+      citations: [{ lawId: ACT, num: "15", label: "高圧ガス保安法 第15条(貯蔵)" }],
+      procedures: [],
+      note: "製造・販売など高圧ガス保安法の他の規定が別途適用される場合があります。",
+    };
+  }
+
+  const storageCitations = [
+    { lawId: ACT, num: "15", label: "高圧ガス保安法 第15条(貯蔵)" },
+    { lawId: ACT, num: "16", label: "高圧ガス保安法 第16条(貯蔵所)" },
+    { lawId: ACT, num: "17_2", label: "高圧ガス保安法 第17条の2(第二種貯蔵所)" },
+    { lawId: ORDER, num: "5", label: "高圧ガス保安法施行令 第5条(貯蔵所に係る政令で定めるガスの種類等)" },
+  ];
+
+  if (gasCategoryId === "lpgas") {
+    if (!answers.lpgasSupply) {
+      return { verdict: "invalid", message: "すべての設問に回答してください。" };
+    }
+    if (answers.lpgasSupply === "yes") {
+      return {
+        verdict: "other_law",
+        title: "液化石油ガス法の対象となる可能性があります",
+        summary:
+          "液化石油ガス法上の供給設備・貯蔵施設での液化石油ガスの貯蔵は、高圧ガス保安法第15条・第16条・" +
+          "第17条の2の対象外です。液化石油ガス法上の規制をご確認ください。",
+        citations: storageCitations,
+        procedures: [],
+        note:
+          "液化石油ガスの保安の確保及び取引の適正化に関する法律(液化石油ガス法)上の規制の詳細については、" +
+          "本ツールの対象外です。事業所所在地を管轄する都道府県にご確認ください。",
+      };
+    }
+    return evaluateStorageBand(answers, storageCitations, EKISEKI_STORAGE_PROCEDURES, 1000, "液化石油ガス");
+  }
+
+  if (!answers.storageGasScope) {
+    return { verdict: "invalid", message: "貯蔵するガスの種類を選択してください。" };
+  }
+
+  if (answers.storageGasScope === "type1only") {
+    return evaluateStorageBand(answers, storageCitations, IPPAN_STORAGE_PROCEDURES, 3000, "不活性ガス等(第一種ガス)");
+  }
+
+  if (answers.storageGasScope === "otherOnly") {
+    return evaluateStorageBand(answers, storageCitations, IPPAN_STORAGE_PROCEDURES, 1000, "第一種ガス以外のガス");
+  }
+
+  if (answers.storageGasScope === "mixed") {
+    const m = Number(answers.storageM);
+    const s2 = Number(answers.storageS2);
+    if (!Number.isFinite(m) || !Number.isFinite(s2) || m < 0 || s2 < 0) {
+      return { verdict: "invalid", message: "すべての設問に回答してください。" };
+    }
+    const total = m + s2;
+    const threshold = calcStorageThreshold(m);
+    const citations = [
+      ...storageCitations,
+      { lawId: IPPAN, num: "103", label: "一般高圧ガス保安規則 第103条(第一種貯蔵所に係る貯蔵容積の算定方法)" },
+    ];
+    const note =
+      m > 0 && s2 > 0
+        ? "不活性ガス(第一種ガス)と可燃性ガス・毒性ガスなどを併せて貯蔵するため、施行令第5条・一般則第103条の算式" +
+          "(N=1000+(2/3)×第一種ガスの貯蔵容積)により許可基準を計算しています。"
+        : null;
+
+    if (total >= threshold) {
+      return {
+        verdict: "permit",
+        title: "第一種貯蔵所の設置許可が必要な可能性があります",
+        summary: `貯蔵容積の合計が許可基準(約${threshold.toFixed(1)}立方メートル)以上です。都道府県知事の許可が必要です。`,
+        citations,
+        procedures: IPPAN_STORAGE_PROCEDURES.permit,
+        note,
+      };
+    }
+    if (total >= 300) {
+      return {
+        verdict: "notification",
+        title: "第二種貯蔵所の設置届出が必要な可能性があります",
+        summary: `貯蔵容積の合計が300立方メートル以上、許可基準(約${threshold.toFixed(1)}立方メートル)未満です。都道府県知事への届出が必要です。`,
+        citations,
+        procedures: IPPAN_STORAGE_PROCEDURES.notification,
+        note,
+      };
+    }
+    return {
+      verdict: "none",
+      title: "貯蔵所の許可・届出の対象とならない可能性があります",
+      summary: "貯蔵容積の合計が300立方メートル未満です。",
+      citations,
+      procedures: [],
+      note: "貯蔵容積が0.15立方メートル(液化ガスは10キログラム)を超える場合、貯蔵所の許可・届出は不要でも、" +
+        "貯蔵の技術基準(法第15条)には従う必要があります。",
+    };
+  }
+
+  return { verdict: "invalid", message: "貯蔵するガスの種類を選択してください。" };
+}
+
+function evaluateStorageBand(answers, baseCitations, procedures, permitThreshold, gasLabel) {
+  if (!answers.storageCapacityBand) {
+    return { verdict: "invalid", message: "すべての設問に回答してください。" };
+  }
+
+  if (answers.storageCapacityBand === "over") {
+    return {
+      verdict: "permit",
+      title: "第一種貯蔵所の設置許可が必要な可能性があります",
+      summary: `${gasLabel}の許可基準(${permitThreshold}立方メートル)以上に該当します。都道府県知事の許可が必要です。`,
+      citations: baseCitations,
+      procedures: procedures.permit,
+      note: null,
+    };
+  }
+
+  if (answers.storageCapacityBand === "between") {
+    return {
+      verdict: "notification",
+      title: "第二種貯蔵所の設置届出が必要な可能性があります",
+      summary:
+        `${gasLabel}の届出基準(300立方メートル)以上、許可基準(${permitThreshold}立方メートル)未満に該当します。` +
+        "都道府県知事への届出が必要です。",
+      citations: baseCitations,
+      procedures: procedures.notification,
+      note: null,
+    };
+  }
+
+  return {
+    verdict: "none",
+    title: "貯蔵所の許可・届出の対象とならない可能性があります",
+    summary: `${gasLabel}の届出基準(300立方メートル)未満です。`,
+    citations: baseCitations,
+    procedures: [],
+    note:
+      "貯蔵容積が0.15立方メートル(液化ガスは10キログラム、液化石油ガスは1.5キログラム)を超える場合、" +
+      "貯蔵所の許可・届出は不要でも、貯蔵の技術基準(法第15条)には従う必要があります。",
+  };
+}
+
+/* ---------- 消費 ---------- */
+//
+// 特定高圧ガス消費者の届出(高圧ガス保安法第24条の2)は、施行令第7条で定める2グループのガスが対象。
+// グループ1(施行令7条1項、圧縮又は液化した状態のもの): モノシラン・ホスフィン・アルシン・ジボラン・
+//   セレン化水素・モノゲルマン・ジシラン。数量の閾値は政令上定められていない。
+// グループ2(施行令7条2項、貯蔵能力の閾値あり): 圧縮水素・圧縮天然ガス(各300m³)、液化酸素・液化アンモニア
+//   (各3000kg)、液化塩素(1000kg)、液化石油ガス(一般消費者向けを除き3000kg、液化石油ガス法施行令第2条各号に
+//   掲げる者は10000kg)。
+// いずれのグループも、法24条の2かっこ書きにより「貯蔵設備の貯蔵能力が政令で定める数量以上である者」または
+// 「消費事業所以外の事業所から導管により供給を受ける者」に該当する場合のみ特定高圧ガス消費者となる(許可制度は
+// なく、届出のみ)。液化石油ガスの一般消費者向け消費は液化石油ガス法の管轄(施行令7条2項の表かっこ書き)。
+// 液化石油ガスのみ液石則が独自の手続き条文(51条以下)を持ち、それ以外は一般則(53条以下)が適用される。
+// 冷凍則には消費者固有の規定がなく、冷凍のための消費(大量アンモニア冷媒等)も一般則の規定に従う。
+//
+// 参照した一次資料:
+//  - 高圧ガス保安法 第24条の2(消費)・第24条の3(技術基準)・第24条の4(変更・廃止の届出)・
+//    第24条の5(その他消費に係る技術基準)・第28条第2項(取扱主任者)
+//  - 高圧ガス保安法施行令 第7条(政令で定める種類の高圧ガス)
+//  - 一般高圧ガス保安規則 第53条(届出)・第54条の2(承継)・第55条(技術基準)・第56条(変更届出)・
+//    第57条(軽微変更)・第58条(廃止届出)・第59条・第60条(その他消費の技術基準)・第75条(取扱主任者届出)
+//  - 液化石油ガス保安規則 第51条(届出)・第51条の2(承継)・第54条(変更届出)・第56条(廃止届出)・
+//    第71条(取扱主任者選任基準)・第73条(取扱主任者届出)
+
+const CONSUMPTION_CATEGORIES = [
+  {
+    id: "general",
+    label: "液化石油ガスを除く高圧ガス(水素・天然ガス・酸素・アンモニア・塩素・特殊高圧ガスなど)",
+    help: "一般高圧ガス保安規則(一般則)の特定高圧ガス消費者規定が適用されます。",
+  },
+  {
+    id: "lpgas",
+    label: "液化石油ガス(LPガス、プロパン・ブタン等)",
+    help: "液化石油ガス保安規則(液石則)の特定高圧ガス消費者規定が適用されます。",
+  },
+];
+
+const CONSUMPTION_GAS_TYPE_STEP = {
+  id: "consumptionGasType",
+  prompt: "消費する高圧ガスの種類は?",
+  type: "choice",
+  options: [
+    {
+      value: "special7",
+      label: "モノシラン・ホスフィン・アルシン・ジボラン・セレン化水素・モノゲルマン・ジシラン(圧縮又は液化したもの)",
+      help: "施行令第7条第1項に定める特殊性の高いガスで、数量にかかわらず対象となり得ます。",
+    },
+    { value: "hydrogen", label: "圧縮水素" },
+    { value: "natgas", label: "圧縮天然ガス" },
+    { value: "oxygen", label: "液化酸素" },
+    { value: "ammonia", label: "液化アンモニア" },
+    { value: "chlorine", label: "液化塩素" },
+    {
+      value: "other",
+      label: "上記以外の高圧ガス",
+      help: "可燃性ガス・毒性ガス・酸素・空気などは、特定高圧ガス消費者に該当しない場合でも別の技術基準(法第24条の5)に従う必要があります。",
+    },
+  ],
+};
+
+function getConsumptionThresholdInfo(gasType) {
+  const map = {
+    hydrogen: { quantity: 300, unit: "立方メートル", gasLabel: "圧縮水素" },
+    natgas: { quantity: 300, unit: "立方メートル", gasLabel: "圧縮天然ガス" },
+    oxygen: { quantity: 3000, unit: "キログラム", gasLabel: "液化酸素" },
+    ammonia: { quantity: 3000, unit: "キログラム", gasLabel: "液化アンモニア" },
+    chlorine: { quantity: 1000, unit: "キログラム", gasLabel: "液化塩素" },
+    lpgas: { quantity: 3000, unit: "キログラム", gasLabel: "液化石油ガス" },
+  };
+  return map[gasType] || null;
+}
+
+const CONSUMPTION_PIPELINE_STEP = {
+  id: "consumptionPipeline",
+  prompt: "消費する事業所以外の事業所から、導管によりこのガスの供給を受けていますか?",
+  type: "choice",
+  help:
+    "他の事業所から導管で供給を受ける場合、貯蔵設備の貯蔵能力にかかわらず特定高圧ガス消費者に該当します" +
+    "(高圧ガス保安法第24条の2)。",
+  options: [
+    { value: "yes", label: "はい(他事業所から導管で供給を受ける)" },
+    { value: "no", label: "いいえ" },
+  ],
+};
+
+const CONSUMPTION_SPECIAL7_STORAGE_STEP = {
+  id: "consumptionStorage",
+  prompt: "このガスの貯蔵設備を有していますか?",
+  type: "choice",
+  help:
+    "施行令第7条第1項のガスには貯蔵能力の数量基準が定められていないため、貯蔵設備を有していれば" +
+    "その能力にかかわらず特定高圧ガス消費者に該当し得ます。",
+  options: [
+    { value: "yes", label: "はい(貯蔵設備を有する)" },
+    { value: "no", label: "いいえ(容器から都度消費するのみなど)" },
+  ],
+};
+
+function makeConsumptionBandStep(gasType) {
+  const info = getConsumptionThresholdInfo(gasType);
+  const extraHelp =
+    gasType === "lpgas"
+      ? "液化石油ガスの保安の確保及び取引の適正化に関する法律施行令第2条各号に掲げる者(大口需要家など)が消費する場合は、基準が1万キログラムになります。"
+      : null;
+  return {
+    id: "consumptionStorageBand",
+    prompt: `${info.gasLabel}の貯蔵設備の貯蔵能力は?`,
+    type: "choice",
+    help: "施行令第7条第2項に定める数量です。" + (extraHelp ? " " + extraHelp : ""),
+    options: [
+      { value: "over", label: `${info.quantity} ${info.unit} 以上` },
+      { value: "under", label: `${info.quantity} ${info.unit} 未満(貯蔵設備がない場合を含む)` },
+    ],
+  };
+}
+
+const CONSUMPTION_LPGAS_CONSUMER_STEP = {
+  id: "lpgasConsumer",
+  prompt: "一般消費者向けに消費しますか?(家庭用など)",
+  type: "choice",
+  help:
+    "液化石油ガス法上の一般消費者(同法第2条第2項)が消費する液化石油ガスは、施行令第7条第2項のかっこ書きにより" +
+    "高圧ガス保安法の特定高圧ガス消費者規定の対象外です(液化石油ガス法の管轄)。",
+  options: [
+    { value: "yes", label: "はい(家庭用LPガスなど、一般消費者としての消費)" },
+    { value: "no", label: "いいえ(業務用・産業用などの消費)" },
+  ],
+};
+
+function getConsumptionSteps(gasCategoryId, answers) {
+  if (gasCategoryId === "lpgas") {
+    const steps = [CONSUMPTION_LPGAS_CONSUMER_STEP];
+    if (answers.lpgasConsumer === "yes") return steps;
+    if (answers.lpgasConsumer !== "no") return steps;
+    steps.push(CONSUMPTION_PIPELINE_STEP);
+    if (answers.consumptionPipeline === "yes") return steps;
+    if (answers.consumptionPipeline !== "no") return steps;
+    steps.push(makeConsumptionBandStep("lpgas"));
+    return steps;
+  }
+
+  const steps = [CONSUMPTION_GAS_TYPE_STEP];
+  const gasType = answers.consumptionGasType;
+  if (!gasType || gasType === "other") return steps;
+
+  if (gasType === "special7") {
+    steps.push(CONSUMPTION_PIPELINE_STEP);
+    if (answers.consumptionPipeline === "yes") return steps;
+    if (answers.consumptionPipeline !== "no") return steps;
+    steps.push(CONSUMPTION_SPECIAL7_STORAGE_STEP);
+    return steps;
+  }
+
+  steps.push(CONSUMPTION_PIPELINE_STEP);
+  if (answers.consumptionPipeline === "yes") return steps;
+  if (answers.consumptionPipeline !== "no") return steps;
+  steps.push(makeConsumptionBandStep(gasType));
+  return steps;
+}
+
+function buildConsumptionResult(gasLabel, procedures, citations, note) {
+  return {
+    verdict: "notification",
+    title: "特定高圧ガス消費者に該当する可能性があります",
+    summary: `${gasLabel}の消費者として、事業所ごとに消費開始の日の20日前までに都道府県知事への届出が必要です(高圧ガス保安法第24条の2)。`,
+    citations,
+    procedures: procedures.notification,
+    note,
+  };
+}
+
+function buildConsumptionNoneResult(gasLabel, citations, extraNote) {
+  return {
+    verdict: "none",
+    title: "特定高圧ガス消費者の届出は不要となる可能性があります",
+    summary: `${gasLabel}の貯蔵設備の貯蔵能力が基準未満で、他事業所からの導管供給も受けない場合、特定高圧ガス消費者の届出は不要です。`,
+    citations,
+    procedures: [],
+    note:
+      (extraNote ? extraNote + " " : "") +
+      "届出が不要な場合でも、可燃性ガス・毒性ガス・酸素・空気を消費する場合は消費の技術基準(法第24条の5)には従う必要があります。",
+  };
+}
+
+function evaluateConsumption(gasCategoryId, answers) {
+  const citations = [
+    { lawId: ACT, num: "24_2", label: "高圧ガス保安法 第24条の2(消費)" },
+    { lawId: ORDER, num: "7", label: "高圧ガス保安法施行令 第7条(政令で定める種類の高圧ガス)" },
+  ];
+
+  if (gasCategoryId === "lpgas") {
+    if (!answers.lpgasConsumer) {
+      return { verdict: "invalid", message: "すべての設問に回答してください。" };
+    }
+    if (answers.lpgasConsumer === "yes") {
+      return {
+        verdict: "other_law",
+        title: "液化石油ガス法の対象となる可能性があります",
+        summary:
+          "一般消費者向けの液化石油ガスの消費は、高圧ガス保安法施行令第7条第2項のかっこ書きにより特定高圧ガス" +
+          "消費者の対象外です。液化石油ガス法上の規制をご確認ください。",
+        citations,
+        procedures: [],
+        note:
+          "液化石油ガスの保安の確保及び取引の適正化に関する法律(液化石油ガス法)上の規制の詳細については、" +
+          "本ツールの対象外です。事業所所在地を管轄する都道府県にご確認ください。",
+      };
+    }
+    if (!answers.consumptionPipeline) {
+      return { verdict: "invalid", message: "すべての設問に回答してください。" };
+    }
+    if (answers.consumptionPipeline === "yes") {
+      return buildConsumptionResult("液化石油ガス", EKISEKI_CONSUMPTION_PROCEDURES, citations, null);
+    }
+    if (!answers.consumptionStorageBand) {
+      return { verdict: "invalid", message: "すべての設問に回答してください。" };
+    }
+    if (answers.consumptionStorageBand === "over") {
+      return buildConsumptionResult("液化石油ガス", EKISEKI_CONSUMPTION_PROCEDURES, citations, null);
+    }
+    return buildConsumptionNoneResult("液化石油ガス", citations, null);
+  }
+
+  const gasType = answers.consumptionGasType;
+  if (!gasType) {
+    return { verdict: "invalid", message: "ガスの種類を選択してください。" };
+  }
+
+  if (gasType === "other") {
+    return {
+      verdict: "none",
+      title: "特定高圧ガス消費者の届出は不要となる可能性があります",
+      summary: "施行令第7条に定めるガスの種類に該当しないため、特定高圧ガス消費者の届出(法第24条の2)は不要です。",
+      citations,
+      procedures: [],
+      note:
+        "可燃性ガス・毒性ガス・酸素・空気を消費する場合は、届出は不要でも消費の技術基準" +
+        "(法第24条の5、一般則第59条・第60条)には従う必要があります。",
+    };
+  }
+
+  if (gasType === "special7") {
+    const gasLabel = "モノシラン・ホスフィン・アルシン・ジボラン・セレン化水素・モノゲルマン・ジシラン";
+    if (!answers.consumptionPipeline) {
+      return { verdict: "invalid", message: "すべての設問に回答してください。" };
+    }
+    if (answers.consumptionPipeline === "yes") {
+      return buildConsumptionResult(gasLabel, IPPAN_CONSUMPTION_PROCEDURES, citations, null);
+    }
+    if (!answers.consumptionStorage) {
+      return { verdict: "invalid", message: "すべての設問に回答してください。" };
+    }
+    if (answers.consumptionStorage === "yes") {
+      return buildConsumptionResult(
+        gasLabel,
+        IPPAN_CONSUMPTION_PROCEDURES,
+        citations,
+        "施行令第7条第1項のガスには貯蔵能力の数量基準が定められていないため、貯蔵設備を有する場合は特定高圧ガス消費者に該当します。"
+      );
+    }
+    return buildConsumptionNoneResult(gasLabel, citations, null);
+  }
+
+  const info = getConsumptionThresholdInfo(gasType);
+  if (!answers.consumptionPipeline) {
+    return { verdict: "invalid", message: "すべての設問に回答してください。" };
+  }
+  if (answers.consumptionPipeline === "yes") {
+    return buildConsumptionResult(info.gasLabel, IPPAN_CONSUMPTION_PROCEDURES, citations, null);
+  }
+  if (!answers.consumptionStorageBand) {
+    return { verdict: "invalid", message: "すべての設問に回答してください。" };
+  }
+  if (answers.consumptionStorageBand === "over") {
+    return buildConsumptionResult(info.gasLabel, IPPAN_CONSUMPTION_PROCEDURES, citations, null);
+  }
+  return buildConsumptionNoneResult(info.gasLabel, citations, null);
+}
+
+/* ---------- 手続きチェックリスト(法令ごと) ---------- */
+
+const IPPAN_PROCEDURES = {
+  permit: [
+    { lawId: IPPAN, num: "3", label: "許可申請(一般則第3条)" },
+    { lawId: IPPAN, num: "31", label: "完成検査の申請等(一般則第31条)" },
+    { lawId: ACT, num: "56_3", label: "特定設備検査(機器メーカーが実施、法第56条の3)" },
+    { lawId: IPPAN, num: "63", label: "危害予防規程の制定・届出(一般則第63条)" },
+    { lawId: ACT, num: "27", label: "保安教育計画の制定・実施(法第27条)" },
+    { lawId: IPPAN, num: "64", label: "保安統括者等の選任・届出(一般則第64条・第67条)" },
+    { lawId: IPPAN, num: "83", label: "定期自主検査の実施・記録(一般則第83条)" },
+    { lawId: IPPAN, num: "80", label: "保安検査の受検(一般則第80条)" },
+    { lawId: ACT, num: "11", label: "技術基準の遵守・維持(法第11条)" },
+    { lawId: IPPAN, num: "95", label: "帳簿の記載・保存(一般則第95条)" },
+    { lawId: IPPAN, num: "42", label: "製造の開始・廃止の届出(一般則第42条)" },
+    { lawId: IPPAN, num: "9", label: "承継の届出(一般則第9条)" },
+    { lawId: IPPAN, num: "14", label: "変更工事の許可申請、または軽微な変更工事の届出(一般則第14条・第15条)" },
+  ],
+  notification: [
+    { lawId: IPPAN, num: "4", label: "製造の事業の届出(一般則第4条)、事業開始の20日前まで" },
+    { lawId: IPPAN, num: "63", label: "危害予防規程の制定・届出(一般則第63条)" },
+    { lawId: ACT, num: "27", label: "保安教育計画の制定・実施(法第27条)" },
+    { lawId: IPPAN, num: "64", label: "保安統括者等の選任・届出(一般則第64条・第67条、一定規模以上)" },
+    { lawId: IPPAN, num: "83", label: "定期自主検査の実施・記録(一般則第83条、指定設備・一定規模以上)" },
+    { lawId: IPPAN, num: "11", label: "技術基準の遵守・維持(処理能力30立方メートル/日以上は第一種製造者と同じ基準、一般則第11条・第12条)" },
+    { lawId: IPPAN, num: "95", label: "帳簿の記載・保存(一般則第95条)" },
+    { lawId: IPPAN, num: "42", label: "製造の開始・廃止の届出(一般則第42条)" },
+    { lawId: IPPAN, num: "9_2", label: "承継の届出(一般則第9条の2)" },
+    { lawId: IPPAN, num: "16", label: "変更工事の届出、または軽微な変更工事(届出不要)(一般則第16条・第17条)" },
+  ],
+};
+
+const REITOU_PROCEDURES = {
+  permit: [
+    { lawId: REITOU, num: "3", label: "許可申請(冷凍則第3条)" },
+    { lawId: REITOU, num: "21", label: "完成検査の申請等(冷凍則第21条)" },
+    { lawId: REITOU, num: "35", label: "危害予防規程の制定・届出(冷凍則第35条)" },
+    { lawId: ACT, num: "27", label: "保安教育計画の制定・実施(法第27条)" },
+    { lawId: REITOU, num: "36", label: "冷凍保安責任者の選任・届出(冷凍則第36条・第37条)" },
+    { lawId: REITOU, num: "44", label: "定期自主検査の実施・記録(冷凍則第44条)" },
+    { lawId: REITOU, num: "41", label: "保安検査の受検(冷凍則第41条)" },
+    { lawId: REITOU, num: "65", label: "帳簿の記載・保存(冷凍則第65条)" },
+    { lawId: REITOU, num: "29", label: "製造の開始・廃止の届出(冷凍則第29条)" },
+    { lawId: REITOU, num: "10", label: "承継の届出(冷凍則第10条)" },
+    { lawId: REITOU, num: "16", label: "変更工事の許可申請、または軽微な変更工事の届出(冷凍則第16条・第17条)" },
+  ],
+  notification: [
+    { lawId: REITOU, num: "4", label: "製造の届出(冷凍則第4条)、製造開始の日まで" },
+    { lawId: REITOU, num: "35", label: "危害予防規程の制定・届出(冷凍則第35条)" },
+    { lawId: ACT, num: "27", label: "保安教育計画の制定・実施(法第27条)" },
+    { lawId: REITOU, num: "36", label: "冷凍保安責任者の選任・届出(冷凍則第36条・第37条、一定規模以上)" },
+    { lawId: REITOU, num: "44", label: "定期自主検査の実施・記録(冷凍則第44条)" },
+    { lawId: REITOU, num: "65", label: "帳簿の記載・保存(冷凍則第65条)" },
+    { lawId: REITOU, num: "29", label: "製造の開始・廃止の届出(冷凍則第29条)" },
+    { lawId: REITOU, num: "10_2", label: "承継の届出(冷凍則第10条の2)" },
+    { lawId: REITOU, num: "18", label: "変更工事の届出、または軽微な変更工事(冷凍則第18条・第19条)" },
+  ],
+};
+
+const EKISEKI_PROCEDURES = {
+  permit: [
+    { lawId: EKISEKI, num: "3", label: "許可申請(液石則第3条)" },
+    { lawId: EKISEKI, num: "32", label: "完成検査の申請等(液石則第32条)" },
+    { lawId: EKISEKI, num: "61", label: "危害予防規程の制定・届出(液石則第61条)" },
+    { lawId: ACT, num: "27", label: "保安教育計画の制定・実施(法第27条)" },
+    { lawId: EKISEKI, num: "62", label: "保安統括者等の選任・届出(液石則第62条・第65条)" },
+    { lawId: EKISEKI, num: "81", label: "定期自主検査の実施・記録(液石則第81条)" },
+    { lawId: EKISEKI, num: "78", label: "保安検査の受検(液石則第78条)" },
+    { lawId: EKISEKI, num: "93", label: "帳簿の記載・保存(液石則第93条)" },
+    { lawId: EKISEKI, num: "42", label: "製造の開始・廃止の届出(液石則第42条)" },
+    { lawId: EKISEKI, num: "10", label: "承継の届出(液石則第10条)" },
+    { lawId: EKISEKI, num: "15", label: "変更工事の許可申請、または軽微な変更工事の届出(液石則第15条・第16条)" },
+  ],
+  notification: [
+    { lawId: EKISEKI, num: "4", label: "製造の事業の届出(液石則第4条)、事業開始の20日前まで" },
+    { lawId: EKISEKI, num: "61", label: "危害予防規程の制定・届出(液石則第61条)" },
+    { lawId: ACT, num: "27", label: "保安教育計画の制定・実施(法第27条)" },
+    { lawId: EKISEKI, num: "62", label: "保安統括者等の選任・届出(液石則第62条・第65条、一定規模以上)" },
+    { lawId: EKISEKI, num: "81", label: "定期自主検査の実施・記録(液石則第81条、指定設備・一定規模以上)" },
+    { lawId: EKISEKI, num: "93", label: "帳簿の記載・保存(液石則第93条)" },
+    { lawId: EKISEKI, num: "42", label: "製造の開始・廃止の届出(液石則第42条)" },
+    { lawId: EKISEKI, num: "10_2", label: "承継の届出(液石則第10条の2)" },
+    { lawId: EKISEKI, num: "17", label: "変更工事の届出、または軽微な変更工事(液石則第17条・第18条)" },
+  ],
+};
+
+const SALES_PROCEDURES = {
+  general: [
+    { lawId: IPPAN, num: "37", label: "販売事業の届出(一般則第37条)、事業開始の20日前まで" },
+    { lawId: IPPAN, num: "37_2", label: "承継の届出(一般則第37条の2)" },
+    { lawId: IPPAN, num: "38", label: "周知の義務(一般則第38条)" },
+    { lawId: IPPAN, num: "40", label: "販売業者等に係る技術上の基準の遵守(一般則第40条)" },
+    { lawId: IPPAN, num: "41", label: "販売するガスの種類の変更届出(一般則第41条)" },
+    { lawId: IPPAN, num: "44", label: "廃止の届出(一般則第44条)" },
+  ],
+  refrigeration: [
+    { lawId: REITOU, num: "26", label: "販売事業の届出(冷凍則第26条)、事業開始の20日前まで" },
+    { lawId: REITOU, num: "26_2", label: "承継の届出(冷凍則第26条の2)" },
+    { lawId: REITOU, num: "27", label: "販売業者等に係る技術上の基準の遵守(冷凍則第27条)" },
+    { lawId: REITOU, num: "28", label: "変更の届出(冷凍則第28条)" },
+    { lawId: REITOU, num: "30", label: "廃止の届出(冷凍則第30条)" },
+  ],
+  lpgas: [
+    { lawId: EKISEKI, num: "38", label: "販売事業の届出(液石則第38条)、事業開始の20日前まで" },
+    { lawId: EKISEKI, num: "38_2", label: "承継の届出(液石則第38条の2)" },
+    { lawId: EKISEKI, num: "39", label: "周知の義務(液石則第39条)" },
+    { lawId: EKISEKI, num: "41", label: "販売業者等に係る技術上の基準の遵守(液石則第41条)" },
+    { lawId: EKISEKI, num: "70", label: "販売主任者の選任等(液石則第70条・第72条)" },
+    { lawId: EKISEKI, num: "44", label: "廃止の届出(液石則第44条)" },
+  ],
+};
+
+const IPPAN_STORAGE_PROCEDURES = {
+  permit: [
+    { lawId: IPPAN, num: "20", label: "第一種貯蔵所設置許可申請(一般則第20条)" },
+    { lawId: IPPAN, num: "31", label: "完成検査の申請等(一般則第31条)" },
+    { lawId: ACT, num: "16", label: "技術基準の遵守・維持(一般則第21条〜第23条)" },
+    { lawId: IPPAN, num: "27", label: "変更工事の許可申請、または軽微な変更工事の届出(一般則第27条・第28条)" },
+    { lawId: IPPAN, num: "24", label: "承継の届出(一般則第24条)" },
+    { lawId: IPPAN, num: "95", label: "帳簿の記載・保存(一般則第95条)" },
+    { lawId: ACT, num: "27", label: "従業者への保安教育の実施(法第27条第4項)" },
+    { lawId: ACT, num: "63", label: "事故届(法第63条)" },
+    { lawId: IPPAN, num: "43", label: "廃止の届出(一般則第43条)" },
+  ],
+  notification: [
+    { lawId: IPPAN, num: "25", label: "第二種貯蔵所設置届出(一般則第25条)" },
+    { lawId: IPPAN, num: "26", label: "技術基準の遵守・維持(一般則第26条)" },
+    { lawId: IPPAN, num: "29", label: "変更工事の届出、または軽微な変更工事(一般則第29条・第30条)" },
+    { lawId: IPPAN, num: "95", label: "帳簿の記載・保存(一般則第95条)" },
+    { lawId: ACT, num: "27", label: "従業者への保安教育の実施(法第27条第4項)" },
+    { lawId: ACT, num: "63", label: "事故届(法第63条)" },
+    { lawId: IPPAN, num: "43", label: "廃止の届出(一般則第43条)" },
+  ],
+};
+
+const EKISEKI_STORAGE_PROCEDURES = {
+  permit: [
+    { lawId: EKISEKI, num: "21", label: "第一種貯蔵所設置許可申請(液石則第21条)" },
+    { lawId: EKISEKI, num: "32", label: "完成検査の申請等(液石則第32条)" },
+    { lawId: ACT, num: "16", label: "技術基準の遵守・維持(液石則第22条〜第24条)" },
+    { lawId: EKISEKI, num: "28", label: "変更工事の許可申請、または軽微な変更工事の届出(液石則第28条・第29条)" },
+    { lawId: EKISEKI, num: "25", label: "承継の届出(液石則第25条)" },
+    { lawId: EKISEKI, num: "93", label: "帳簿の記載・保存(液石則第93条)" },
+    { lawId: ACT, num: "27", label: "従業者への保安教育の実施(法第27条第4項)" },
+    { lawId: ACT, num: "63", label: "事故届(法第63条)" },
+    { lawId: EKISEKI, num: "43", label: "廃止の届出(液石則第43条)" },
+  ],
+  notification: [
+    { lawId: EKISEKI, num: "26", label: "第二種貯蔵所設置届出(液石則第26条)" },
+    { lawId: EKISEKI, num: "27", label: "技術基準の遵守・維持(液石則第27条)" },
+    { lawId: EKISEKI, num: "30", label: "変更工事の届出、または軽微な変更工事(液石則第30条・第31条)" },
+    { lawId: EKISEKI, num: "93", label: "帳簿の記載・保存(液石則第93条)" },
+    { lawId: ACT, num: "27", label: "従業者への保安教育の実施(法第27条第4項)" },
+    { lawId: ACT, num: "63", label: "事故届(法第63条)" },
+    { lawId: EKISEKI, num: "43", label: "廃止の届出(液石則第43条)" },
+  ],
+};
+
+const IPPAN_CONSUMPTION_PROCEDURES = {
+  notification: [
+    { lawId: IPPAN, num: "53", label: "特定高圧ガス消費届出(一般則第53条)、消費開始の20日前まで" },
+    { lawId: IPPAN, num: "55", label: "技術基準の遵守・維持(一般則第55条)" },
+    { lawId: IPPAN, num: "56", label: "変更工事の届出、または軽微な変更工事(一般則第56条・第57条)" },
+    { lawId: IPPAN, num: "54_2", label: "承継の届出(一般則第54条の2)" },
+    { lawId: ACT, num: "28", label: "特定高圧ガス取扱主任者の選任(法第28条第2項)" },
+    { lawId: IPPAN, num: "75", label: "取扱主任者の選任等の届出(一般則第75条)" },
+    { lawId: ACT, num: "27", label: "従業者への保安教育の実施(法第27条第4項)" },
+    { lawId: ACT, num: "63", label: "事故届(法第63条)" },
+    { lawId: IPPAN, num: "58", label: "消費の廃止の届出(一般則第58条)" },
+  ],
+};
+
+const EKISEKI_CONSUMPTION_PROCEDURES = {
+  notification: [
+    { lawId: EKISEKI, num: "51", label: "特定高圧ガス消費届出(液石則第51条)、消費開始の20日前まで" },
+    { lawId: ACT, num: "24_3", label: "技術基準の遵守・維持(法第24条の3)" },
+    { lawId: EKISEKI, num: "54", label: "変更工事の届出(液石則第54条)" },
+    { lawId: EKISEKI, num: "51_2", label: "承継の届出(液石則第51条の2)" },
+    { lawId: EKISEKI, num: "71", label: "取扱主任者の選任(液石則第71条)" },
+    { lawId: EKISEKI, num: "73", label: "取扱主任者の選任等の届出(液石則第73条)" },
+    { lawId: ACT, num: "27", label: "従業者への保安教育の実施(法第27条第4項)" },
+    { lawId: ACT, num: "63", label: "事故届(法第63条)" },
+    { lawId: EKISEKI, num: "56", label: "消費の廃止の届出(液石則第56条)" },
+  ],
+};
+
+/* ---------- 呼び出し口 ---------- */
+
+function getStepsForGasCategory(actionType, gasCategoryId, answers = {}) {
+  if (actionType === "sales") return getSalesSteps(gasCategoryId, answers);
+  if (actionType === "storage") return getStorageSteps(gasCategoryId, answers);
+  if (actionType === "consumption") return getConsumptionSteps(gasCategoryId, answers);
+  if (gasCategoryId === "general") return getGeneralSteps(answers);
+  if (gasCategoryId === "refrigeration") return getRefrigerationSteps(answers);
+  if (gasCategoryId === "lpgas") return getLpgasSteps();
+  return [];
+}
+
+function evaluateDiagnosis(actionType, gasCategoryId, answers) {
+  if (actionType === "sales") return evaluateSales(gasCategoryId, answers);
+  if (actionType === "storage") return evaluateStorage(gasCategoryId, answers);
+  if (actionType === "consumption") return evaluateConsumption(gasCategoryId, answers);
+  if (gasCategoryId === "general") return evaluateGeneral(answers);
+  if (gasCategoryId === "refrigeration") return evaluateRefrigeration(answers);
+  if (gasCategoryId === "lpgas") return evaluateLpgas(answers);
+  return { verdict: "invalid", message: "ガスの種類を選択してください。" };
+}
+
+const DISCLAIMER =
+  "このツールは公開されている条文に基づく参考情報を機械的に整理して表示するものであり、正式な該非判断ではありません。" +
+  "実際の許可・届出の要否や手続きについては、必ず事業所の所在地を管轄する都道府県(高圧ガス担当窓口)にご確認ください。";
+
+// 技術上の基準の細部(例示基準)や運用解釈(基本通達)は随時改正されるため、本文を
+// 取り込まず、経済産業省の一覧ページへの案内にとどめる。
+const METI_REFERENCE = {
+  url: "https://www.meti.go.jp/policy/safety_security/industrial_safety/sangyo/hipregas/hourei/kouatu_kokuji.html",
+  label:
+    "技術上の基準の具体的な内容(例示基準)や条文の運用解釈(基本通達)は随時改正されます。最新の内容は経済産業省「高圧ガス保安法等」のページでご確認ください。",
+};
+
+// 実際に事業者が提出する申請書様式(Word形式)・必要書類は、奈良県総務部知事公室消防救急課保安係の
+// 行為別ページに掲載されている(様式番号自体は法令原文にも現れるが、随時改定されるためリンク誘導のみとする)。
+// 各ページとも一般則/液石則/冷凍則による様式の区分けはしておらず、行為(製造/貯蔵/消費/販売)単位のみの構成。
+// 2026-07-20にページ構成を確認済み: https://www.pref.nara.lg.jp/n011/39583.html (総合案内)
+const NARA_PROCEDURE_REFERENCE = {
+  manufacture: {
+    url: "https://www.pref.nara.lg.jp/n011/39584.html",
+    label:
+      "製造・保安検査・完成検査等の申請書様式(Word形式)や必要書類は、奈良県「高圧ガスの製造、保安検査、完成検査等の手続き」のページでご確認・ダウンロードいただけます。",
+  },
+  storage: {
+    url: "https://www.pref.nara.lg.jp/n011/39585.html",
+    label:
+      "貯蔵所設置許可・容器検査所等の申請書様式(Word形式)や必要書類は、奈良県「高圧ガスの貯蔵、容器検査所等の手続き」のページでご確認・ダウンロードいただけます。",
+  },
+  consumption: {
+    url: "https://www.pref.nara.lg.jp/n011/39587.html",
+    label:
+      "特定高圧ガス消費等の申請書様式(Word形式)や必要書類は、奈良県「特定高圧ガス消費等の手続き」のページでご確認・ダウンロードいただけます。",
+  },
+  sales: {
+    url: "https://www.pref.nara.lg.jp/n011/39586.html",
+    label:
+      "販売事業届等の申請書様式(Word形式)や必要書類は、奈良県「高圧ガスの販売等の手続き」のページでご確認・ダウンロードいただけます。",
+  },
+};
+
+// 承継届・代表者/社名変更届・廃止届は行為を問わず様式がこのページにまとまっている。
+const NARA_COMMON_REFERENCE = {
+  url: "https://www.pref.nara.lg.jp/n011/39588.html",
+  label: "承継・代表者/社名変更・廃止に関する届出様式は、奈良県「代表者・社名変更等の手続き」のページでご確認・ダウンロードいただけます。",
+};
+
+/* =========================================================
+   main.js
+   ========================================================= */
+
+const breadcrumbEl = document.getElementById("breadcrumb");
+const stageEl = document.getElementById("stage");
+const historyListEl = document.getElementById("history-list");
+const clearHistoryBtn = document.getElementById("clear-history-btn");
+const toastEl = document.getElementById("toast");
+const modeTabsEl = document.getElementById("mode-tabs");
+
+const appState = {
+  mode: "diagnosis", // 'diagnosis' | 'browse'
+  diag: {
+    actionType: null,
+    gasCategory: null,
+    stepIndex: 0,
+    answers: {},
+    result: null,
+    expandedCitations: new Set(),
+    citationCache: new Map(), // "lawId:num" -> {status, article, message}
+  },
+  browse: {
+    law: null,
+    lawData: null,
+    lawTitle: "",
+    chapters: [],
+    chapter: null,
+    section: null,
+    article: null,
+  },
+};
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function showToast(message, isError = false) {
+  toastEl.textContent = message;
+  toastEl.hidden = false;
+  toastEl.style.background = isError ? "var(--danger)" : "var(--text)";
+  toastEl.style.color = isError ? "#fff" : "var(--bg)";
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => {
+    toastEl.hidden = true;
+  }, 3200);
+}
+
+// --- 法令データ取得(キャッシュ優先、対象4法令・参照法令いずれにも使える) ---
+
+async function loadLawData(lawMeta, { forceRefresh = false } = {}) {
+  if (forceRefresh) {
+    await clearCachedLaw(lawMeta.lawId);
+  }
+  const cached = await getCachedLaw(lawMeta.lawId);
+  if (cached && !forceRefresh) {
+    return cached.data;
+  }
+  const data = await fetchLawData(lawMeta.lawId);
+  await putCachedLaw(lawMeta.lawId, data, data?.revision_info?.updated || null);
+  return data;
+}
+
+// --- モード切替 ---
+
+function setMode(mode) {
+  appState.mode = mode;
+  render();
+}
+
+function updateModeTabs() {
+  modeTabsEl.querySelectorAll(".mode-tab").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.mode === appState.mode);
+  });
+}
+
+modeTabsEl.querySelectorAll(".mode-tab").forEach((btn) => {
+  btn.addEventListener("click", () => setMode(btn.dataset.mode));
+});
+
+function render() {
+  updateModeTabs();
+  if (appState.mode === "diagnosis") {
+    renderDiagBreadcrumb();
+    renderDiagStage();
+  } else {
+    renderBrowseBreadcrumb();
+    renderBrowseStage();
+  }
+}
+
+function crumbButton(label, onClick) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.textContent = label;
+  btn.addEventListener("click", onClick);
+  return btn;
+}
+
+function crumbCurrent(label) {
+  const span = document.createElement("span");
+  span.className = "crumb-current";
+  span.textContent = label;
+  return span;
+}
+
+function crumbSep() {
+  const s = document.createElement("span");
+  s.className = "crumb-sep";
+  s.textContent = "›";
+  return s;
+}
+
+/* =========================================================
+   設問モード (diagnosis)
+   ========================================================= */
+
+function resetDiagnosis() {
+  appState.diag = {
+    actionType: null,
+    gasCategory: null,
+    stepIndex: 0,
+    answers: {},
+    result: null,
+    expandedCitations: new Set(),
+    citationCache: new Map(),
+  };
+  render();
+}
+
+function selectActionType(actionType) {
+  if (!actionType.available) return;
+  appState.diag.actionType = actionType.id;
+  appState.diag.gasCategory = null;
+  appState.diag.stepIndex = 0;
+  appState.diag.answers = {};
+  appState.diag.result = null;
+  render();
+}
+
+function selectGasCategory(gasCategory) {
+  appState.diag.gasCategory = gasCategory.id;
+  appState.diag.stepIndex = 0;
+  appState.diag.answers = {};
+  appState.diag.result = null;
+  render();
+}
+
+async function finalizeDiagnosisResult() {
+  const result = evaluateDiagnosis(appState.diag.actionType, appState.diag.gasCategory, appState.diag.answers);
+  appState.diag.result = result;
+  render();
+
+  if (result.verdict !== "invalid") {
+    try {
+      await addHistoryEntry({
+        type: "diagnosis",
+        actionType: appState.diag.actionType,
+        actionLabel: ACTION_TYPES.find((a) => a.id === appState.diag.actionType)?.label,
+        gasCategory: appState.diag.gasCategory,
+        gasCategoryLabel: getCategoriesForAction(appState.diag.actionType).find((g) => g.id === appState.diag.gasCategory)?.label,
+        answers: { ...appState.diag.answers },
+        verdict: result.verdict,
+        title: result.title,
+        summary: result.summary,
+      });
+      await renderHistory();
+    } catch (err) {
+      console.error("履歴の保存に失敗しました", err);
+    }
+  }
+}
+
+function formatAnswerLabel(step, value) {
+  if (step.type === "choice") {
+    const opt = step.options.find((o) => o.value === value);
+    return opt ? opt.label : String(value);
+  }
+  return `${value}${step.unit ? " " + step.unit : ""}`;
+}
+
+function goToDiagStep(index) {
+  const steps = getStepsForGasCategory(appState.diag.actionType, appState.diag.gasCategory, appState.diag.answers);
+  for (let j = index; j < steps.length; j++) {
+    delete appState.diag.answers[steps[j].id];
+  }
+  appState.diag.stepIndex = index;
+  appState.diag.result = null;
+  render();
+}
+
+async function answerStep(step, value) {
+  appState.diag.answers[step.id] = value;
+  const steps = getStepsForGasCategory(appState.diag.actionType, appState.diag.gasCategory, appState.diag.answers);
+  if (appState.diag.stepIndex < steps.length - 1) {
+    appState.diag.stepIndex += 1;
+    render();
+    return;
+  }
+  // 最終設問に回答 → 判定
+  await finalizeDiagnosisResult();
+}
+
+function renderDiagBreadcrumb() {
+  breadcrumbEl.innerHTML = "";
+  breadcrumbEl.appendChild(crumbButton("ホーム", () => resetDiagnosis()));
+
+  if (!appState.diag.actionType) return;
+
+  const actionMeta = ACTION_TYPES.find((a) => a.id === appState.diag.actionType);
+  breadcrumbEl.appendChild(crumbSep());
+  if (appState.diag.gasCategory) {
+    breadcrumbEl.appendChild(crumbButton(actionMeta.label, () => selectActionType(actionMeta)));
+  } else {
+    breadcrumbEl.appendChild(crumbCurrent(actionMeta.label));
+  }
+
+  if (!appState.diag.gasCategory) return;
+
+  const gasMeta = getCategoriesForAction(appState.diag.actionType).find((g) => g.id === appState.diag.gasCategory);
+  breadcrumbEl.appendChild(crumbSep());
+  if (appState.diag.result || appState.diag.stepIndex > 0) {
+    breadcrumbEl.appendChild(crumbButton(gasMeta.label, () => goToDiagStep(0)));
+  } else {
+    breadcrumbEl.appendChild(crumbCurrent(gasMeta.label));
+  }
+
+  const steps = getStepsForGasCategory(appState.diag.actionType, appState.diag.gasCategory, appState.diag.answers);
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    if (!(step.id in appState.diag.answers)) break;
+    breadcrumbEl.appendChild(crumbSep());
+    const label = formatAnswerLabel(step, appState.diag.answers[step.id]);
+    const isCurrent = i === appState.diag.stepIndex && !appState.diag.result;
+    if (isCurrent) {
+      breadcrumbEl.appendChild(crumbCurrent(label));
+    } else {
+      breadcrumbEl.appendChild(crumbButton(label, () => goToDiagStep(i)));
+    }
+  }
+
+  if (appState.diag.result) {
+    breadcrumbEl.appendChild(crumbSep());
+    breadcrumbEl.appendChild(crumbCurrent("判定結果"));
+  }
+}
+
+function renderDiagStage() {
+  if (appState.diag.actionType && appState.diag.gasCategory && !appState.diag.result) {
+    const pendingSteps = getStepsForGasCategory(appState.diag.actionType, appState.diag.gasCategory, appState.diag.answers);
+    if (appState.diag.stepIndex >= pendingSteps.length) {
+      // このガス区分には(これ以上の)設問がなく、直ちに判定できる場合(例: 冷凍則の販売)。
+      // finalizeDiagnosisResult が結果を確定させたうえで render() を呼び直すので、
+      // ここでは stageEl に手を加えずに抜ける(二重描画による上書きを避ける)。
+      finalizeDiagnosisResult();
+      return;
+    }
+  }
+
+  stageEl.innerHTML = "";
+  const wrap = document.createElement("div");
+
+  const disclaimer = document.createElement("div");
+  disclaimer.className = "disclaimer";
+  disclaimer.textContent = DISCLAIMER;
+  wrap.appendChild(disclaimer);
+
+  const body = document.createElement("div");
+  body.className = "stage";
+
+  if (!appState.diag.actionType) {
+    body.appendChild(renderActionTypeStep());
+  } else if (!appState.diag.gasCategory) {
+    body.appendChild(renderGasCategoryStep());
+  } else if (appState.diag.result) {
+    body.appendChild(renderResultStep());
+  } else {
+    body.appendChild(renderQuestionStep());
+  }
+
+  wrap.appendChild(body);
+  stageEl.appendChild(wrap);
+}
+
+function renderActionTypeStep() {
+  const wrap = document.createElement("div");
+  const h2 = document.createElement("h2");
+  h2.textContent = "何についてお調べですか?";
+  wrap.appendChild(h2);
+
+  const grid = document.createElement("div");
+  grid.className = "card-grid";
+  for (const action of ACTION_TYPES) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "pick-card";
+    if (!action.available) card.style.opacity = "0.5";
+    card.innerHTML = `<span class="pick-title">${escapeHtml(action.label)}</span><span class="pick-sub">${
+      action.available ? "" : "準備中"
+    }</span>`;
+    card.addEventListener("click", () => selectActionType(action));
+    grid.appendChild(card);
+  }
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+function renderGasCategoryStep() {
+  const wrap = document.createElement("div");
+  const h2 = document.createElement("h2");
+  h2.textContent =
+    appState.diag.actionType === "sales"
+      ? "どのガスを販売しますか?"
+      : appState.diag.actionType === "storage"
+      ? "どのガスを貯蔵しますか?"
+      : appState.diag.actionType === "consumption"
+      ? "どのガスを消費しますか?"
+      : "どのガスを製造しますか?";
+  wrap.appendChild(h2);
+
+  const list = document.createElement("div");
+  list.className = "pick-list";
+  for (const category of getCategoriesForAction(appState.diag.actionType)) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "pick-card";
+    card.innerHTML = `<span class="pick-title">${escapeHtml(category.label)}</span><span class="pick-sub">${escapeHtml(
+      category.help || ""
+    )}</span>`;
+    card.addEventListener("click", () => selectGasCategory(category));
+    list.appendChild(card);
+  }
+  wrap.appendChild(list);
+  return wrap;
+}
+
+function renderQuestionStep() {
+  const steps = getStepsForGasCategory(appState.diag.actionType, appState.diag.gasCategory, appState.diag.answers);
+  const step = steps[appState.diag.stepIndex];
+  const wrap = document.createElement("div");
+
+  const h2 = document.createElement("h2");
+  h2.textContent = step.prompt;
+  wrap.appendChild(h2);
+
+  if (step.help) {
+    const help = document.createElement("div");
+    help.className = "diag-help";
+    help.textContent = step.help;
+    wrap.appendChild(help);
+  }
+
+  if (step.type === "choice") {
+    const list = document.createElement("div");
+    list.className = "pick-list";
+    for (const opt of step.options) {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "pick-card";
+      card.innerHTML = `<span class="pick-title">${escapeHtml(opt.label)}</span>${
+        opt.help ? `<span class="pick-sub">${escapeHtml(opt.help)}</span>` : ""
+      }`;
+      card.addEventListener("click", () => answerStep(step, opt.value));
+      list.appendChild(card);
+    }
+    wrap.appendChild(list);
+  } else if (step.type === "number") {
+    const row = document.createElement("div");
+    row.className = "diag-number-row";
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = String(step.min ?? 0);
+    input.step = "any";
+    input.placeholder = "数値を入力";
+    const unit = document.createElement("span");
+    unit.className = "unit";
+    unit.textContent = step.unit || "";
+    row.appendChild(input);
+    row.appendChild(unit);
+    wrap.appendChild(row);
+
+    const actions = document.createElement("div");
+    actions.className = "diag-actions";
+    const nextBtn = document.createElement("button");
+    nextBtn.type = "button";
+    nextBtn.className = "btn-primary";
+    nextBtn.textContent = "次へ";
+    nextBtn.disabled = true;
+    input.addEventListener("input", () => {
+      const v = Number(input.value);
+      nextBtn.disabled = input.value === "" || !Number.isFinite(v) || v < 0;
+    });
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" && !nextBtn.disabled) answerStep(step, input.value);
+    });
+    nextBtn.addEventListener("click", () => answerStep(step, input.value));
+    actions.appendChild(nextBtn);
+    wrap.appendChild(actions);
+
+    setTimeout(() => input.focus(), 0);
+  }
+
+  return wrap;
+}
+
+function verdictLabel(verdict) {
+  if (verdict === "permit") return "許可";
+  if (verdict === "notification") return "届出";
+  if (verdict === "other_law") return "他法令の対象";
+  return "対象外の可能性";
+}
+
+function renderResultStep() {
+  const result = appState.diag.result;
+  const wrap = document.createElement("div");
+
+  const banner = document.createElement("div");
+  banner.className = `verdict-banner ${result.verdict}`;
+  banner.innerHTML = `
+    <div class="verdict-title">${escapeHtml(verdictLabel(result.verdict))} — ${escapeHtml(result.title)}</div>
+    <div class="verdict-summary">${escapeHtml(result.summary)}</div>
+  `;
+  wrap.appendChild(banner);
+
+  if (result.note) {
+    const note = document.createElement("div");
+    note.className = "note-box";
+    note.textContent = result.note;
+    wrap.appendChild(note);
+  }
+
+  if (result.procedures && result.procedures.length > 0) {
+    const procBlock = document.createElement("div");
+    procBlock.className = "result-block";
+    const procHeading = document.createElement("h3");
+    procHeading.textContent = "必要となりうる手続き";
+    procBlock.appendChild(procHeading);
+    for (const proc of result.procedures) {
+      procBlock.appendChild(renderCitationCard(proc));
+    }
+    wrap.appendChild(procBlock);
+
+    const naraRef = NARA_PROCEDURE_REFERENCE[appState.diag.actionType];
+    if (naraRef) {
+      const naraBlock = document.createElement("div");
+      naraBlock.className = "result-block";
+      const naraHeading = document.createElement("h3");
+      naraHeading.textContent = "奈良県への申請について";
+      naraBlock.appendChild(naraHeading);
+
+      const naraBox = document.createElement("div");
+      naraBox.className = "note-box";
+      naraBox.innerHTML = `${escapeHtml(naraRef.label)} <a href="${naraRef.url}" target="_blank" rel="noopener">申請様式のページを見る ↗</a>`;
+      naraBlock.appendChild(naraBox);
+
+      const naraCommonBox = document.createElement("div");
+      naraCommonBox.className = "note-box";
+      naraCommonBox.innerHTML = `${escapeHtml(NARA_COMMON_REFERENCE.label)} <a href="${NARA_COMMON_REFERENCE.url}" target="_blank" rel="noopener">承継・変更・廃止の様式ページを見る ↗</a>`;
+      naraBlock.appendChild(naraCommonBox);
+
+      wrap.appendChild(naraBlock);
+    }
+  }
+
+  const metiBox = document.createElement("div");
+  metiBox.className = "note-box";
+  metiBox.innerHTML = `${escapeHtml(METI_REFERENCE.label)} <a href="${METI_REFERENCE.url}" target="_blank" rel="noopener">経済産業省「高圧ガス保安法等」のページを見る ↗</a>`;
+  wrap.appendChild(metiBox);
+
+  const citeBlock = document.createElement("div");
+  citeBlock.className = "result-block";
+  const citeHeading = document.createElement("h3");
+  citeHeading.textContent = "判定の根拠条文";
+  citeBlock.appendChild(citeHeading);
+
+  for (const citation of result.citations) {
+    citeBlock.appendChild(renderCitationCard(citation));
+  }
+  wrap.appendChild(citeBlock);
+
+  const actions = document.createElement("div");
+  actions.className = "diag-actions";
+  const retryBtn = document.createElement("button");
+  retryBtn.type = "button";
+  retryBtn.className = "btn-primary";
+  retryBtn.textContent = "もう一度回答する";
+  retryBtn.addEventListener("click", () => selectActionType(ACTION_TYPES.find((a) => a.id === appState.diag.actionType)));
+  actions.appendChild(retryBtn);
+  wrap.appendChild(actions);
+
+  return wrap;
+}
+
+function renderCitationCard(citation) {
+  const key = `${citation.lawId}:${citation.num}`;
+  const card = document.createElement("div");
+  card.className = "citation-card";
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "citation-toggle";
+  const expanded = appState.diag.expandedCitations.has(key);
+  toggle.textContent = `${expanded ? "▾" : "▸"} ${citation.label}`;
+  toggle.addEventListener("click", () => toggleCitation(citation));
+  card.appendChild(toggle);
+
+  if (expanded) {
+    const body = document.createElement("div");
+    body.className = "citation-body";
+    const cached = appState.diag.citationCache.get(key);
+    if (!cached || cached.status === "loading") {
+      body.innerHTML = `<div class="loading">条文を読み込んでいます…</div>`;
+    } else if (cached.status === "error") {
+      body.innerHTML = `<div class="error-box">条文の取得に失敗しました。(${escapeHtml(cached.message || "")})</div>`;
+    } else if (cached.status === "notfound") {
+      body.innerHTML = `<div class="error-box">該当条文が見つかりませんでした。</div>`;
+    } else {
+      body.innerHTML = renderArticle(cached.article.node);
+    }
+    card.appendChild(body);
+  }
+
+  return card;
+}
+
+async function toggleCitation(citation) {
+  const key = `${citation.lawId}:${citation.num}`;
+  if (appState.diag.expandedCitations.has(key)) {
+    appState.diag.expandedCitations.delete(key);
+    render();
+    return;
+  }
+  appState.diag.expandedCitations.add(key);
+  render();
+
+  if (appState.diag.citationCache.has(key)) return;
+  appState.diag.citationCache.set(key, { status: "loading" });
+  try {
+    const lawMeta = findLawMeta(citation.lawId);
+    const lawData = await loadLawData(lawMeta);
+    const mainProvision = getMainProvision(lawData);
+    const article = findArticleByNum(mainProvision, citation.num);
+    appState.diag.citationCache.set(key, article ? { status: "ready", article } : { status: "notfound" });
+  } catch (err) {
+    console.error(err);
+    appState.diag.citationCache.set(key, { status: "error", message: err.message });
+  }
+  render();
+}
+
+async function restoreDiagnosisFromHistory(entry) {
+  appState.mode = "diagnosis";
+  const steps = getStepsForGasCategory(entry.actionType, entry.gasCategory, entry.answers);
+  appState.diag = {
+    actionType: entry.actionType,
+    gasCategory: entry.gasCategory,
+    stepIndex: Math.max(0, steps.length - 1),
+    answers: { ...entry.answers },
+    result: evaluateDiagnosis(entry.actionType, entry.gasCategory, entry.answers),
+    expandedCitations: new Set(),
+    citationCache: new Map(),
+  };
+  render();
+}
+
+/* =========================================================
+   条文ブラウズモード (browse) — 法令 → 章 → 節 → 条
+   ========================================================= */
+
+function resetBrowse() {
+  appState.browse = {
+    law: null,
+    lawData: null,
+    lawTitle: "",
+    chapters: [],
+    chapter: null,
+    section: null,
+    article: null,
+  };
+  render();
+}
+
+async function selectLaw(lawMeta, { forceRefresh = false } = {}) {
+  const b = appState.browse;
+  b.law = lawMeta;
+  b.chapter = null;
+  b.section = null;
+  b.article = null;
+  renderBrowseLoading(`${lawMeta.title} を読み込んでいます…`);
+
+  try {
+    const lawData = await loadLawData(lawMeta, { forceRefresh });
+    b.lawData = lawData;
+    b.lawTitle = getLawTitle(lawData) || lawMeta.title;
+    const mainProvision = getMainProvision(lawData);
+    b.chapters = buildChapters(mainProvision);
+
+    if (b.chapters.length === 0) {
+      renderBrowseError("この法令から条文構造を読み取れませんでした。");
+      return;
+    }
+
+    if (b.chapters.length === 1 && b.chapters[0].num === null) {
+      selectChapter(b.chapters[0]);
+      return;
+    }
+
+    render();
+  } catch (err) {
+    console.error(err);
+    renderBrowseError(`法令データの取得に失敗しました。時間をおいて再度お試しください。\n(${err.message})`);
+  }
+}
+
+function selectChapter(chapter) {
+  appState.browse.chapter = chapter;
+  appState.browse.section = null;
+  appState.browse.article = null;
+  render();
+}
+
+function selectSection(section) {
+  appState.browse.section = section;
+  appState.browse.article = null;
+  render();
+}
+
+async function selectArticle(article) {
+  const b = appState.browse;
+  b.article = article;
+  render();
+
+  try {
+    await addHistoryEntry({
+      type: "article",
+      lawId: b.law.lawId,
+      lawShortName: b.law.shortName,
+      lawTitle: b.lawTitle,
+      chapterNum: b.chapter ? b.chapter.num : null,
+      chapterTitle: b.chapter ? b.chapter.title : null,
+      sectionNum: b.section ? b.section.num : null,
+      sectionTitle: b.section ? b.section.title : null,
+      articleNum: article.num,
+      articleTitle: article.title,
+      articleCaption: article.caption,
+    });
+    await renderHistory();
+  } catch (err) {
+    console.error("履歴の保存に失敗しました", err);
+  }
+}
+
+async function restoreArticleFromHistory(entry) {
+  const lawMeta = TARGET_LAWS.find((l) => l.lawId === entry.lawId);
+  if (!lawMeta) {
+    showToast("対象法令の情報が見つかりませんでした。", true);
+    return;
+  }
+  appState.mode = "browse";
+  renderBrowseLoading(`${entry.lawTitle || lawMeta.title} を読み込んでいます…`);
+  try {
+    const lawData = await loadLawData(lawMeta);
+    const b = appState.browse;
+    b.law = lawMeta;
+    b.lawData = lawData;
+    b.lawTitle = getLawTitle(lawData) || lawMeta.title;
+    const mainProvision = getMainProvision(lawData);
+    b.chapters = buildChapters(mainProvision);
+
+    let chapter = null;
+    if (entry.chapterNum !== null && entry.chapterNum !== undefined) {
+      chapter = b.chapters.find((c) => c.num === entry.chapterNum) || null;
+    } else if (b.chapters.length === 1 && b.chapters[0].num === null) {
+      chapter = b.chapters[0];
+    }
+    b.chapter = chapter;
+
+    let section = null;
+    if (chapter && entry.sectionNum !== null && entry.sectionNum !== undefined) {
+      section = chapter.sections.find((s) => s.num === entry.sectionNum) || null;
+    }
+    b.section = section;
+
+    const pool = section ? section.articles : chapter ? chapter.articles : [];
+    const article = pool.find((a) => a.num === entry.articleNum) || null;
+
+    if (!article) {
+      showToast("この条文は法令の改正等により見つかりませんでした。最新の目次から探してください。", true);
+      b.article = null;
+      render();
+      return;
+    }
+
+    b.article = article;
+    render();
+  } catch (err) {
+    console.error(err);
+    renderBrowseError(`履歴からの復元に失敗しました。\n(${err.message})`);
+  }
+}
+
+function renderBrowseLoading(message) {
+  stageEl.innerHTML = `<div class="loading">${escapeHtml(message)}</div>`;
+  renderBrowseBreadcrumb();
+}
+
+function renderBrowseError(message) {
+  stageEl.innerHTML = `<div class="error-box">${escapeHtml(message)}</div>`;
+  renderBrowseBreadcrumb();
+}
+
+function renderBrowseBreadcrumb() {
+  breadcrumbEl.innerHTML = "";
+  const b = appState.browse;
+
+  breadcrumbEl.appendChild(crumbButton("法令選択", () => resetBrowse()));
+  if (!b.law) return;
+
+  breadcrumbEl.appendChild(crumbSep());
+  if (b.chapter || b.chapters.length <= 1) {
+    breadcrumbEl.appendChild(crumbButton(b.law.shortName, () => selectLaw(b.law)));
+  } else {
+    breadcrumbEl.appendChild(crumbCurrent(b.law.shortName));
+  }
+
+  if (!b.chapter || b.chapter.num === null) return;
+
+  breadcrumbEl.appendChild(crumbSep());
+  if (b.section || b.article) {
+    breadcrumbEl.appendChild(crumbButton(b.chapter.title, () => selectChapter(b.chapter)));
+  } else {
+    breadcrumbEl.appendChild(crumbCurrent(b.chapter.title));
+  }
+
+  if (b.section) {
+    breadcrumbEl.appendChild(crumbSep());
+    if (b.article) {
+      breadcrumbEl.appendChild(crumbButton(b.section.title, () => selectSection(b.section)));
+    } else {
+      breadcrumbEl.appendChild(crumbCurrent(b.section.title));
+    }
+  }
+
+  if (b.article) {
+    breadcrumbEl.appendChild(crumbSep());
+    breadcrumbEl.appendChild(crumbCurrent(b.article.title));
+  }
+}
+
+function renderBrowseStage() {
+  stageEl.innerHTML = "";
+  const b = appState.browse;
+
+  if (!b.law) {
+    stageEl.appendChild(renderLawStage());
+    return;
+  }
+  if (!b.chapter) {
+    stageEl.appendChild(renderChapterStage());
+    return;
+  }
+  if (b.chapter.sections.length > 0 && !b.section) {
+    stageEl.appendChild(renderSectionStage());
+    return;
+  }
+  if (!b.article) {
+    stageEl.appendChild(renderArticleListStage());
+    return;
+  }
+  stageEl.appendChild(renderArticleStage());
+}
+
+function renderLawStage() {
+  const wrap = document.createElement("div");
+  wrap.className = "stage";
+  const h2 = document.createElement("h2");
+  h2.textContent = "対象法令を選択してください";
+  wrap.appendChild(h2);
+
+  const grid = document.createElement("div");
+  grid.className = "card-grid";
+  for (const law of TARGET_LAWS) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "pick-card";
+    card.innerHTML = `<span class="pick-title">${escapeHtml(law.shortName)}</span><span class="pick-sub">${escapeHtml(law.title)}</span>`;
+    card.addEventListener("click", () => selectLaw(law));
+    grid.appendChild(card);
+  }
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+function renderChapterStage() {
+  const b = appState.browse;
+  const wrap = document.createElement("div");
+  wrap.className = "stage";
+
+  const toolbar = document.createElement("div");
+  toolbar.className = "toolbar";
+  const refreshBtn = document.createElement("button");
+  refreshBtn.type = "button";
+  refreshBtn.className = "btn-link";
+  refreshBtn.textContent = "⟲ 最新版を再取得";
+  refreshBtn.addEventListener("click", () => selectLaw(b.law, { forceRefresh: true }));
+  toolbar.appendChild(refreshBtn);
+  wrap.appendChild(toolbar);
+
+  const h2 = document.createElement("h2");
+  h2.textContent = `${b.lawTitle} — 章を選択してください`;
+  wrap.appendChild(h2);
+
+  const list = document.createElement("div");
+  list.className = "pick-list";
+  for (const chapter of b.chapters) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "pick-card";
+    card.innerHTML = `<span class="pick-title">${escapeHtml(chapter.title)}</span>`;
+    card.addEventListener("click", () => selectChapter(chapter));
+    list.appendChild(card);
+  }
+  wrap.appendChild(list);
+  return wrap;
+}
+
+function renderSectionStage() {
+  const b = appState.browse;
+  const wrap = document.createElement("div");
+  wrap.className = "stage";
+  const h2 = document.createElement("h2");
+  h2.textContent = `${b.chapter.title} — 節を選択してください`;
+  wrap.appendChild(h2);
+
+  const list = document.createElement("div");
+  list.className = "pick-list";
+
+  if (b.chapter.articles.length > 0) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "pick-card";
+    card.innerHTML = `<span class="pick-title">（節に属さない条）</span><span class="pick-sub">${b.chapter.articles.length}条</span>`;
+    card.addEventListener("click", () =>
+      selectSection({ key: `${b.chapter.key}-direct`, num: null, title: null, articles: b.chapter.articles })
+    );
+    list.appendChild(card);
+  }
+
+  for (const section of b.chapter.sections) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "pick-card";
+    card.innerHTML = `<span class="pick-title">${escapeHtml(section.title)}</span><span class="pick-sub">${section.articles.length}条</span>`;
+    card.addEventListener("click", () => selectSection(section));
+    list.appendChild(card);
+  }
+
+  wrap.appendChild(list);
+  return wrap;
+}
+
+function renderArticleListStage() {
+  const b = appState.browse;
+  const wrap = document.createElement("div");
+  wrap.className = "stage";
+  const scopeTitle = b.section && b.section.title ? b.section.title : b.chapter.title;
+  const h2 = document.createElement("h2");
+  h2.textContent = `${scopeTitle} — 条を選択してください`;
+  wrap.appendChild(h2);
+
+  const articles = b.section ? b.section.articles : b.chapter.articles;
+
+  const list = document.createElement("div");
+  list.className = "pick-list";
+  for (const article of articles) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "pick-card";
+    card.innerHTML = `<span class="pick-title">${escapeHtml(article.title)}</span>${
+      article.caption ? `<span class="pick-sub">${escapeHtml(article.caption)}</span>` : ""
+    }`;
+    card.addEventListener("click", () => selectArticle(article));
+    list.appendChild(card);
+  }
+  wrap.appendChild(list);
+  return wrap;
+}
+
+function renderArticleStage() {
+  const wrap = document.createElement("div");
+  wrap.innerHTML = renderArticle(appState.browse.article.node);
+  return wrap;
+}
+
+/* =========================================================
+   照会履歴パネル (共通)
+   ========================================================= */
+
+function formatTimestamp(iso) {
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+async function renderHistory() {
+  const entries = await listHistory();
+  historyListEl.innerHTML = "";
+
+  if (entries.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "history-empty";
+    empty.textContent = "まだ照会履歴はありません。";
+    historyListEl.appendChild(empty);
+    return;
+  }
+
+  for (const entry of entries) {
+    const li = document.createElement("li");
+    li.className = "history-item";
+    const type = entry.type || "article";
+
+    if (type === "diagnosis") {
+      li.innerHTML = `
+        <span class="h-law">診断・${escapeHtml(entry.actionLabel || "")}</span>
+        <span class="h-title">${escapeHtml(verdictLabel(entry.verdict))} — ${escapeHtml(entry.title || "")}</span>
+        <span class="h-time">${escapeHtml(entry.gasCategoryLabel || "")} ・ ${formatTimestamp(entry.timestamp)}</span>
+      `;
+      li.addEventListener("click", () => restoreDiagnosisFromHistory(entry));
+    } else {
+      const scope = [entry.chapterTitle, entry.sectionTitle].filter(Boolean).join(" / ");
+      li.innerHTML = `
+        <span class="h-law">${escapeHtml(entry.lawShortName || "")}</span>
+        <span class="h-title">${escapeHtml(entry.articleTitle || "")}${entry.articleCaption ? " " + escapeHtml(entry.articleCaption) : ""}</span>
+        <span class="h-time">${scope ? escapeHtml(scope) + " ・ " : ""}${formatTimestamp(entry.timestamp)}</span>
+      `;
+      li.addEventListener("click", () => restoreArticleFromHistory(entry));
+    }
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "h-delete";
+    delBtn.textContent = "×";
+    delBtn.title = "この履歴を削除";
+    delBtn.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      await deleteHistoryEntry(entry.id);
+      renderHistory();
+    });
+    li.appendChild(delBtn);
+
+    historyListEl.appendChild(li);
+  }
+}
+
+clearHistoryBtn.addEventListener("click", async () => {
+  if (!confirm("照会履歴をすべて削除しますか？この操作は取り消せません。")) return;
+  await clearHistory();
+  renderHistory();
+});
+
+// --- 初期化 ---
+
+render();
+renderHistory();
+
+  </script>
+</body>
+</html>

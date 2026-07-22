@@ -1,0 +1,2528 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LP法(液化石油ガス法) 法令ビューア</title>
+  <style>
+:root {
+  color-scheme: light dark;
+  --bg: #f5f6f4;
+  --panel-bg: #ffffff;
+  --border: #d8dcd4;
+  --text: #1f2a20;
+  --text-muted: #5c6b5e;
+  --accent: #2f6b3a;
+  --accent-contrast: #ffffff;
+  --chip-bg: #eef3ec;
+  --danger: #a5342a;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141814;
+    --panel-bg: #1b201b;
+    --border: #333c33;
+    --text: #e7ece6;
+    --text-muted: #a3ada2;
+    --accent: #6bb37a;
+    --accent-contrast: #0d140e;
+    --chip-bg: #232b23;
+    --danger: #e08579;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+}
+
+a {
+  color: var(--accent);
+}
+
+.app-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+}
+
+.app-header h1 {
+  margin: 0 0 6px;
+  font-size: 1.4rem;
+}
+
+.app-sub {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.app-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+  max-width: 1280px;
+  margin: 16px auto;
+  padding: 0 16px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.main-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  min-height: 60vh;
+  overflow: hidden;
+}
+
+.mode-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 10px 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.mode-tab {
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  padding: 10px 16px;
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+}
+
+.mode-tab:hover {
+  background: var(--chip-bg);
+}
+
+.mode-tab.active {
+  color: var(--accent);
+  font-weight: 700;
+  background: var(--chip-bg);
+}
+
+.disclaimer {
+  margin: 0 16px 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--chip-bg);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.diag-help {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: -6px 0 12px;
+}
+
+.diag-number-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.diag-number-row input[type="number"] {
+  font: inherit;
+  font-size: 1rem;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  color: var(--text);
+  width: 160px;
+}
+
+.diag-number-row .unit {
+  color: var(--text-muted);
+}
+
+.diag-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-primary {
+  font: inherit;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  cursor: pointer;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.verdict-banner {
+  padding: 14px 16px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+}
+
+.verdict-banner.registration,
+.verdict-banner.certification,
+.verdict-banner.notification {
+  background: color-mix(in srgb, #2f6b8f 12%, var(--panel-bg));
+  border-color: #2f6b8f;
+}
+
+.verdict-banner.not_required,
+.verdict-banner.out_of_scope {
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel-bg));
+  border-color: var(--accent);
+}
+
+.verdict-banner.blocked {
+  background: color-mix(in srgb, #c0392b 12%, var(--panel-bg));
+  border-color: #c0392b;
+}
+
+.verdict-banner.info {
+  background: color-mix(in srgb, #8a6d3b 12%, var(--panel-bg));
+  border-color: #8a6d3b;
+}
+
+.verdict-banner.large_scale {
+  background: color-mix(in srgb, #8a6d3b 12%, var(--panel-bg));
+  border-color: #8a6d3b;
+}
+
+.verdict-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+
+.verdict-summary {
+  color: var(--text-muted);
+}
+
+.result-block {
+  margin: 14px 0;
+}
+
+.result-block h3 {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+
+.citation-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.citation-toggle {
+  width: 100%;
+  text-align: left;
+  background: var(--panel-bg);
+  border: none;
+  font: inherit;
+  padding: 10px 12px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.citation-toggle:hover {
+  background: var(--chip-bg);
+}
+
+.citation-body {
+  padding: 4px 12px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.note-box {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--chip-bg);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 10px 0;
+}
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.breadcrumb button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.breadcrumb button:hover {
+  background: var(--chip-bg);
+}
+
+.breadcrumb .crumb-current {
+  color: var(--text-muted);
+  padding: 4px 6px;
+}
+
+.breadcrumb .crumb-sep {
+  color: var(--text-muted);
+}
+
+.stage {
+  padding: 16px;
+}
+
+.stage h2 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.pick-card {
+  text-align: left;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.pick-card:hover {
+  border-color: var(--accent);
+  background: var(--chip-bg);
+}
+
+.pick-card .pick-title {
+  font-weight: 600;
+  display: block;
+}
+
+.pick-card .pick-sub {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pick-list .pick-card {
+  padding: 10px 14px;
+}
+
+.loading,
+.error-box,
+.empty-box {
+  padding: 24px 8px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.error-box {
+  color: var(--danger);
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 4px 6px;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
+/* --- 条文表示 --- */
+
+.article {
+  padding: 4px 4px 20px;
+}
+
+.article-head {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--accent);
+}
+
+.article-caption {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.article-title {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.paragraph {
+  margin: 10px 0;
+}
+
+.paragraph-caption {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.paragraph-line {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.para-num {
+  min-width: 1.6em;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.para-text,
+.item-text,
+.list-line {
+  white-space: pre-wrap;
+}
+
+.item-list,
+.subitem-list {
+  margin: 4px 0 4px 1.8em;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subitem-list.level-2 {
+  margin-left: 1.6em;
+}
+
+.subitem-list.level-3 {
+  margin-left: 1.6em;
+}
+
+.item-line {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.item-title {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.list-block {
+  margin: 6px 0 6px 1.8em;
+  color: var(--text);
+}
+
+.remarks {
+  margin: 10px 0 10px 1.2em;
+  padding: 8px 12px;
+  border-left: 3px solid var(--border);
+  background: var(--chip-bg);
+  border-radius: 0 6px 6px 0;
+}
+
+.remarks-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.generic-block {
+  margin: 6px 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.law-table {
+  border-collapse: collapse;
+  margin: 10px 0 10px 1.2em;
+  font-size: 0.88rem;
+}
+
+.law-table td {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  vertical-align: top;
+}
+
+/* --- 履歴パネル --- */
+
+.history-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 14px;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: sticky;
+  top: 16px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.history-header h2 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  position: relative;
+}
+
+.history-item:hover {
+  border-color: var(--accent);
+  background: var(--chip-bg);
+}
+
+.history-item .h-law {
+  display: inline-block;
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--chip-bg);
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.history-item .h-title {
+  display: block;
+  font-weight: 600;
+}
+
+.history-item .h-time {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  margin-top: 2px;
+}
+
+.history-item .h-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 2px 4px;
+}
+
+.history-item .h-delete:hover {
+  color: var(--danger);
+}
+
+.history-empty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--bg);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  box-shadow: var(--shadow);
+}
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <a href="../index.html" style="display:inline-block;margin-bottom:6px;font-size:0.85rem;color:var(--accent,#2f6b3a);text-decoration:none;">‹ ツール一覧</a>
+    <h1>LP法(液化石油ガス法) 法令ビューア</h1>
+    <p class="app-sub">
+      対象法令: 液化石油ガスの保安の確保及び取引の適正化に関する法律 / 同施行令 / 同施行規則
+      <br />データ出典: <a href="https://laws.e-gov.go.jp/" target="_blank" rel="noopener">e-Gov法令検索</a>
+      (<a href="https://laws.e-gov.go.jp/api/2/swagger-ui" target="_blank" rel="noopener">法令API Version 2</a>)
+    </p>
+  </header>
+
+  <div class="app-layout">
+    <main class="main-panel">
+      <div class="mode-tabs" id="mode-tabs" role="tablist">
+        <button type="button" class="mode-tab" data-mode="diagnosis" role="tab">設問で調べる</button>
+        <button type="button" class="mode-tab" data-mode="browse" role="tab">条文を直接みる</button>
+      </div>
+      <nav class="breadcrumb" id="breadcrumb" aria-label="選択パンくず"></nav>
+      <section class="stage" id="stage"></section>
+    </main>
+
+    <aside class="history-panel">
+      <div class="history-header">
+        <h2>照会履歴</h2>
+        <button id="clear-history-btn" class="btn-link" type="button">すべて削除</button>
+      </div>
+      <ul class="history-list" id="history-list"></ul>
+    </aside>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script>
+"use strict";
+
+/* =========================================================
+   constants.js
+   ========================================================= */
+
+// 対象法令(LP法本体・施行令・施行規則)の law_id は e-Gov 法令API v2 の
+// GET /laws?law_title=... で事前に確認済みの値。
+const TARGET_LAWS = [
+  {
+    lawId: "342AC0000000149",
+    shortName: "法",
+    title: "液化石油ガスの保安の確保及び取引の適正化に関する法律",
+  },
+  {
+    lawId: "343CO0000000014",
+    shortName: "施行令",
+    title: "液化石油ガスの保安の確保及び取引の適正化に関する法律施行令",
+  },
+  {
+    lawId: "409M50000400011",
+    shortName: "施行規則",
+    title: "液化石油ガスの保安の確保及び取引の適正化に関する法律施行規則",
+  },
+];
+
+// 設問モードの判定根拠として条文を引用する際に参照する法令(他法令の関連条文の
+// 原文表示のためだけに使う。対象3法令とは別枠)。
+const REFERENCE_LAWS = [
+  {
+    lawId: "326AC0000000204",
+    shortName: "高圧法",
+    title: "高圧ガス保安法",
+  },
+];
+
+const ALL_LAWS = [...TARGET_LAWS, ...REFERENCE_LAWS];
+
+function findLawMeta(lawId) {
+  return ALL_LAWS.find((l) => l.lawId === lawId) || null;
+}
+
+const API_BASE = "https://laws.e-gov.go.jp/api/2";
+
+/* =========================================================
+   api.js
+   ========================================================= */
+
+// 法令本文全体を取得する。e-Gov 法令API v2 /law_data/{law_id_or_num}
+// レスポンスは { law_info, revision_info, law_full_text, ... } の形。
+async function fetchLawData(lawId) {
+  const url = `${API_BASE}/law_data/${encodeURIComponent(lawId)}?response_format=json`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`法令データの取得に失敗しました (HTTP ${res.status}): ${lawId}`);
+  }
+  return res.json();
+}
+
+/* =========================================================
+   storage.js
+   ========================================================= */
+
+// ブラウザの IndexedDB を使った法令データキャッシュと照会履歴の永続化。
+// サーバーは一切使わず、この端末・このブラウザ内にのみ保存される。
+
+const DB_NAME = "lp-law-viewer-db";
+const DB_VERSION = 1;
+const STORE_LAW_CACHE = "lawCache";
+const STORE_HISTORY = "history";
+
+let dbPromise = null;
+
+function openDb() {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE_LAW_CACHE)) {
+        db.createObjectStore(STORE_LAW_CACHE, { keyPath: "lawId" });
+      }
+      if (!db.objectStoreNames.contains(STORE_HISTORY)) {
+        const store = db.createObjectStore(STORE_HISTORY, {
+          keyPath: "id",
+          autoIncrement: true,
+        });
+        store.createIndex("timestamp", "timestamp");
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return dbPromise;
+}
+
+function tx(storeName, mode) {
+  return openDb().then(
+    (db) => db.transaction(storeName, mode).objectStore(storeName)
+  );
+}
+
+// --- 法令データキャッシュ ---
+
+async function getCachedLaw(lawId) {
+  const store = await tx(STORE_LAW_CACHE, "readonly");
+  return new Promise((resolve, reject) => {
+    const req = store.get(lawId);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function putCachedLaw(lawId, data, updated) {
+  const store = await tx(STORE_LAW_CACHE, "readwrite");
+  return new Promise((resolve, reject) => {
+    const req = store.put({
+      lawId,
+      data,
+      updated: updated || null,
+      fetchedAt: new Date().toISOString(),
+    });
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function clearCachedLaw(lawId) {
+  const store = await tx(STORE_LAW_CACHE, "readwrite");
+  return new Promise((resolve, reject) => {
+    const req = store.delete(lawId);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// --- 照会履歴 ---
+
+const MAX_HISTORY = 200;
+
+async function addHistoryEntry(entry) {
+  const store = await tx(STORE_HISTORY, "readwrite");
+  return new Promise((resolve, reject) => {
+    const req = store.add({
+      ...entry,
+      timestamp: new Date().toISOString(),
+    });
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function listHistory(limit = MAX_HISTORY) {
+  const store = await tx(STORE_HISTORY, "readonly");
+  return new Promise((resolve, reject) => {
+    const results = [];
+    const req = store.index("timestamp").openCursor(null, "prev");
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor && results.length < limit) {
+        results.push(cursor.value);
+        cursor.continue();
+      } else {
+        resolve(results);
+      }
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function clearHistory() {
+  const store = await tx(STORE_HISTORY, "readwrite");
+  return new Promise((resolve, reject) => {
+    const req = store.clear();
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function deleteHistoryEntry(id) {
+  const store = await tx(STORE_HISTORY, "readwrite");
+  return new Promise((resolve, reject) => {
+    const req = store.delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/* =========================================================
+   lawTree.js
+   ========================================================= */
+
+// e-Gov 法令API v2 の law_full_text (tag/attr/children のXML由来ツリー) から
+// 法令 → 章 → 節(あれば) → 条 のナビゲーション構造を組み立てるユーティリティ。
+
+// ノード配下の文字列を再帰的に連結して取り出す(タグに関わらず安全に使える)。
+function extractText(node) {
+  if (typeof node === "string") return node;
+  if (!node || !Array.isArray(node.children)) return "";
+  return node.children.map(extractText).join("");
+}
+
+// 指定タグの直接の子ノードを1つ取得。
+function findChild(node, tag) {
+  if (!node || !Array.isArray(node.children)) return null;
+  return node.children.find((c) => c && c.tag === tag) || null;
+}
+
+function findChildren(node, tag) {
+  if (!node || !Array.isArray(node.children)) return [];
+  return node.children.filter((c) => c && c.tag === tag);
+}
+
+function getChildText(node, tag) {
+  const child = findChild(node, tag);
+  return child ? extractText(child).trim() : "";
+}
+
+// Column を持つ文(定義規定などで「用語」「意義」のように列が分かれる場合)を
+// 読みやすく全角スペース区切りで連結する。Column が無ければ通常のテキスト抽出。
+function extractSentenceText(node) {
+  if (!node) return "";
+  const columns = findChildren(node, "Column");
+  if (columns.length > 0) {
+    return columns.map((c) => extractText(c).trim()).join("　");
+  }
+  return extractText(node).trim();
+}
+
+function makeArticleSummary(articleNode) {
+  const num = articleNode.attr && articleNode.attr.Num;
+  const title = getChildText(articleNode, "ArticleTitle") || `第${num}条`;
+  const caption = getChildText(articleNode, "ArticleCaption");
+  return { num, title, caption, node: articleNode };
+}
+
+// Section/Subsection など入れ子構造の中から Article を出現順にすべて収集する。
+function collectArticlesDeep(nodes) {
+  let result = [];
+  for (const n of nodes || []) {
+    if (!n || typeof n !== "object") continue;
+    if (n.tag === "Article") {
+      result.push(makeArticleSummary(n));
+    } else if (Array.isArray(n.children)) {
+      result = result.concat(collectArticlesDeep(n.children));
+    }
+  }
+  return result;
+}
+
+// LawBody.MainProvision から 章(Chapter) → 節(Section) → 条(Article) の
+// ナビゲーションツリーを構築する。章が無い法令は単一の仮想章にまとめる。
+function buildChapters(mainProvisionNode) {
+  const topChildren = (mainProvisionNode && mainProvisionNode.children) || [];
+  const hasChapters = topChildren.some((c) => c && c.tag === "Chapter");
+
+  if (!hasChapters) {
+    const articles = collectArticlesDeep(topChildren);
+    if (articles.length === 0) return [];
+    return [
+      {
+        key: "c-single",
+        num: null,
+        title: null,
+        sections: [],
+        articles,
+      },
+    ];
+  }
+
+  const chapters = [];
+  topChildren
+    .filter((c) => c && c.tag === "Chapter")
+    .forEach((chapterNode, ci) => {
+      const num = (chapterNode.attr && chapterNode.attr.Num) || String(ci);
+      const title = getChildText(chapterNode, "ChapterTitle") || `第${num}章`;
+      const sections = [];
+      const directArticles = [];
+
+      for (const child of chapterNode.children || []) {
+        if (!child || typeof child !== "object") continue;
+        if (child.tag === "Section") {
+          const sNum = (child.attr && child.attr.Num) || String(sections.length);
+          const sTitle = getChildText(child, "SectionTitle") || `第${sNum}節`;
+          const sArticles = collectArticlesDeep(child.children || []);
+          if (sArticles.length > 0) {
+            sections.push({
+              key: `c${num}-s${sNum}`,
+              num: sNum,
+              title: sTitle,
+              articles: sArticles,
+            });
+          }
+        } else if (child.tag === "Article") {
+          directArticles.push(makeArticleSummary(child));
+        }
+      }
+
+      if (sections.length > 0 || directArticles.length > 0) {
+        chapters.push({
+          key: `c${num}`,
+          num,
+          title,
+          sections,
+          articles: directArticles,
+        });
+      }
+    });
+
+  return chapters;
+}
+
+function getLawTitle(lawData) {
+  const lawBody = findChild(lawData.law_full_text, "LawBody");
+  return getChildText(lawBody, "LawTitle") || lawData.revision_info?.law_title || "";
+}
+
+function getMainProvision(lawData) {
+  const lawBody = findChild(lawData.law_full_text, "LawBody");
+  return findChild(lawBody, "MainProvision");
+}
+
+// 条番号(例: "5", "3_2")を指定して、法令内から該当条文ノードを1件検索する。
+// 設問モードの判定根拠(引用条文)を表示するために使う。
+function findArticleByNum(mainProvisionNode, num) {
+  const stack = [mainProvisionNode];
+  while (stack.length > 0) {
+    const node = stack.pop();
+    if (!node || typeof node !== "object") continue;
+    if (node.tag === "Article" && node.attr && node.attr.Num === num) {
+      return makeArticleSummary(node);
+    }
+    for (const c of node.children || []) {
+      if (c && typeof c === "object") stack.push(c);
+    }
+  }
+  return null;
+}
+
+/* =========================================================
+   render.js
+   ========================================================= */
+
+// 条文(Article)ノードを人間が読みやすいHTMLに変換する再帰レンダラー。
+// e-Gov法令標準XMLスキーマの主要タグ(Paragraph/Item/Subitem1-3/List/Table等)を
+// 明示的に扱い、未対応タグはテキストのみ安全に抽出するフォールバックを持つ。
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function findChild(node, tag) {
+  if (!node || !Array.isArray(node.children)) return null;
+  return node.children.find((c) => c && c.tag === tag) || null;
+}
+function findChildren(node, tag) {
+  if (!node || !Array.isArray(node.children)) return [];
+  return node.children.filter((c) => c && c.tag === tag);
+}
+function textOf(node, tag) {
+  const c = findChild(node, tag);
+  return c ? extractText(c).trim() : "";
+}
+
+function renderArticle(articleNode) {
+  const title = textOf(articleNode, "ArticleTitle");
+  const caption = textOf(articleNode, "ArticleCaption");
+
+  let html = '<div class="article">';
+  html += '<div class="article-head">';
+  if (caption) {
+    html += `<span class="article-caption">${escapeHtml(caption)}</span>`;
+  }
+  html += `<span class="article-title">${escapeHtml(title)}</span>`;
+  html += "</div>";
+
+  for (const child of articleNode.children || []) {
+    if (!child || typeof child !== "object") continue;
+    if (child.tag === "Paragraph") {
+      html += renderParagraph(child);
+    } else if (child.tag === "ArticleCaption" || child.tag === "ArticleTitle") {
+      // 見出しとして既に表示済み
+    } else if (typeof child !== "string") {
+      html += renderGenericBlock(child);
+    }
+  }
+
+  html += "</div>";
+  return html;
+}
+
+function renderParagraph(p) {
+  const numText = textOf(p, "ParagraphNum"); // 第1項は空、第2項以降は全角数字
+  const caption = textOf(p, "ParagraphCaption");
+  const sentenceNode = findChild(p, "ParagraphSentence");
+  const sentenceText = sentenceNode ? extractSentenceText(sentenceNode) : "";
+
+  let html = '<div class="paragraph">';
+  if (caption) {
+    html += `<div class="paragraph-caption">${escapeHtml(caption)}</div>`;
+  }
+  html += '<div class="paragraph-line">';
+  html += `<span class="para-num">${escapeHtml(numText)}</span>`;
+  html += `<span class="para-text">${escapeHtml(sentenceText)}</span>`;
+  html += "</div>";
+
+  const items = findChildren(p, "Item");
+  if (items.length > 0) {
+    html += '<div class="item-list">' + items.map(renderItem).join("") + "</div>";
+  }
+
+  const lists = findChildren(p, "List");
+  if (lists.length > 0) {
+    html += lists.map(renderList).join("");
+  }
+
+  const tables = findChildren(p, "TableStruct");
+  if (tables.length > 0) {
+    html += tables.map(renderTableStruct).join("");
+  }
+
+  const remarks = findChildren(p, "Remarks");
+  if (remarks.length > 0) {
+    html += remarks.map(renderRemarks).join("");
+  }
+
+  html += "</div>";
+  return html;
+}
+
+function renderItem(item) {
+  const title = textOf(item, "ItemTitle");
+  const sentenceNode = findChild(item, "ItemSentence");
+  const sentenceText = sentenceNode ? extractSentenceText(sentenceNode) : "";
+
+  let html = '<div class="item">';
+  html += '<div class="item-line">';
+  html += `<span class="item-title">${escapeHtml(title)}</span>`;
+  html += `<span class="item-text">${escapeHtml(sentenceText)}</span>`;
+  html += "</div>";
+
+  html += renderSubitems(item, 1);
+
+  const tables = findChildren(item, "TableStruct");
+  if (tables.length > 0) {
+    html += tables.map(renderTableStruct).join("");
+  }
+
+  html += "</div>";
+  return html;
+}
+
+function renderSubitems(node, level) {
+  const tag = `Subitem${level}`;
+  const subs = findChildren(node, tag);
+  if (subs.length === 0) return "";
+
+  const titleTag = `${tag}Title`;
+  const sentenceTag = `${tag}Sentence`;
+
+  let html = `<div class="subitem-list level-${level}">`;
+  for (const sub of subs) {
+    const title = textOf(sub, titleTag);
+    const sentenceNode = findChild(sub, sentenceTag);
+    const sentenceText = sentenceNode ? extractSentenceText(sentenceNode) : "";
+    html += `<div class="subitem level-${level}">`;
+    html += '<div class="item-line">';
+    html += `<span class="item-title">${escapeHtml(title)}</span>`;
+    html += `<span class="item-text">${escapeHtml(sentenceText)}</span>`;
+    html += "</div>";
+    html += renderSubitems(sub, level + 1);
+    html += "</div>";
+  }
+  html += "</div>";
+  return html;
+}
+
+function renderList(listNode) {
+  const sentences = findChildren(listNode, "ListSentence");
+  if (sentences.length === 0) {
+    return `<div class="list-block">${escapeHtml(extractText(listNode).trim())}</div>`;
+  }
+  return (
+    '<div class="list-block">' +
+    sentences.map((s) => `<div class="list-line">${escapeHtml(extractSentenceText(s))}</div>`).join("") +
+    "</div>"
+  );
+}
+
+function renderRemarks(remarksNode) {
+  const label = textOf(remarksNode, "RemarksLabel") || "備考";
+  const paragraphs = findChildren(remarksNode, "Paragraph");
+  let html = '<div class="remarks">';
+  html += `<div class="remarks-label">${escapeHtml(label)}</div>`;
+  if (paragraphs.length > 0) {
+    html += paragraphs.map(renderParagraph).join("");
+  } else {
+    html += `<div class="remarks-text">${escapeHtml(extractText(remarksNode).trim())}</div>`;
+  }
+  html += "</div>";
+  return html;
+}
+
+function renderTableStruct(tableStructNode) {
+  const table = findChild(tableStructNode, "Table");
+  if (!table) {
+    return `<div class="table-fallback">${escapeHtml(extractText(tableStructNode).trim())}</div>`;
+  }
+  const rows = findChildren(table, "TableRow");
+  let html = '<table class="law-table"><tbody>';
+  for (const row of rows) {
+    html += "<tr>";
+    const cols = findChildren(row, "TableColumn");
+    for (const col of cols) {
+      const attr = col.attr || {};
+      const attrs = [];
+      if (attr.colspan) attrs.push(`colspan="${escapeHtml(attr.colspan)}"`);
+      if (attr.rowspan) attrs.push(`rowspan="${escapeHtml(attr.rowspan)}"`);
+      html += `<td ${attrs.join(" ")}>${escapeHtml(extractSentenceText(col))}</td>`;
+    }
+    html += "</tr>";
+  }
+  html += "</tbody></table>";
+  return html;
+}
+
+// 上記で明示的に扱っていないタグに対する安全なフォールバック。
+// 内容は失わず、プレーンテキストとして表示する。
+function renderGenericBlock(node) {
+  const text = extractText(node).trim();
+  if (!text) return "";
+  return `<div class="generic-block">${escapeHtml(text)}</div>`;
+}
+
+/* =========================================================
+   diagnosis.js
+   ========================================================= */
+
+// LP法(液化石油ガスの保安の確保及び取引の適正化に関する法律)の設問診断ロジック。
+// 対象は次の4区分: 販売事業の登録 / 保安機関の認定 / 供給設備・貯蔵施設の技術基準 / 設備工事の届出。
+// 技術基準の細部(圧力試験値・弁の構造等の工学仕様)は取り込まず、登録・認定・届出の
+// 要否判定に必要な事項と、保安物件距離等の主要な数値のみを扱う。詳細は根拠条文の
+// 原文展開及びMETI該当ページへの誘導で補う。
+
+const LAW = "342AC0000000149"; // 法本体
+const ORDER = "343CO0000000014"; // 施行令
+const RULE = "409M50000400011"; // 施行規則
+
+const DISCLAIMER =
+  "この診断は液化石油ガスの保安の確保及び取引の適正化に関する法律(LP法)等の条文に基づく簡易的な目安です。個別の許認可判断は必ず所轄の経済産業局・都道府県等にご確認ください。";
+
+const METI_REFERENCE = {
+  label: "技術基準の詳細(告示・通達等)は随時改正されるため、",
+  url: "https://www.meti.go.jp/policy/safety_security/industrial_safety/sangyo/lpgas/hourei/index.html",
+};
+
+const ACTION_TYPES = [
+  {
+    id: "sales_registration",
+    label: "一般消費者向け販売事業の登録",
+    help: "一般消費者等にLPガスを反復継続的に供給する事業を始める場合の登録要否と主な要件",
+    available: true,
+  },
+  {
+    id: "safety_org",
+    label: "保安機関の認定",
+    help: "販売事業者に代わって保安業務(点検・調査・周知等)を行う「保安機関」の認定要否",
+    available: true,
+  },
+  {
+    id: "supply_equipment",
+    label: "供給設備・貯蔵施設の技術基準",
+    help: "通常供給・バルク供給それぞれの貯蔵能力に応じた保安物件距離・火気距離等を確認",
+    available: true,
+  },
+  {
+    id: "construction_notification",
+    label: "液化石油ガス設備工事の届出",
+    help: "学校・病院等の対象施設で行う増設等の設備工事について届出が必要かを確認",
+    available: true,
+  },
+];
+
+function cite(lawId, num, label) {
+  return { lawId, num, label };
+}
+
+/* =========================================================
+   1. 一般消費者向け販売事業の登録
+   ========================================================= */
+
+function stepsSalesRegistration(answers) {
+  const steps = [
+    {
+      id: "generalConsumer",
+      prompt: "一般消費者等(家庭用・業務用の消費者)にLPガスを反復継続的に供給しますか？",
+      help: "工業用需要家など「一般消費者等」に該当しない相手のみへの供給は、この法律の登録対象ではありません。",
+      type: "choice",
+      options: [
+        { value: "yes", label: "供給する(その予定を含む)" },
+        {
+          value: "no",
+          label: "供給しない(工業用需要家等のみ)",
+          help: "高圧ガス保安法(液化石油ガス保安規則等)の対象となる可能性があります",
+        },
+      ],
+    },
+  ];
+  if (answers.generalConsumer !== "yes") return steps;
+
+  steps.push({
+    id: "disqualified",
+    prompt: "次のいずれかに該当しますか？(登録の欠格事由)",
+    help: "この法律・高圧ガス保安法等に基づき罰金以上の刑に処せられ2年を経過しない、登録取消しの日から2年を経過しない、心身の故障、法人役員が該当 等",
+    type: "choice",
+    options: [
+      { value: "none", label: "どれにも該当しない" },
+      { value: "applies", label: "該当するものがある" },
+    ],
+  });
+  return steps;
+}
+
+function evalSalesRegistration(answers) {
+  if (answers.generalConsumer !== "yes") {
+    return {
+      verdict: "out_of_scope",
+      title: "LP法上の販売事業登録は対象外",
+      summary:
+        "一般消費者等への供給を行わない場合、この法律が定める液化石油ガス販売事業の登録は不要です。",
+      note: "工業用需要家等のみへの供給は、高圧ガス保安法(液化石油ガス保安規則等)の対象となる可能性があります。",
+      citations: [cite(LAW, "2", "第二条(定義)")],
+    };
+  }
+  if (answers.disqualified === "applies") {
+    return {
+      verdict: "blocked",
+      title: "登録を受けられない可能性があります",
+      summary: "登録の欠格事由に該当する可能性があるため、そのままでは登録が拒否される場合があります。",
+      note: "該当の詳細を所轄の経済産業局・都道府県等にご確認ください。",
+      citations: [cite(LAW, "4", "第四条(登録の拒否)")],
+    };
+  }
+  return {
+    verdict: "registration",
+    title: "液化石油ガス販売事業の登録が必要です",
+    summary:
+      "経済産業大臣・都道府県知事又は指定都市の長(販売所の設置範囲による)の登録を受ける必要があります。",
+    note: "登録後も、貯蔵施設の保有・技術基準への適合維持、業務主任者の選任など継続的な義務があります。",
+    procedures: [
+      cite(LAW, "3", "第三条(事業の登録)"),
+      cite(LAW, "11", "第十一条(貯蔵施設)"),
+      cite(LAW, "16", "第十六条(基準適合義務等)"),
+      cite(LAW, "19", "第十九条(業務主任者)"),
+    ],
+    citations: [
+      cite(LAW, "3", "第三条(事業の登録)"),
+      cite(LAW, "4", "第四条(登録の拒否)"),
+      cite(LAW, "11", "第十一条(貯蔵施設)"),
+      cite(LAW, "19", "第十九条(業務主任者)"),
+    ],
+  };
+}
+
+/* =========================================================
+   2. 保安機関の認定
+   ========================================================= */
+
+const HOAN_CATEGORIES = [
+  { value: "1", label: "供給開始時点検・調査" },
+  { value: "2", label: "容器交換時等供給設備点検" },
+  { value: "3", label: "定期供給設備点検" },
+  { value: "4", label: "定期消費設備調査" },
+  { value: "5", label: "周知" },
+  { value: "6", label: "緊急時対応" },
+  { value: "7", label: "緊急時連絡(自ら出動せず行うものに限る)" },
+];
+
+function stepsSafetyOrg(answers) {
+  const steps = [
+    {
+      id: "selfPerform",
+      prompt: "保安業務(点検・調査・周知・緊急時対応等)を自社で行いますか？",
+      type: "choice",
+      options: [
+        {
+          value: "outsource",
+          label: "保安機関に委託する",
+          help: "委託先が第二十九条の認定を受けた保安機関であることを確認してください",
+        },
+        { value: "self", label: "自ら行う(認定を受ける)" },
+      ],
+    },
+  ];
+  if (answers.selfPerform !== "self") return steps;
+
+  steps.push({
+    id: "category",
+    prompt: "行おうとする保安業務区分を選んでください",
+    help: "複数の区分を組み合わせて認定を受けることもできます。ここでは代表的な1区分を選んで判定します。",
+    type: "choice",
+    options: HOAN_CATEGORIES,
+  });
+
+  steps.push({
+    id: "disqualified",
+    prompt: "次のいずれかに該当しますか？(認定の欠格事由)",
+    help: "この法律・高圧ガス保安法等に基づき罰金以上の刑に処せられ2年を経過しない、認定取消しの日から2年を経過しない、心身の故障、法人役員が該当 等",
+    type: "choice",
+    options: [
+      { value: "none", label: "どれにも該当しない" },
+      { value: "applies", label: "該当するものがある" },
+    ],
+  });
+  return steps;
+}
+
+function evalSafetyOrg(answers) {
+  if (answers.selfPerform !== "self") {
+    return {
+      verdict: "not_required",
+      title: "保安機関の認定は不要です",
+      summary: "保安業務の全部を委託する場合、貴社が保安機関の認定を受ける必要はありません。",
+      note: "委託先が認定を受けた保安機関であることを委託契約時に確認してください。",
+      citations: [cite(LAW, "27", "第二十七条(保安業務を行う義務)"), cite(LAW, "28", "第二十八条(保安業務の委託)")],
+    };
+  }
+  if (answers.disqualified === "applies") {
+    return {
+      verdict: "blocked",
+      title: "認定を受けられない可能性があります",
+      summary: "認定の欠格事由に該当する可能性があるため、そのままでは認定が受けられない場合があります。",
+      note: "該当の詳細を所轄の経済産業局・都道府県等にご確認ください。",
+      citations: [cite(LAW, "30", "第三十条(欠格条項)")],
+    };
+  }
+  const categoryLabel = HOAN_CATEGORIES.find((c) => c.value === answers.category)?.label || "";
+  return {
+    verdict: "certification",
+    title: "保安機関の認定が必要です",
+    summary: `選択した保安業務区分「${categoryLabel}」を行うには、経済産業大臣・都道府県知事又は指定都市の長の認定を受ける必要があります。`,
+    note: "認定の申請では、保安業務に係る一般消費者等の数の範囲を定める必要があります。技術的能力基準・損害賠償措置等の認定基準を満たす必要があります。",
+    procedures: [
+      cite(LAW, "29", "第二十九条(認定)"),
+      cite(LAW, "31", "第三十一条(認定の基準)"),
+      cite(LAW, "34", "第三十四条(保安機関の業務等)"),
+    ],
+    citations: [
+      cite(LAW, "29", "第二十九条(認定)"),
+      cite(LAW, "30", "第三十条(欠格条項)"),
+      cite(LAW, "31", "第三十一条(認定の基準)"),
+      cite(LAW, "32", "第三十二条(保安機関の認定の更新)"),
+    ],
+  };
+}
+
+/* =========================================================
+   3. 供給設備・貯蔵施設の技術基準(通常供給・バルク供給共通入口)
+   ========================================================= */
+
+function stepsSupplyEquipment(answers) {
+  const steps = [
+    {
+      id: "supplyMethod",
+      prompt: "供給方式を選んでください",
+      type: "choice",
+      options: [
+        { value: "cylinder", label: "容器(ボンベ)による通常供給" },
+        { value: "bulk_container", label: "バルク容器による供給" },
+        { value: "bulk_tank", label: "バルク貯槽による供給" },
+      ],
+    },
+  ];
+  if (!answers.supplyMethod) return steps;
+
+  const largeScaleHelp =
+    "この規模は「特定供給設備」に該当し、第三十六条以下(都道府県知事等の許可)の対象です。この診断の対象範囲外のため、所轄の経済産業局・都道府県等にご相談ください。";
+
+  let capacityOptions;
+  if (answers.supplyMethod === "bulk_tank") {
+    capacityOptions = [
+      { value: "under1000", label: "貯蔵能力1,000kg未満" },
+      { value: "over1000", label: "1,000kg以上(特定供給設備)", help: largeScaleHelp },
+    ];
+  } else {
+    capacityOptions = [
+      { value: "under1000", label: "貯蔵能力1,000kg未満" },
+      { value: "1000to3000", label: "1,000kg以上3,000kg未満" },
+      { value: "over3000", label: "3,000kg以上(特定供給設備)", help: largeScaleHelp },
+    ];
+  }
+
+  steps.push({
+    id: "capacity",
+    prompt: "貯蔵能力(算式W=0.9wV等により算出した値)はどの範囲ですか？",
+    help: "貯蔵能力の算式は施行規則第一条第二項第五号に定められています。",
+    type: "choice",
+    options: capacityOptions,
+  });
+  return steps;
+}
+
+const SUPPLY_SUMMARY = {
+  "cylinder:under1000": {
+    title: "通常供給(容器等・貯蔵能力1,000kg未満)の技術基準",
+    summary:
+      "容器(内容積20L以上)は、その位置から2m以内にある火気を遮る措置を講じ、かつ原則として屋外に置く必要があります(告示で定める場合を除き屋内設置は不可)。",
+    ruleNum: "18",
+  },
+  "cylinder:1000to3000": {
+    title: "通常供給(貯蔵設備・貯蔵能力1,000kg以上3,000kg未満)の技術基準",
+    summary:
+      "貯蔵設備は、第一種保安物件から16.97m以上、第二種保安物件から11.31m以上の距離が必要です(鉄筋コンクリート障壁等の設置により距離要件を満たしたものとみなせる場合あり)。火気取扱施設からは5m以上の距離、又は漏えいガスの流動防止措置が必要です。柵・へい、警戒標、消火設備、軽量な屋根・遮へい板の設置も必要です。",
+    ruleNum: "18",
+  },
+  "bulk_container:under1000": {
+    title: "バルク供給(バルク容器・貯蔵能力1,000kg未満)の技術基準",
+    summary:
+      "容器等と同様、その位置から2m以内にある火気を遮る措置を講じ、かつ原則として屋外に置く必要があります。加えてカップリング用液流出防止装置・ガス放出防止器又は緊急遮断装置・過充てん防止装置等バルク容器特有の附属機器の設置が必要です。",
+    ruleNum: "19",
+  },
+  "bulk_container:1000to3000": {
+    title: "バルク供給(バルク容器・貯蔵能力1,000kg以上3,000kg未満)の技術基準",
+    summary:
+      "容器等の場合と同水準で、第一種保安物件から16.97m以上、第二種保安物件から11.31m以上、火気取扱施設から5m以上の距離が必要です。不燃性・難燃性材料の屋根又は遮へい板、消火設備の設置も必要です。",
+    ruleNum: "19",
+  },
+  "bulk_tank:under1000": {
+    title: "バルク供給(バルク貯槽・貯蔵能力1,000kg未満)の技術基準",
+    summary:
+      "バルク貯槽は容器等より近接設置が可能で、第一種保安物件から1.5m以上、第二種保安物件から1m以上の距離で足ります(告示で定める加熱試験合格構造壁の設置や地盤面下埋設によりこの距離要件が不要となる場合あり)。その外面から2m以内にある火気を遮る措置を講じ、屋外に置く必要があります。",
+    ruleNum: "19",
+  },
+};
+
+function evalSupplyEquipment(answers) {
+  const key = `${answers.supplyMethod}:${answers.capacity}`;
+  const info = SUPPLY_SUMMARY[key];
+  if (!info) {
+    return {
+      verdict: "large_scale",
+      title: "特定供給設備(都道府県知事等の許可対象)に該当します",
+      summary:
+        "この規模の供給設備は「特定供給設備」に該当し、第三十六条以下(貯蔵施設等の設置許可)の技術基準が適用されます。この診断の対象範囲外です。",
+      note: "所轄の経済産業局・都道府県等にご相談ください。",
+      citations: [cite(LAW, "36", "第三十六条(貯蔵施設等の設置の許可)"), cite(LAW, "37", "第三十七条(許可の基準)")],
+    };
+  }
+  return {
+    verdict: "info",
+    title: info.title,
+    summary: info.summary,
+    note: "上記は主要な数値のみの要約です。設備の細部の技術仕様(圧力試験・附属機器の構造等)は根拠条文の全文及びMETI告示・通達をご確認ください。",
+    citations: [cite(RULE, info.ruleNum, `施行規則第${info.ruleNum === "18" ? "十八" : "十九"}条`)],
+  };
+}
+
+/* =========================================================
+   4. 液化石油ガス設備工事の届出
+   ========================================================= */
+
+function stepsConstructionNotification(answers) {
+  const steps = [
+    {
+      id: "facilityType",
+      prompt: "工事対象の施設・建築物は、次のいずれかに該当しますか？",
+      help: "学校・病院・診療所・劇場・映画館・演芸場・公会堂・キャバレー等・貸席飲食店・百貨店マーケット・旅館ホテル寄宿舎共同住宅・図書館博物館美術館・公衆浴場・駅や船舶航空機発着場・神社寺院教会・床面積1,000㎡以上の事務所(いずれかに類する施設を含む)",
+      type: "choice",
+      options: [
+        { value: "yes", label: "該当する" },
+        { value: "no", label: "該当しない" },
+      ],
+    },
+  ];
+  if (answers.facilityType !== "yes") return steps;
+
+  steps.push({
+    id: "capacityOver500",
+    prompt: "その供給設備(特定供給設備を除く)に係る貯蔵能力は500kgを超えますか？",
+    type: "choice",
+    options: [
+      { value: "yes", label: "超える" },
+      { value: "no", label: "超えない" },
+    ],
+  });
+  if (answers.capacityOver500 !== "yes") return steps;
+
+  steps.push({
+    id: "workType",
+    prompt: "行う工事の内容は？",
+    type: "choice",
+    options: [
+      { value: "pipe_extension", label: "供給管の延長を伴う工事" },
+      { value: "storage_change", label: "貯蔵設備の位置変更又は貯蔵能力の増加を伴う工事" },
+      { value: "other", label: "上記以外(容器交換のみ等)" },
+    ],
+  });
+  return steps;
+}
+
+function evalConstructionNotification(answers) {
+  if (answers.facilityType !== "yes") {
+    return {
+      verdict: "not_required",
+      title: "設備工事の届出は不要です",
+      summary: "工事対象の施設・建築物が届出対象の類型に該当しないため、この規定による届出は不要です。",
+      citations: [cite(RULE, "86", "施行規則第八十六条(施設又は建築物の指定)")],
+    };
+  }
+  if (answers.capacityOver500 !== "yes") {
+    return {
+      verdict: "not_required",
+      title: "設備工事の届出は不要です",
+      summary: "供給設備の貯蔵能力が500kgを超えないため、この規定による届出は不要です。",
+      citations: [cite(RULE, "87", "施行規則第八十七条(液化石油ガス設備工事)")],
+    };
+  }
+  if (answers.workType === "other") {
+    return {
+      verdict: "not_required",
+      title: "設備工事の届出は不要です",
+      summary: "供給管の延長、又は貯蔵設備の位置変更・貯蔵能力の増加のいずれにも該当しない工事のため、この規定による届出は不要です。",
+      citations: [cite(RULE, "87", "施行規則第八十七条(液化石油ガス設備工事)")],
+    };
+  }
+  return {
+    verdict: "notification",
+    title: "液化石油ガス設備工事の届出が必要です",
+    summary:
+      "対象施設・建築物、貯蔵能力500kg超、かつ供給管の延長又は貯蔵設備の位置変更・能力増加を伴う工事のいずれにも該当するため、工事後遅滞なく所在地を管轄する都道府県知事への届出が必要です。",
+    procedures: [cite(LAW, "38_3", "第三十八条の三(液化石油ガス設備工事の届出)"), cite(RULE, "88", "施行規則第八十八条(工事の届出)")],
+    citations: [
+      cite(LAW, "38_3", "第三十八条の三(液化石油ガス設備工事の届出)"),
+      cite(RULE, "86", "施行規則第八十六条(施設又は建築物の指定)"),
+      cite(RULE, "87", "施行規則第八十七条(液化石油ガス設備工事)"),
+      cite(RULE, "88", "施行規則第八十八条(工事の届出)"),
+    ],
+  };
+}
+
+/* =========================================================
+   公開API
+   ========================================================= */
+
+const STEP_BUILDERS = {
+  sales_registration: stepsSalesRegistration,
+  safety_org: stepsSafetyOrg,
+  supply_equipment: stepsSupplyEquipment,
+  construction_notification: stepsConstructionNotification,
+};
+
+const EVALUATORS = {
+  sales_registration: evalSalesRegistration,
+  safety_org: evalSafetyOrg,
+  supply_equipment: evalSupplyEquipment,
+  construction_notification: evalConstructionNotification,
+};
+
+function getStepsForAction(actionType, answers) {
+  const builder = STEP_BUILDERS[actionType];
+  return builder ? builder(answers) : [];
+}
+
+function evaluateDiagnosis(actionType, answers) {
+  const evaluator = EVALUATORS[actionType];
+  if (!evaluator) {
+    return { verdict: "invalid", title: "対象外", summary: "", citations: [] };
+  }
+  return evaluator(answers);
+}
+
+/* =========================================================
+   main.js
+   ========================================================= */
+
+const breadcrumbEl = document.getElementById("breadcrumb");
+const stageEl = document.getElementById("stage");
+const historyListEl = document.getElementById("history-list");
+const clearHistoryBtn = document.getElementById("clear-history-btn");
+const toastEl = document.getElementById("toast");
+const modeTabsEl = document.getElementById("mode-tabs");
+
+const appState = {
+  mode: "diagnosis", // 'diagnosis' | 'browse'
+  diag: {
+    actionType: null,
+    stepIndex: 0,
+    answers: {},
+    result: null,
+    expandedCitations: new Set(),
+    citationCache: new Map(), // "lawId:num" -> {status, article, message}
+  },
+  browse: {
+    law: null,
+    lawData: null,
+    lawTitle: "",
+    chapters: [],
+    chapter: null,
+    section: null,
+    article: null,
+  },
+};
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function showToast(message, isError = false) {
+  toastEl.textContent = message;
+  toastEl.hidden = false;
+  toastEl.style.background = isError ? "var(--danger)" : "var(--text)";
+  toastEl.style.color = isError ? "#fff" : "var(--bg)";
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => {
+    toastEl.hidden = true;
+  }, 3200);
+}
+
+// --- 法令データ取得(キャッシュ優先、対象3法令・参照法令いずれにも使える) ---
+
+async function loadLawData(lawMeta, { forceRefresh = false } = {}) {
+  if (forceRefresh) {
+    await clearCachedLaw(lawMeta.lawId);
+  }
+  const cached = await getCachedLaw(lawMeta.lawId);
+  if (cached && !forceRefresh) {
+    return cached.data;
+  }
+  const data = await fetchLawData(lawMeta.lawId);
+  await putCachedLaw(lawMeta.lawId, data, data?.revision_info?.updated || null);
+  return data;
+}
+
+// --- モード切替 ---
+
+function setMode(mode) {
+  appState.mode = mode;
+  render();
+}
+
+function updateModeTabs() {
+  modeTabsEl.querySelectorAll(".mode-tab").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.mode === appState.mode);
+  });
+}
+
+modeTabsEl.querySelectorAll(".mode-tab").forEach((btn) => {
+  btn.addEventListener("click", () => setMode(btn.dataset.mode));
+});
+
+function render() {
+  updateModeTabs();
+  if (appState.mode === "diagnosis") {
+    renderDiagBreadcrumb();
+    renderDiagStage();
+  } else {
+    renderBrowseBreadcrumb();
+    renderBrowseStage();
+  }
+}
+
+function crumbButton(label, onClick) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.textContent = label;
+  btn.addEventListener("click", onClick);
+  return btn;
+}
+
+function crumbCurrent(label) {
+  const span = document.createElement("span");
+  span.className = "crumb-current";
+  span.textContent = label;
+  return span;
+}
+
+function crumbSep() {
+  const s = document.createElement("span");
+  s.className = "crumb-sep";
+  s.textContent = "›";
+  return s;
+}
+
+/* =========================================================
+   設問モード (diagnosis)
+   ========================================================= */
+
+function resetDiagnosis() {
+  appState.diag = {
+    actionType: null,
+    stepIndex: 0,
+    answers: {},
+    result: null,
+    expandedCitations: new Set(),
+    citationCache: new Map(),
+  };
+  render();
+}
+
+function selectActionType(actionType) {
+  if (!actionType.available) return;
+  appState.diag.actionType = actionType.id;
+  appState.diag.stepIndex = 0;
+  appState.diag.answers = {};
+  appState.diag.result = null;
+  render();
+}
+
+async function finalizeDiagnosisResult() {
+  const result = evaluateDiagnosis(appState.diag.actionType, appState.diag.answers);
+  appState.diag.result = result;
+  render();
+
+  if (result.verdict !== "invalid") {
+    try {
+      await addHistoryEntry({
+        type: "diagnosis",
+        actionType: appState.diag.actionType,
+        actionLabel: ACTION_TYPES.find((a) => a.id === appState.diag.actionType)?.label,
+        answers: { ...appState.diag.answers },
+        verdict: result.verdict,
+        title: result.title,
+        summary: result.summary,
+      });
+      await renderHistory();
+    } catch (err) {
+      console.error("履歴の保存に失敗しました", err);
+    }
+  }
+}
+
+function formatAnswerLabel(step, value) {
+  if (step.type === "choice") {
+    const opt = step.options.find((o) => o.value === value);
+    return opt ? opt.label : String(value);
+  }
+  return `${value}${step.unit ? " " + step.unit : ""}`;
+}
+
+function goToDiagStep(index) {
+  const steps = getStepsForAction(appState.diag.actionType, appState.diag.answers);
+  for (let j = index; j < steps.length; j++) {
+    delete appState.diag.answers[steps[j].id];
+  }
+  appState.diag.stepIndex = index;
+  appState.diag.result = null;
+  render();
+}
+
+async function answerStep(step, value) {
+  appState.diag.answers[step.id] = value;
+  const steps = getStepsForAction(appState.diag.actionType, appState.diag.answers);
+  if (appState.diag.stepIndex < steps.length - 1) {
+    appState.diag.stepIndex += 1;
+    render();
+    return;
+  }
+  // 最終設問に回答 → 判定
+  await finalizeDiagnosisResult();
+}
+
+function renderDiagBreadcrumb() {
+  breadcrumbEl.innerHTML = "";
+  breadcrumbEl.appendChild(crumbButton("行為選択", () => resetDiagnosis()));
+
+  if (!appState.diag.actionType) return;
+
+  const actionMeta = ACTION_TYPES.find((a) => a.id === appState.diag.actionType);
+  breadcrumbEl.appendChild(crumbSep());
+  if (appState.diag.result || appState.diag.stepIndex > 0) {
+    breadcrumbEl.appendChild(crumbButton(actionMeta.label, () => goToDiagStep(0)));
+  } else {
+    breadcrumbEl.appendChild(crumbCurrent(actionMeta.label));
+  }
+
+  const steps = getStepsForAction(appState.diag.actionType, appState.diag.answers);
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    if (!(step.id in appState.diag.answers)) break;
+    breadcrumbEl.appendChild(crumbSep());
+    const label = formatAnswerLabel(step, appState.diag.answers[step.id]);
+    const isCurrent = i === appState.diag.stepIndex && !appState.diag.result;
+    if (isCurrent) {
+      breadcrumbEl.appendChild(crumbCurrent(label));
+    } else {
+      breadcrumbEl.appendChild(crumbButton(label, () => goToDiagStep(i)));
+    }
+  }
+
+  if (appState.diag.result) {
+    breadcrumbEl.appendChild(crumbSep());
+    breadcrumbEl.appendChild(crumbCurrent("判定結果"));
+  }
+}
+
+function renderDiagStage() {
+  if (appState.diag.actionType && !appState.diag.result) {
+    const pendingSteps = getStepsForAction(appState.diag.actionType, appState.diag.answers);
+    if (appState.diag.stepIndex >= pendingSteps.length) {
+      // これ以上の設問がなく、直ちに判定できる場合。finalizeDiagnosisResult が
+      // 結果を確定させたうえで render() を呼び直すので、ここでは stageEl に
+      // 手を加えずに抜ける(二重描画による上書きを避ける)。
+      finalizeDiagnosisResult();
+      return;
+    }
+  }
+
+  stageEl.innerHTML = "";
+  const wrap = document.createElement("div");
+
+  const disclaimer = document.createElement("div");
+  disclaimer.className = "disclaimer";
+  disclaimer.textContent = DISCLAIMER;
+  wrap.appendChild(disclaimer);
+
+  const body = document.createElement("div");
+  body.className = "stage";
+
+  if (!appState.diag.actionType) {
+    body.appendChild(renderActionTypeStep());
+  } else if (appState.diag.result) {
+    body.appendChild(renderResultStep());
+  } else {
+    body.appendChild(renderQuestionStep());
+  }
+
+  wrap.appendChild(body);
+  stageEl.appendChild(wrap);
+}
+
+function renderActionTypeStep() {
+  const wrap = document.createElement("div");
+  const h2 = document.createElement("h2");
+  h2.textContent = "何についてお調べですか?";
+  wrap.appendChild(h2);
+
+  const grid = document.createElement("div");
+  grid.className = "card-grid";
+  for (const action of ACTION_TYPES) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "pick-card";
+    if (!action.available) card.style.opacity = "0.5";
+    card.innerHTML = `<span class="pick-title">${escapeHtml(action.label)}</span><span class="pick-sub">${escapeHtml(
+      action.help || ""
+    )}</span>`;
+    card.addEventListener("click", () => selectActionType(action));
+    grid.appendChild(card);
+  }
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+function renderQuestionStep() {
+  const steps = getStepsForAction(appState.diag.actionType, appState.diag.answers);
+  const step = steps[appState.diag.stepIndex];
+  const wrap = document.createElement("div");
+
+  const h2 = document.createElement("h2");
+  h2.textContent = step.prompt;
+  wrap.appendChild(h2);
+
+  if (step.help) {
+    const help = document.createElement("div");
+    help.className = "diag-help";
+    help.textContent = step.help;
+    wrap.appendChild(help);
+  }
+
+  if (step.type === "choice") {
+    const list = document.createElement("div");
+    list.className = "pick-list";
+    for (const opt of step.options) {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "pick-card";
+      card.innerHTML = `<span class="pick-title">${escapeHtml(opt.label)}</span>${
+        opt.help ? `<span class="pick-sub">${escapeHtml(opt.help)}</span>` : ""
+      }`;
+      card.addEventListener("click", () => answerStep(step, opt.value));
+      list.appendChild(card);
+    }
+    wrap.appendChild(list);
+  } else if (step.type === "number") {
+    const row = document.createElement("div");
+    row.className = "diag-number-row";
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = String(step.min ?? 0);
+    input.step = "any";
+    input.placeholder = "数値を入力";
+    const unit = document.createElement("span");
+    unit.className = "unit";
+    unit.textContent = step.unit || "";
+    row.appendChild(input);
+    row.appendChild(unit);
+    wrap.appendChild(row);
+
+    const actions = document.createElement("div");
+    actions.className = "diag-actions";
+    const nextBtn = document.createElement("button");
+    nextBtn.type = "button";
+    nextBtn.className = "btn-primary";
+    nextBtn.textContent = "次へ";
+    nextBtn.disabled = true;
+    input.addEventListener("input", () => {
+      const v = Number(input.value);
+      nextBtn.disabled = input.value === "" || !Number.isFinite(v) || v < 0;
+    });
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" && !nextBtn.disabled) answerStep(step, input.value);
+    });
+    nextBtn.addEventListener("click", () => answerStep(step, input.value));
+    actions.appendChild(nextBtn);
+    wrap.appendChild(actions);
+
+    setTimeout(() => input.focus(), 0);
+  }
+
+  return wrap;
+}
+
+const VERDICT_LABELS = {
+  registration: "登録",
+  certification: "認定",
+  notification: "届出",
+  not_required: "手続き不要",
+  out_of_scope: "対象外",
+  blocked: "要注意",
+  info: "技術基準",
+  large_scale: "対象外(大規模設備)",
+};
+
+function verdictLabel(verdict) {
+  return VERDICT_LABELS[verdict] || "確認結果";
+}
+
+function renderResultStep() {
+  const result = appState.diag.result;
+  const wrap = document.createElement("div");
+
+  const banner = document.createElement("div");
+  banner.className = `verdict-banner ${result.verdict}`;
+  banner.innerHTML = `
+    <div class="verdict-title">${escapeHtml(verdictLabel(result.verdict))} — ${escapeHtml(result.title)}</div>
+    <div class="verdict-summary">${escapeHtml(result.summary)}</div>
+  `;
+  wrap.appendChild(banner);
+
+  if (result.note) {
+    const note = document.createElement("div");
+    note.className = "note-box";
+    note.textContent = result.note;
+    wrap.appendChild(note);
+  }
+
+  if (result.procedures && result.procedures.length > 0) {
+    const procBlock = document.createElement("div");
+    procBlock.className = "result-block";
+    const procHeading = document.createElement("h3");
+    procHeading.textContent = "必要となりうる手続き";
+    procBlock.appendChild(procHeading);
+    for (const proc of result.procedures) {
+      procBlock.appendChild(renderCitationCard(proc));
+    }
+    wrap.appendChild(procBlock);
+  }
+
+  const metiBox = document.createElement("div");
+  metiBox.className = "note-box";
+  metiBox.innerHTML = `${escapeHtml(METI_REFERENCE.label)} <a href="${METI_REFERENCE.url}" target="_blank" rel="noopener">経済産業省「液化石油ガスの保安の確保及び取引の適正化に関する法律」関係法令ページを見る ↗</a>`;
+  wrap.appendChild(metiBox);
+
+  const citeBlock = document.createElement("div");
+  citeBlock.className = "result-block";
+  const citeHeading = document.createElement("h3");
+  citeHeading.textContent = "判定の根拠条文";
+  citeBlock.appendChild(citeHeading);
+
+  for (const citation of result.citations) {
+    citeBlock.appendChild(renderCitationCard(citation));
+  }
+  wrap.appendChild(citeBlock);
+
+  const actions = document.createElement("div");
+  actions.className = "diag-actions";
+  const retryBtn = document.createElement("button");
+  retryBtn.type = "button";
+  retryBtn.className = "btn-primary";
+  retryBtn.textContent = "もう一度回答する";
+  retryBtn.addEventListener("click", () => selectActionType(ACTION_TYPES.find((a) => a.id === appState.diag.actionType)));
+  actions.appendChild(retryBtn);
+  wrap.appendChild(actions);
+
+  return wrap;
+}
+
+function renderCitationCard(citation) {
+  const key = `${citation.lawId}:${citation.num}`;
+  const card = document.createElement("div");
+  card.className = "citation-card";
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "citation-toggle";
+  const expanded = appState.diag.expandedCitations.has(key);
+  toggle.textContent = `${expanded ? "▾" : "▸"} ${citation.label}`;
+  toggle.addEventListener("click", () => toggleCitation(citation));
+  card.appendChild(toggle);
+
+  if (expanded) {
+    const body = document.createElement("div");
+    body.className = "citation-body";
+    const cached = appState.diag.citationCache.get(key);
+    if (!cached || cached.status === "loading") {
+      body.innerHTML = `<div class="loading">条文を読み込んでいます…</div>`;
+    } else if (cached.status === "error") {
+      body.innerHTML = `<div class="error-box">条文の取得に失敗しました。(${escapeHtml(cached.message || "")})</div>`;
+    } else if (cached.status === "notfound") {
+      body.innerHTML = `<div class="error-box">該当条文が見つかりませんでした。</div>`;
+    } else {
+      body.innerHTML = renderArticle(cached.article.node);
+    }
+    card.appendChild(body);
+  }
+
+  return card;
+}
+
+async function toggleCitation(citation) {
+  const key = `${citation.lawId}:${citation.num}`;
+  if (appState.diag.expandedCitations.has(key)) {
+    appState.diag.expandedCitations.delete(key);
+    render();
+    return;
+  }
+  appState.diag.expandedCitations.add(key);
+  render();
+
+  if (appState.diag.citationCache.has(key)) return;
+  appState.diag.citationCache.set(key, { status: "loading" });
+  try {
+    const lawMeta = findLawMeta(citation.lawId);
+    const lawData = await loadLawData(lawMeta);
+    const mainProvision = getMainProvision(lawData);
+    const article = findArticleByNum(mainProvision, citation.num);
+    appState.diag.citationCache.set(key, article ? { status: "ready", article } : { status: "notfound" });
+  } catch (err) {
+    console.error(err);
+    appState.diag.citationCache.set(key, { status: "error", message: err.message });
+  }
+  render();
+}
+
+async function restoreDiagnosisFromHistory(entry) {
+  appState.mode = "diagnosis";
+  const steps = getStepsForAction(entry.actionType, entry.answers);
+  appState.diag = {
+    actionType: entry.actionType,
+    stepIndex: Math.max(0, steps.length - 1),
+    answers: { ...entry.answers },
+    result: evaluateDiagnosis(entry.actionType, entry.answers),
+    expandedCitations: new Set(),
+    citationCache: new Map(),
+  };
+  render();
+}
+
+/* =========================================================
+   条文ブラウズモード (browse) — 法令 → 章 → 節 → 条
+   ========================================================= */
+
+function resetBrowse() {
+  appState.browse = {
+    law: null,
+    lawData: null,
+    lawTitle: "",
+    chapters: [],
+    chapter: null,
+    section: null,
+    article: null,
+  };
+  render();
+}
+
+async function selectLaw(lawMeta, { forceRefresh = false } = {}) {
+  const b = appState.browse;
+  b.law = lawMeta;
+  b.chapter = null;
+  b.section = null;
+  b.article = null;
+  renderBrowseLoading(`${lawMeta.title} を読み込んでいます…`);
+
+  try {
+    const lawData = await loadLawData(lawMeta, { forceRefresh });
+    b.lawData = lawData;
+    b.lawTitle = getLawTitle(lawData) || lawMeta.title;
+    const mainProvision = getMainProvision(lawData);
+    b.chapters = buildChapters(mainProvision);
+
+    if (b.chapters.length === 0) {
+      renderBrowseError("この法令から条文構造を読み取れませんでした。");
+      return;
+    }
+
+    if (b.chapters.length === 1 && b.chapters[0].num === null) {
+      selectChapter(b.chapters[0]);
+      return;
+    }
+
+    render();
+  } catch (err) {
+    console.error(err);
+    renderBrowseError(`法令データの取得に失敗しました。時間をおいて再度お試しください。\n(${err.message})`);
+  }
+}
+
+function selectChapter(chapter) {
+  appState.browse.chapter = chapter;
+  appState.browse.section = null;
+  appState.browse.article = null;
+  render();
+}
+
+function selectSection(section) {
+  appState.browse.section = section;
+  appState.browse.article = null;
+  render();
+}
+
+async function selectArticle(article) {
+  const b = appState.browse;
+  b.article = article;
+  render();
+
+  try {
+    await addHistoryEntry({
+      type: "article",
+      lawId: b.law.lawId,
+      lawShortName: b.law.shortName,
+      lawTitle: b.lawTitle,
+      chapterNum: b.chapter ? b.chapter.num : null,
+      chapterTitle: b.chapter ? b.chapter.title : null,
+      sectionNum: b.section ? b.section.num : null,
+      sectionTitle: b.section ? b.section.title : null,
+      articleNum: article.num,
+      articleTitle: article.title,
+      articleCaption: article.caption,
+    });
+    await renderHistory();
+  } catch (err) {
+    console.error("履歴の保存に失敗しました", err);
+  }
+}
+
+async function restoreArticleFromHistory(entry) {
+  const lawMeta = TARGET_LAWS.find((l) => l.lawId === entry.lawId);
+  if (!lawMeta) {
+    showToast("対象法令の情報が見つかりませんでした。", true);
+    return;
+  }
+  appState.mode = "browse";
+  renderBrowseLoading(`${entry.lawTitle || lawMeta.title} を読み込んでいます…`);
+  try {
+    const lawData = await loadLawData(lawMeta);
+    const b = appState.browse;
+    b.law = lawMeta;
+    b.lawData = lawData;
+    b.lawTitle = getLawTitle(lawData) || lawMeta.title;
+    const mainProvision = getMainProvision(lawData);
+    b.chapters = buildChapters(mainProvision);
+
+    let chapter = null;
+    if (entry.chapterNum !== null && entry.chapterNum !== undefined) {
+      chapter = b.chapters.find((c) => c.num === entry.chapterNum) || null;
+    } else if (b.chapters.length === 1 && b.chapters[0].num === null) {
+      chapter = b.chapters[0];
+    }
+    b.chapter = chapter;
+
+    let section = null;
+    if (chapter && entry.sectionNum !== null && entry.sectionNum !== undefined) {
+      section = chapter.sections.find((s) => s.num === entry.sectionNum) || null;
+    }
+    b.section = section;
+
+    const pool = section ? section.articles : chapter ? chapter.articles : [];
+    const article = pool.find((a) => a.num === entry.articleNum) || null;
+
+    if (!article) {
+      showToast("この条文は法令の改正等により見つかりませんでした。最新の目次から探してください。", true);
+      b.article = null;
+      render();
+      return;
+    }
+
+    b.article = article;
+    render();
+  } catch (err) {
+    console.error(err);
+    renderBrowseError(`履歴からの復元に失敗しました。\n(${err.message})`);
+  }
+}
+
+function renderBrowseLoading(message) {
+  stageEl.innerHTML = `<div class="loading">${escapeHtml(message)}</div>`;
+  renderBrowseBreadcrumb();
+}
+
+function renderBrowseError(message) {
+  stageEl.innerHTML = `<div class="error-box">${escapeHtml(message)}</div>`;
+  renderBrowseBreadcrumb();
+}
+
+function renderBrowseBreadcrumb() {
+  breadcrumbEl.innerHTML = "";
+  const b = appState.browse;
+
+  breadcrumbEl.appendChild(crumbButton("法令選択", () => resetBrowse()));
+  if (!b.law) return;
+
+  breadcrumbEl.appendChild(crumbSep());
+  if (b.chapter || b.chapters.length <= 1) {
+    breadcrumbEl.appendChild(crumbButton(b.law.shortName, () => selectLaw(b.law)));
+  } else {
+    breadcrumbEl.appendChild(crumbCurrent(b.law.shortName));
+  }
+
+  if (!b.chapter || b.chapter.num === null) return;
+
+  breadcrumbEl.appendChild(crumbSep());
+  if (b.section || b.article) {
+    breadcrumbEl.appendChild(crumbButton(b.chapter.title, () => selectChapter(b.chapter)));
+  } else {
+    breadcrumbEl.appendChild(crumbCurrent(b.chapter.title));
+  }
+
+  if (b.section) {
+    breadcrumbEl.appendChild(crumbSep());
+    if (b.article) {
+      breadcrumbEl.appendChild(crumbButton(b.section.title, () => selectSection(b.section)));
+    } else {
+      breadcrumbEl.appendChild(crumbCurrent(b.section.title));
+    }
+  }
+
+  if (b.article) {
+    breadcrumbEl.appendChild(crumbSep());
+    breadcrumbEl.appendChild(crumbCurrent(b.article.title));
+  }
+}
+
+function renderBrowseStage() {
+  stageEl.innerHTML = "";
+  const b = appState.browse;
+
+  if (!b.law) {
+    stageEl.appendChild(renderLawStage());
+    return;
+  }
+  if (!b.chapter) {
+    stageEl.appendChild(renderChapterStage());
+    return;
+  }
+  if (b.chapter.sections.length > 0 && !b.section) {
+    stageEl.appendChild(renderSectionStage());
+    return;
+  }
+  if (!b.article) {
+    stageEl.appendChild(renderArticleListStage());
+    return;
+  }
+  stageEl.appendChild(renderArticleStage());
+}
+
+function renderLawStage() {
+  const wrap = document.createElement("div");
+  wrap.className = "stage";
+  const h2 = document.createElement("h2");
+  h2.textContent = "対象法令を選択してください";
+  wrap.appendChild(h2);
+
+  const grid = document.createElement("div");
+  grid.className = "card-grid";
+  for (const law of TARGET_LAWS) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "pick-card";
+    card.innerHTML = `<span class="pick-title">${escapeHtml(law.shortName)}</span><span class="pick-sub">${escapeHtml(law.title)}</span>`;
+    card.addEventListener("click", () => selectLaw(law));
+    grid.appendChild(card);
+  }
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+function renderChapterStage() {
+  const b = appState.browse;
+  const wrap = document.createElement("div");
+  wrap.className = "stage";
+
+  const toolbar = document.createElement("div");
+  toolbar.className = "toolbar";
+  const refreshBtn = document.createElement("button");
+  refreshBtn.type = "button";
+  refreshBtn.className = "btn-link";
+  refreshBtn.textContent = "⟲ 最新版を再取得";
+  refreshBtn.addEventListener("click", () => selectLaw(b.law, { forceRefresh: true }));
+  toolbar.appendChild(refreshBtn);
+  wrap.appendChild(toolbar);
+
+  const h2 = document.createElement("h2");
+  h2.textContent = `${b.lawTitle} — 章を選択してください`;
+  wrap.appendChild(h2);
+
+  const list = document.createElement("div");
+  list.className = "pick-list";
+  for (const chapter of b.chapters) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "pick-card";
+    card.innerHTML = `<span class="pick-title">${escapeHtml(chapter.title)}</span>`;
+    card.addEventListener("click", () => selectChapter(chapter));
+    list.appendChild(card);
+  }
+  wrap.appendChild(list);
+  return wrap;
+}
+
+function renderSectionStage() {
+  const b = appState.browse;
+  const wrap = document.createElement("div");
+  wrap.className = "stage";
+  const h2 = document.createElement("h2");
+  h2.textContent = `${b.chapter.title} — 節を選択してください`;
+  wrap.appendChild(h2);
+
+  const list = document.createElement("div");
+  list.className = "pick-list";
+
+  if (b.chapter.articles.length > 0) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "pick-card";
+    card.innerHTML = `<span class="pick-title">（節に属さない条）</span><span class="pick-sub">${b.chapter.articles.length}条</span>`;
+    card.addEventListener("click", () =>
+      selectSection({ key: `${b.chapter.key}-direct`, num: null, title: null, articles: b.chapter.articles })
+    );
+    list.appendChild(card);
+  }
+
+  for (const section of b.chapter.sections) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "pick-card";
+    card.innerHTML = `<span class="pick-title">${escapeHtml(section.title)}</span><span class="pick-sub">${section.articles.length}条</span>`;
+    card.addEventListener("click", () => selectSection(section));
+    list.appendChild(card);
+  }
+
+  wrap.appendChild(list);
+  return wrap;
+}
+
+function renderArticleListStage() {
+  const b = appState.browse;
+  const wrap = document.createElement("div");
+  wrap.className = "stage";
+  const scopeTitle = b.section && b.section.title ? b.section.title : b.chapter.title;
+  const h2 = document.createElement("h2");
+  h2.textContent = `${scopeTitle} — 条を選択してください`;
+  wrap.appendChild(h2);
+
+  const articles = b.section ? b.section.articles : b.chapter.articles;
+
+  const list = document.createElement("div");
+  list.className = "pick-list";
+  for (const article of articles) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "pick-card";
+    card.innerHTML = `<span class="pick-title">${escapeHtml(article.title)}</span>${
+      article.caption ? `<span class="pick-sub">${escapeHtml(article.caption)}</span>` : ""
+    }`;
+    card.addEventListener("click", () => selectArticle(article));
+    list.appendChild(card);
+  }
+  wrap.appendChild(list);
+  return wrap;
+}
+
+function renderArticleStage() {
+  const wrap = document.createElement("div");
+  wrap.innerHTML = renderArticle(appState.browse.article.node);
+  return wrap;
+}
+
+/* =========================================================
+   照会履歴パネル (共通)
+   ========================================================= */
+
+function formatTimestamp(iso) {
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+async function renderHistory() {
+  const entries = await listHistory();
+  historyListEl.innerHTML = "";
+
+  if (entries.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "history-empty";
+    empty.textContent = "まだ照会履歴はありません。";
+    historyListEl.appendChild(empty);
+    return;
+  }
+
+  for (const entry of entries) {
+    const li = document.createElement("li");
+    li.className = "history-item";
+    const type = entry.type || "article";
+
+    if (type === "diagnosis") {
+      li.innerHTML = `
+        <span class="h-law">診断・${escapeHtml(entry.actionLabel || "")}</span>
+        <span class="h-title">${escapeHtml(verdictLabel(entry.verdict))} — ${escapeHtml(entry.title || "")}</span>
+        <span class="h-time">${formatTimestamp(entry.timestamp)}</span>
+      `;
+      li.addEventListener("click", () => restoreDiagnosisFromHistory(entry));
+    } else {
+      const scope = [entry.chapterTitle, entry.sectionTitle].filter(Boolean).join(" / ");
+      li.innerHTML = `
+        <span class="h-law">${escapeHtml(entry.lawShortName || "")}</span>
+        <span class="h-title">${escapeHtml(entry.articleTitle || "")}${entry.articleCaption ? " " + escapeHtml(entry.articleCaption) : ""}</span>
+        <span class="h-time">${scope ? escapeHtml(scope) + " ・ " : ""}${formatTimestamp(entry.timestamp)}</span>
+      `;
+      li.addEventListener("click", () => restoreArticleFromHistory(entry));
+    }
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "h-delete";
+    delBtn.textContent = "×";
+    delBtn.title = "この履歴を削除";
+    delBtn.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      await deleteHistoryEntry(entry.id);
+      renderHistory();
+    });
+    li.appendChild(delBtn);
+
+    historyListEl.appendChild(li);
+  }
+}
+
+clearHistoryBtn.addEventListener("click", async () => {
+  if (!confirm("照会履歴をすべて削除しますか？この操作は取り消せません。")) return;
+  await clearHistory();
+  renderHistory();
+});
+
+// --- 初期化 ---
+
+render();
+renderHistory();
+
+  </script>
+</body>
+</html>
