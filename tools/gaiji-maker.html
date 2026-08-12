@@ -4,6 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>異体字(外字)作成ツール</title>
+  <!--
+    埋め込みデータの出典:
+      旧字体対応表 (773組) は kyujitai.js (https://github.com/hakatashi/kyujitai.js) の
+      data/kyujitai.json より抽出。MIT License, Copyright (c) hakatashi.
+      互換漢字の対応は実行時に String.prototype.normalize("NFD") から導出しており、
+      データの埋め込みや通信は行っていません。
+  -->
   <style>
 :root {
   color-scheme: light dark;
@@ -68,7 +75,7 @@ a {
 }
 
 .tool-main {
-  max-width: 720px;
+  max-width: 760px;
   margin: 16px auto;
   padding: 0 16px 40px;
   display: flex;
@@ -87,6 +94,12 @@ a {
 .panel h2 {
   margin: 0 0 10px;
   font-size: 1.05rem;
+}
+
+.panel h3 {
+  margin: 16px 0 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
 }
 
 .disclaimer {
@@ -142,11 +155,76 @@ a {
   margin: 4px 0 0;
 }
 
+/* ---- 検索(Step 0) ---- */
+.search-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+#search-char-input {
+  font-size: 1.4rem;
+  width: 6em;
+  text-align: center;
+}
+
+.result-group {
+  margin-top: 14px;
+}
+
+.char-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.char-chip {
+  font: inherit;
+  min-width: 62px;
+  padding: 8px 6px 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--chip-bg);
+  color: var(--text);
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.char-chip:hover {
+  border-color: var(--accent);
+}
+
+.char-chip.selected {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+}
+
+.char-chip .big {
+  font-size: 1.9rem;
+  display: block;
+}
+
+.char-chip .cp {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 2px;
+}
+
+.empty-note {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 6px 0 0;
+}
+
 .font-compare-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: 10px;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .font-compare-cell {
@@ -157,21 +235,31 @@ a {
   background: var(--chip-bg);
 }
 
+.font-compare-cell.unavailable {
+  opacity: 0.45;
+}
+
 .font-compare-cell .glyph {
-  font-size: 2.4rem;
+  font-size: 2.3rem;
   line-height: 1.3;
 }
 
 .font-compare-cell .fontname {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: var(--text-muted);
   margin-top: 4px;
 }
 
+.font-compare-cell .missing {
+  font-size: 0.6rem;
+  color: var(--danger);
+}
+
+/* ---- 画像アップロード ---- */
 .drop-zone {
   border: 2px dashed var(--border);
   border-radius: 10px;
-  padding: 28px 16px;
+  padding: 24px 16px;
   text-align: center;
   cursor: pointer;
   color: var(--text-muted);
@@ -193,14 +281,29 @@ a {
   outline-offset: 2px;
 }
 
-canvas#preview-canvas {
-  display: block;
+.canvas-wrap {
+  width: 256px;
+  height: 256px;
+  max-width: 100%;
   margin: 0 auto;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #fff;
-  max-width: 100%;
-  height: auto;
+  overflow: hidden;
+  background-image:
+    linear-gradient(45deg, #c8c8c8 25%, transparent 25%),
+    linear-gradient(-45deg, #c8c8c8 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #c8c8c8 75%),
+    linear-gradient(-45deg, transparent 75%, #c8c8c8 75%);
+  background-color: #fff;
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+}
+
+canvas#preview-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
 }
 
 .controls-grid {
@@ -253,6 +356,78 @@ input:disabled {
   cursor: not-allowed;
 }
 
+/* ---- コードポイント選択 ---- */
+.cp-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.cp-grid {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 2px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+@media (max-width: 560px) {
+  .cp-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+}
+
+.cp-cell {
+  font: inherit;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel-bg);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.cp-cell:hover {
+  border-color: var(--accent);
+}
+
+.cp-cell.selected {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+}
+
+.cp-cell.used {
+  background: var(--chip-bg);
+}
+
+.cp-cell.selected.used {
+  background: var(--accent);
+}
+
+.cp-cell .cell-glyph {
+  font-size: 1.05rem;
+}
+
+.cp-cell .cell-hex {
+  font-size: 0.5rem;
+  color: var(--text-muted);
+}
+
+.cp-cell.selected .cell-hex {
+  color: var(--accent-contrast);
+}
+
 .codepoint-display {
   font-size: 1.1rem;
   font-weight: 700;
@@ -286,6 +461,29 @@ input:disabled {
   cursor: pointer;
 }
 
+.radio-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.target-preview {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  background: var(--chip-bg);
+  border-radius: 6px;
+}
+
+.target-preview .big {
+  font-size: 1.6rem;
+  vertical-align: middle;
+  color: var(--text);
+}
+
 ol.steps {
   margin: 0;
   padding-left: 1.3em;
@@ -297,6 +495,13 @@ ol.steps li {
 
 ol.steps li:last-child {
   margin-bottom: 0;
+}
+
+code {
+  background: var(--chip-bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.85em;
 }
 
 .toast {
@@ -325,33 +530,56 @@ ol.steps li:last-child {
   <main class="tool-main">
 
     <section class="panel" id="existing-check-section">
-      <h2>Step 0. まず既存の文字/IVSで足りないか確認</h2>
+      <h2>Step 0. まず既存の文字で足りないか検索</h2>
       <p class="hint-text">
-        独自の外字はこのパソコンにフォントを入れないと他の環境では正しく表示されません。まずは既にあるUnicode文字やIVS(異体字シーケンス)で目的の字形が見つからないか確認し、見つからない場合だけ以下でカスタム外字の作成に進んでください。
+        独自の外字はこのパソコンにフォントを入れないと他の環境では表示されません。まずは既存のUnicode文字やIVS(異体字シーケンス)で目的の字形が無いか検索し、見つからない場合だけカスタム外字の作成に進んでください。
       </p>
-      <ul style="font-size:0.85rem;color:var(--text-muted);margin:10px 0 0;padding-left:1.2em;">
-        <li>変換候補の一覧やIMEの拡張候補表示に「IVS」「異体字」の項目が出ないか確認する</li>
-        <li>スタートメニューで「IMEパッド」を検索して開き、文字一覧でUnicode内の近い字形を探す</li>
-      </ul>
-      <div class="field" style="margin-top:14px;">
-        <label for="compare-char-input">比べたい文字を1文字入力すると、このパソコンに入っている複数の書体で並べて表示します(任意)</label>
-        <input type="text" id="compare-char-input" maxlength="4" placeholder="例: 葛" />
+      <div class="field" style="margin-top:12px;">
+        <label for="search-char-input">基準となる漢字を1文字入力/貼り付け</label>
+        <div class="search-row">
+          <input type="text" id="search-char-input" maxlength="4" placeholder="例: 崎" autocomplete="off" />
+          <button type="button" id="ivs-scan-btn" class="btn-chip" disabled>IVS異体字を検出</button>
+        </div>
       </div>
-      <div id="font-compare-grid" class="font-compare-grid" hidden></div>
+
+      <div id="search-results" hidden>
+        <div class="result-group">
+          <h3>書体ごとの字形</h3>
+          <div id="font-compare-grid" class="font-compare-grid"></div>
+        </div>
+
+        <div class="result-group">
+          <h3>異体字・旧字体・互換漢字</h3>
+          <div id="variant-list" class="char-list"></div>
+          <p id="variant-empty" class="empty-note" hidden>この文字に対応する異体字は見つかりませんでした。</p>
+        </div>
+
+        <div class="result-group">
+          <h3>IVS異体字(このPCのフォントで表示できるもの)</h3>
+          <div id="ivs-list" class="char-list"></div>
+          <p id="ivs-note" class="empty-note">「IVS異体字を検出」を押すと、お使いのPCのフォントで実際に表示できる異体字シーケンスを探します。</p>
+        </div>
+      </div>
     </section>
 
     <section class="panel" id="upload-section">
       <h2>1. 画像を選択</h2>
       <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="画像を選択">
         <input type="file" id="image-input" accept="image/*" hidden />
-        <p>クリックまたはドラッグ&amp;ドロップで画像を選択</p>
+        <p>クリック / ドラッグ&amp;ドロップ / <code>Ctrl+V</code> で貼り付け</p>
+        <p class="hint-text" style="margin-top:6px;">スニッピングツールで切り取ってそのまま Ctrl+V できます。</p>
+      </div>
+      <div class="output-actions" style="margin-top:10px;">
+        <button type="button" id="paste-clipboard-btn" class="btn-secondary" hidden>クリップボードから貼り付け</button>
       </div>
       <p id="image-error" class="field-error" hidden></p>
     </section>
 
     <section class="panel" id="adjust-section">
       <h2>2. 調整</h2>
-      <canvas id="preview-canvas" width="256" height="256"></canvas>
+      <div class="canvas-wrap">
+        <canvas id="preview-canvas" width="64" height="64"></canvas>
+      </div>
       <div class="controls-grid">
         <button type="button" id="rotate-btn" class="btn-chip" disabled>↻ 90°回転</button>
         <label class="switch-row"><input type="checkbox" id="invert-toggle" disabled /> 白黒反転</label>
@@ -364,12 +592,39 @@ ol.steps li:last-child {
         <label class="field-inline">2値化しきい値: <span id="threshold-value">128</span>
           <input type="range" id="threshold-slider" min="0" max="255" value="128" disabled />
         </label>
+        <label class="field-inline">出力サイズ
+          <select id="output-size-select">
+            <option value="64">64×64 (外字エディター標準)</option>
+            <option value="128">128×128</option>
+            <option value="256">256×256</option>
+          </select>
+        </label>
+        <label class="field-inline">出力モード
+          <select id="output-mode-select">
+            <option value="transparent">透過(背景なし)</option>
+            <option value="opaque">白背景(アルファなし)</option>
+          </select>
+        </label>
       </div>
+      <p class="hint-text">外字エディターに貼り付けて黒く潰れる場合は、出力モードを「白背景」に切り替えるか、一度ペイントに貼り付けてからコピーし直して貼り付けてください。</p>
+    </section>
+
+    <section class="panel" id="codepoint-section">
+      <h2>3. 登録先コードポイントを選択</h2>
+      <p class="codepoint-display">登録先: U+<span id="codepoint-label">E000</span></p>
+      <div class="cp-toolbar">
+        <button type="button" id="cp-prev-btn" class="btn-chip">‹ 前</button>
+        <select id="cp-page-select"></select>
+        <button type="button" id="cp-next-btn" class="btn-chip">次 ›</button>
+        <input type="text" id="codepoint-input" value="E000" maxlength="4" autocomplete="off" style="font:inherit;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--panel-bg);color:var(--text);width:6em;" />
+      </div>
+      <div id="cp-grid" class="cp-grid"></div>
+      <p class="hint-text">網掛けのセットは既に外字が登録されている可能性があります(お使いのPCの外字フォントで判定)。空いているコードを選んでください。</p>
+      <p class="field-error" id="codepoint-error" hidden></p>
     </section>
 
     <section class="panel" id="output-section">
-      <h2>3. 貼り付け用画像</h2>
-      <p class="codepoint-display">登録先コードポイント: U+<span id="codepoint-label">E000</span></p>
+      <h2>4. 貼り付け用画像</h2>
       <div class="output-actions">
         <button type="button" id="copy-image-btn" class="btn-primary" disabled>画像をコピー</button>
         <button type="button" id="download-image-btn" class="btn-secondary" disabled>画像をダウンロード</button>
@@ -380,17 +635,17 @@ ol.steps li:last-child {
     </section>
 
     <section class="panel" id="dict-section">
-      <h2>4. IME辞書登録情報</h2>
+      <h2>5. IME辞書登録情報</h2>
+      <div class="radio-row">
+        <label><input type="radio" name="dict-target" value="gaiji" checked /> 外字(上で選んだコードポイント)を登録する</label>
+        <label><input type="radio" name="dict-target" value="existing" /> Step 0 の検索で見つけた既存文字を登録する(外字の作成は不要)</label>
+      </div>
+      <p class="target-preview" id="target-preview">登録される語句: <span class="big" id="target-char">—</span> <span id="target-desc"></span></p>
       <form id="dict-form">
         <div class="field">
           <label for="reading-input">読み(ひらがな)<span class="required">必須</span></label>
           <input type="text" id="reading-input" autocomplete="off" />
           <p class="field-error" id="reading-error" hidden></p>
-        </div>
-        <div class="field">
-          <label for="codepoint-input">コードポイント (U+, E000〜E757)</label>
-          <input type="text" id="codepoint-input" value="E000" maxlength="4" autocomplete="off" />
-          <p class="field-error" id="codepoint-error" hidden></p>
         </div>
         <div class="field">
           <label for="pos-select">品詞</label>
@@ -400,20 +655,23 @@ ol.steps li:last-child {
           <label for="memo-input">メモ/表示名(任意・自分の管理用。ファイルには含まれません)</label>
           <input type="text" id="memo-input" autocomplete="off" />
         </div>
+        <p class="field-error" id="target-error" hidden></p>
         <button type="submit" id="generate-dict-btn" class="btn-primary">辞書ファイルをダウンロード</button>
       </form>
+      <p class="hint-text">IVS(異体字シーケンス)を含む語句は、MS-IMEのユーザー辞書が受け付けない場合があります。その際は基底文字のみで登録し、変換後にIVSを適用してください。</p>
     </section>
 
     <section class="panel disclaimer" id="instructions-section">
       <h2>手順</h2>
       <ol class="steps">
-        <li>まず Step 0 で、既存のUnicode文字やIVSの異体字で足りないか確認する</li>
-        <li>上のツールで画像を調整し「画像をコピー」を押す(対応していないブラウザでは「画像をダウンロード」して保存する)</li>
-        <li><code>Win+R</code> またはスタートメニューの検索で「外字エディター」(<code>eudcedit.exe</code>)を開き、上に表示されているコードポイントを選択して <code>Ctrl+V</code> で貼り付け、保存する</li>
+        <li>Step 0 で既存のUnicode文字・異体字・IVSを検索する。目的の字が見つかればそれを登録すればよく、外字を作る必要はない</li>
+        <li>見つからない場合、画像を読み込んで調整し「画像をコピー」を押す</li>
+        <li><code>Win+R</code> またはスタートメニューの検索で「外字エディター」(<code>eudcedit.exe</code>)を開き、選択したコードポイントを指定して <code>Ctrl+V</code> で貼り付け、保存する</li>
         <li>スタートメニューの検索で「ユーザー辞書ツール」を開き、「ツール」→「テキストファイルからの登録」でダウンロードした辞書ファイル(<code>gaiji-dict-XXXX.txt</code>)を読み込む</li>
-        <li>IMEを切り替えて登録した読みを入力し、変換候補に作成した外字が表示されることを確認する</li>
+        <li>IMEを切り替えて登録した読みを入力し、変換候補に目的の文字が表示されることを確認する</li>
       </ol>
-      <p class="hint-text">補足: 辞書ファイルの読み込みに失敗する場合は、メモ帳で開き直して文字コードをUTF-8またはANSIに変更して保存し直すと解決することがあります。</p>
+      <p class="hint-text">補足1: 貼り付けた画像が黒く潰れる場合は、出力サイズを 64×64 にする / 出力モードを「白背景」にする / 一度ペイントに貼ってからコピーし直す、のいずれかをお試しください。</p>
+      <p class="hint-text">補足2: 辞書ファイルの読み込みに失敗する場合は、メモ帳で開き直して文字コードをUTF-8またはANSIに変更して保存し直すと解決することがあります。</p>
     </section>
 
   </main>
@@ -424,18 +682,42 @@ ol.steps li:last-child {
 /* =========================================================
    constants.js
    ========================================================= */
-const OUTPUT_SIZE = 256;
 const PUA_MIN = 0xe000;
 const PUA_MAX = 0xe757;
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 const POS_OPTIONS = ["名詞", "固有名詞", "人名", "姓", "名", "地名", "組織", "短縮よみ"];
+const CP_PAGE_SIZE = 256;
+
 const COMPARE_FONTS = [
-  { label: "游明朝", family: '"Yu Mincho","游明朝",serif' },
-  { label: "MS明朝", family: '"MS Mincho","ＭＳ 明朝",serif' },
-  { label: "メイリオ", family: '"Meiryo","メイリオ",sans-serif' },
-  { label: "游ゴシック", family: '"Yu Gothic","游ゴシック",sans-serif' },
-  { label: "MSゴシック", family: '"MS Gothic","ＭＳ ゴシック",sans-serif' },
+  { label: "游明朝", family: '"Yu Mincho","游明朝"' },
+  { label: "MS明朝", family: '"MS Mincho","ＭＳ 明朝"' },
+  { label: "BIZ UD明朝", family: '"BIZ UDMincho","BIZ UD明朝"' },
+  { label: "IPAmj明朝", family: '"IPAmjMincho","IPAmj明朝"' },
+  { label: "メイリオ", family: '"Meiryo","メイリオ"' },
+  { label: "游ゴシック", family: '"Yu Gothic","游ゴシック"' },
+  { label: "MSゴシック", family: '"MS Gothic","ＭＳ ゴシック"' },
+  { label: "SimSun(宋体)", family: '"SimSun","宋体"' },
+  { label: "SimHei(黑体)", family: '"SimHei","黑体"' },
+  { label: "MingLiU(繁体)", family: '"MingLiU","細明體"' },
+  { label: "Batang(韓)", family: '"Batang","바탕"' },
 ];
+
+/* 旧字体対応表: kyujitai.js (MIT, hakatashi) の data/kyujitai.json より抽出
+   KYUJI_PAIRS は [新字体][旧字体] の2文字ずつ、KYUJI_VS は対応する
+   異体字選択子の U+E0100 からのオフセット(1桁) */
+const KYUJI_PAIRS = "万萬与與両兩並竝乗乘乱亂乳乳争爭亜亞仏佛仮假会會伝傳伴伴余餘体體価價侮侮併倂侵侵倹儉偽僞偉偉偏偏傑傑僧僧充充児兒免免党黨内內全全兼兼円圓冊册写寫冴冱処處判判券券割割剣劍剤劑剰剩励勵労勞効效勅敕勉勉勤勤勝勝勧勸勲勳包包区區医醫半半卑卑即卽巻卷参參及及収收双雙叙敍号號台臺吸吸周周啄啄喝喝啓啓喫喫嘆嘆器器嘱囑噴噴団團囲圍図圖国國圏圈圧壓坪坪城城尭堯塚塚塀塀堕墮塁壘墜墜墳墳塩鹽増增墨墨壊壞壌壤壮壯壱壹売賣声聲変變夢夢契契奥奧奨奬姫姬媛媛婿壻嫌嫌嬢孃学學孤孤実實宝寶害害宵宵寛寬寝寢寿壽対對専專将將尋尋尊尊導導当當尚尙単單巣巢営營厳嚴尽盡届屆属屬層層岳嶽峡峽崩崩巌巖巡巡巨巨巽巽帯帶帰歸帽帽幣幣平平広廣庁廳廊廊廃廢廉廉弊弊弐貳弥彌弾彈彦彥径徑従從徴徵徳德応應忍忍急急恒恆悔悔恵惠悩惱恋戀悪惡悦悅惨慘情情愉愉慎愼慨慨憎憎憤憤懐懷懲懲成成戦戰戯戲戸戶戻戾所所房房扇扇扉扉払拂扱扱抜拔択擇拝拜担擔拠據拡擴拒拒挟挾挿插捜搜挙擧掲揭捨捨掃掃援援揺搖摂攝撃擊敏敏教敎数數断斷既既旧舊昼晝晋晉晩晚暑暑暁曉暦曆晴晴暖暖曙曙朗朗来來条條枢樞栄榮梅梅桟棧桜櫻検檢棚棚楽樂楼樓槙槇様樣概槪構構横橫権權欄欄欠缺欧歐歓歡歩步歴歷残殘殴毆殺殺殻殼毎每気氣没沒沢澤泡泡海海浄淨浅淺涙淚浜濱浮浮渉涉渇渴渚渚渓溪渋澁済濟清淸温溫満滿港港湿濕湾灣滞滯漢漢溝溝滝瀧潜潛瀬瀨灰灰灯燈炉爐為爲点點煮煮焼燒煙煙爵爵犠犧状狀狭狹独獨猪猪猟獵献獻猶猶獣獸獲獲琢琢瑶瑤瓶甁産產画畫異異畳疊痴癡癒癒発發益益盗盜県縣真眞瞬瞬矩矩研硏砕碎硝硝碑碑社社祈祈祉祉祐祐祖祖祝祝神神祥祥禎禎禍禍福福礼禮禄祿禅禪秘祕称稱税稅程程穀穀稲稻穂穗穏穩穫穫穣穰突突窃竊節節粋粹精精糸絲約約経經終終絵繪続續継繼緒緖緑綠練練緯緯編編総總縄繩縁緣繁繁縦縱繊纖繭繭缶罐署署羽羽翁翁習習翼翼翻翻者者聡聰聴聽粛肅肖肖肩肩胞胞胆膽脱脫脳腦臓臟臭臭舎舍舗舖舞舞艶艷芸藝茎莖荘莊著著蔵藏薫薰薬藥蘭蘭虚虛虜虜虫蟲蚕蠶蛍螢蛮蠻衛衞装裝褐褐褒襃要要覆覆覇霸視視覚覺覧覽観觀触觸訳譯証證評評誠誠誕誕請請調調誉譽読讀謁謁諸諸謡謠謹謹謙謙講講謄謄譲讓豊豐賓賓賛贊贈贈赳赳践踐転轉軽輕辞辭込込迅迅迎迎近近返返迫迫迭迭述述迷迷追追退退送送逃逃逆逆透透逐逐途途通通逝逝速速造造連連逮逮週週進進遂遂遇遇遊遊運運遍遍過過道道達達違違遠遠遣遣適適遭遭遮遮遵遵遷遷選選遺遺避避還還辺邊逓遞逸逸遥遙遅遲郎郞都都郷鄕酌酌酔醉醸釀釈釋釣釣鉄鐵鉱鑛銭錢鋭銳鋳鑄錬鍊録錄鎮鎭関關闘鬪降降陥陷隆隆険險随隨隠隱隣鄰隷隸雅雅雑雜難難霊靈青靑静靜響響頼賴頻頻顔顏類類顕顯飢飢飯飯飲飮飼飼飾飾餅餠餓餓館館飽飽駅驛駆驅騒騷騰騰験驗髄髓髪髮竜龍鶏鷄麟麟麦麥黄黃黒黑黙默黛黛斉齊斎齋歯齒齢齡亀龜逢逢芦芦飴飴溢溢茨茨鰯鰯淫淫迂迂厩厩噂噂餌餌襖襖迦迦牙牙廻廻恢恢晦晦蟹蟹葛葛鞄鞄釜釜翰翰翫翫徽徽祇祇汲汲灸灸笈笈卿卿饗饗僅僅喰喰櫛櫛屑屑粂粂祁祁隙隙倦倦捲捲牽牽鍵鍵諺諺巷巷梗梗膏膏鵠鵠甑甑叉叉榊榊薩薩鯖鯖錆錆鮫鮫餐餐杓杓灼灼酋酋楯楯薯薯藷藷哨哨鞘鞘杖杖蝕蝕訊訊逗逗摺摺撰撰煎煎煽煽穿穿箭箭詮詮噌噌遡遡揃揃遜遜腿腿蛸蛸辿辿樽樽歎歎註註瀦瀦捗捗槌槌鎚鎚辻辻挺挺鄭鄭擢擢溺溺兎兎堵堵屠屠賭賭瀞瀞遁遁謎謎灘灘楢楢禰禰牌牌這這秤秤駁駁箸箸叛叛挽挽誹誹樋樋稗稗逼逼謬謬豹豹廟廟瀕瀕斧斧蔽蔽瞥瞥蔑蔑篇篇娩娩鞭鞭庖庖蓬蓬鱒鱒迄迄儲儲餅餅籾籾爺爺鑓鑓愈愈猷猷漣漣煉煉簾簾榔榔屢屢冤冤叟叟咬咬嘲嘲囀囀徘徘扁扁棘棘橙橙狡狡甕甕甦甦疼疼祟祟竈竈筵筵篝篝腱腱艘艘芒芒虔虔蜃蜃蠅蠅訝訝靄靄靱靱騙騙鴉鴉史史交交朕朕告吿寧寧邦邦拳拳機機空空竟竟記記億億次次前前化化紀紀延延屡屢湾灣幾幾虐虐誤誤亘亙凜凛刃刄呉吳回囘妊姙娯娛強强携攜旅旅曽曾歳歲粘黏糾糺絶絕萌萠説說祷禱鎌鐮閲閱麺麵祢禰";
+const KYUJI_VS = "01000010000001000101003121201001100000110000000001120100100001000001011120103000000100110012000000000021000101003002100000012100000000010010113001110010310000000101100000000110103031000011110110000010000011100000003000010001130200000010000010000000000000000100000100000000010001100010000001200000002020000020010100131001010101000101000000100002010100010100000031000100300023211000111000010020100100010000000010110100000011211000000111000013000011111111111121111111101112111111121131111111100100000300010000000000301000002000001000001001101110001000002000010000011111111513111121011111111112111011111101111013111111111111111111111121111111111111111111111111112111111111111111111111111111111112111200210131111100121101111111122021111100511122211142001110000000001010000000001";
+
+/* kyujitai に含まれない人名・戸籍で頻出の異体字グループ(手書き補完) */
+const VARIANT_GROUPS = [
+  "崎﨑嵜㟢", "高髙", "富冨", "島嶋嶌", "柳栁", "桧檜", "吉𠮷", "村邨",
+  "峰峯", "舘館", "沖冲", "晃晄", "凛凜", "鴎鷗", "桑桒", "斎齋", "辺邉",
+  "浜濵", "剣劒劔釼", "亘亙", "涼凉", "芦蘆", "藪薮籔", "竈竃", "籠篭",
+  "曽曾", "瀬瀨",
+];
+
+/* 正規分解を持たない互換漢字(14字)のうち、基底文字が確実なもの */
+const COMPAT_EXTRA = [["﨑", "崎"], ["﨔", "欅"], ["﨟", "臘"]];
 
 /* =========================================================
    state.js
@@ -446,6 +728,13 @@ const appState = {
   fitMode: "contain",
   threshold: 128,
   inverted: false,
+  outputSize: 64,
+  outputMode: "transparent",
+  codepoint: 0xe000,
+  cpPage: 0,
+  searchChar: "",
+  selectedExisting: "",
+  dictTarget: "gaiji",
 };
 
 /* =========================================================
@@ -454,25 +743,164 @@ const appState = {
 const dropZoneEl = document.getElementById("drop-zone");
 const imageInputEl = document.getElementById("image-input");
 const imageErrorEl = document.getElementById("image-error");
+const pasteClipboardBtnEl = document.getElementById("paste-clipboard-btn");
 const previewCanvasEl = document.getElementById("preview-canvas");
 const rotateBtnEl = document.getElementById("rotate-btn");
 const invertToggleEl = document.getElementById("invert-toggle");
 const fitModeSelectEl = document.getElementById("fit-mode-select");
 const thresholdSliderEl = document.getElementById("threshold-slider");
 const thresholdValueEl = document.getElementById("threshold-value");
+const outputSizeSelectEl = document.getElementById("output-size-select");
+const outputModeSelectEl = document.getElementById("output-mode-select");
 const codepointLabelEl = document.getElementById("codepoint-label");
+const codepointInputEl = document.getElementById("codepoint-input");
+const codepointErrorEl = document.getElementById("codepoint-error");
+const cpGridEl = document.getElementById("cp-grid");
+const cpPageSelectEl = document.getElementById("cp-page-select");
+const cpPrevBtnEl = document.getElementById("cp-prev-btn");
+const cpNextBtnEl = document.getElementById("cp-next-btn");
 const copyImageBtnEl = document.getElementById("copy-image-btn");
 const downloadImageBtnEl = document.getElementById("download-image-btn");
 const clipboardUnsupportedNoteEl = document.getElementById("clipboard-unsupported-note");
 const dictFormEl = document.getElementById("dict-form");
 const readingInputEl = document.getElementById("reading-input");
 const readingErrorEl = document.getElementById("reading-error");
-const codepointInputEl = document.getElementById("codepoint-input");
-const codepointErrorEl = document.getElementById("codepoint-error");
 const posSelectEl = document.getElementById("pos-select");
-const compareCharInputEl = document.getElementById("compare-char-input");
+const targetErrorEl = document.getElementById("target-error");
+const targetCharEl = document.getElementById("target-char");
+const targetDescEl = document.getElementById("target-desc");
+const searchCharInputEl = document.getElementById("search-char-input");
+const searchResultsEl = document.getElementById("search-results");
 const fontCompareGridEl = document.getElementById("font-compare-grid");
+const variantListEl = document.getElementById("variant-list");
+const variantEmptyEl = document.getElementById("variant-empty");
+const ivsListEl = document.getElementById("ivs-list");
+const ivsNoteEl = document.getElementById("ivs-note");
+const ivsScanBtnEl = document.getElementById("ivs-scan-btn");
 const toastEl = document.getElementById("toast");
+
+/* =========================================================
+   variantData.js  — 異体字の索引を組み立てる
+   ========================================================= */
+const variantIndex = new Map();
+
+function linkVariants(a, b) {
+  if (a === b) return;
+  if (!variantIndex.has(a)) variantIndex.set(a, new Set());
+  if (!variantIndex.has(b)) variantIndex.set(b, new Set());
+  variantIndex.get(a).add(b);
+  variantIndex.get(b).add(a);
+}
+
+/* 互換漢字は normalize("NFD") から実行時に導出する(データ埋め込み不要) */
+function buildCompatIndex() {
+  const ranges = [[0xf900, 0xfad9], [0x2f800, 0x2fa1d]];
+  for (const [start, end] of ranges) {
+    for (let cp = start; cp <= end; cp++) {
+      const ch = String.fromCodePoint(cp);
+      const nfd = ch.normalize("NFD");
+      if (nfd !== ch && Array.from(nfd).length === 1) linkVariants(nfd, ch);
+    }
+  }
+  for (const [compat, base] of COMPAT_EXTRA) linkVariants(base, compat);
+}
+
+function buildKyujiIndex() {
+  for (let i = 0; i * 2 + 1 < KYUJI_PAIRS.length; i++) {
+    const shin = KYUJI_PAIRS[i * 2];
+    const kyu = KYUJI_PAIRS[i * 2 + 1];
+    linkVariants(shin, kyu);
+  }
+}
+
+function buildGroupIndex() {
+  for (const group of VARIANT_GROUPS) {
+    const chars = Array.from(group);
+    for (let i = 0; i < chars.length; i++) {
+      for (let j = i + 1; j < chars.length; j++) linkVariants(chars[i], chars[j]);
+    }
+  }
+}
+
+function lookupVariants(ch) {
+  const set = variantIndex.get(ch);
+  return set ? Array.from(set) : [];
+}
+
+/* =========================================================
+   fontDetect.js
+   ========================================================= */
+const fontAvailabilityCache = new Map();
+const measureCanvas = document.createElement("canvas");
+const measureCtx = measureCanvas.getContext("2d");
+
+function isFontAvailable(family) {
+  if (fontAvailabilityCache.has(family)) return fontAvailabilityCache.get(family);
+  const sample = "永漢字あ";
+  const baselines = ["monospace", "serif", "sans-serif"];
+  let available = false;
+  for (const base of baselines) {
+    measureCtx.font = "48px " + base;
+    const baseWidth = measureCtx.measureText(sample).width;
+    measureCtx.font = "48px " + family + "," + base;
+    const testWidth = measureCtx.measureText(sample).width;
+    if (Math.abs(testWidth - baseWidth) > 0.5) {
+      available = true;
+      break;
+    }
+  }
+  fontAvailabilityCache.set(family, available);
+  return available;
+}
+
+/* =========================================================
+   ivsDetect.js — 実際に字形が変わるIVSだけを実フォントから探す
+   ========================================================= */
+const IVS_CANVAS_SIZE = 48;
+const ivsCanvas = document.createElement("canvas");
+ivsCanvas.width = IVS_CANVAS_SIZE;
+ivsCanvas.height = IVS_CANVAS_SIZE;
+const ivsCtx = ivsCanvas.getContext("2d", { willReadFrequently: true });
+
+function hashGlyph(text, family) {
+  ivsCtx.clearRect(0, 0, IVS_CANVAS_SIZE, IVS_CANVAS_SIZE);
+  ivsCtx.fillStyle = "#000";
+  ivsCtx.textBaseline = "middle";
+  ivsCtx.textAlign = "center";
+  ivsCtx.font = "36px " + family;
+  ivsCtx.fillText(text, IVS_CANVAS_SIZE / 2, IVS_CANVAS_SIZE / 2);
+  const data = ivsCtx.getImageData(0, 0, IVS_CANVAS_SIZE, IVS_CANVAS_SIZE).data;
+  let h = 2166136261;
+  let ink = 0;
+  for (let i = 3; i < data.length; i += 4) {
+    const v = data[i];
+    if (v > 8) ink++;
+    h ^= v;
+    h = Math.imul(h, 16777619);
+  }
+  return { hash: h >>> 0, ink };
+}
+
+function detectIvsVariants(baseChar) {
+  const found = [];
+  const seen = new Set();
+  for (const font of COMPARE_FONTS) {
+    if (!isFontAvailable(font.family)) continue;
+    const baseInfo = hashGlyph(baseChar, font.family);
+    if (baseInfo.ink === 0) continue;
+    for (let vs = 0xe0100; vs <= 0xe01ef; vs++) {
+      const seq = baseChar + String.fromCodePoint(vs);
+      const info = hashGlyph(seq, font.family);
+      if (info.ink === 0) continue;
+      if (info.hash === baseInfo.hash) continue;
+      const key = font.label + ":" + info.hash;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      found.push({ seq: seq, vs: vs, font: font });
+    }
+  }
+  return found;
+}
 
 /* =========================================================
    imageProcessing.js
@@ -514,6 +942,7 @@ function rotateCanvas(srcCanvas, degrees) {
   return out;
 }
 
+/* 背景は塗らず透過のままにする(外字エディターでの黒潰れ対策) */
 function fitToSquare(srcCanvas, size, mode) {
   const out = document.createElement("canvas");
   out.width = size;
@@ -521,8 +950,6 @@ function fitToSquare(srcCanvas, size, mode) {
   const ctx = out.getContext("2d");
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, size, size);
 
   const sw = srcCanvas.width;
   const sh = srcCanvas.height;
@@ -533,8 +960,9 @@ function fitToSquare(srcCanvas, size, mode) {
   return out;
 }
 
+/* 2値化: 線画は不透明な黒、背景はアルファ0の完全透過にする */
 function applyThresholdInvert(canvas, threshold, invert) {
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
   const { width, height } = canvas;
   const imgData = ctx.getImageData(0, 0, width, height);
   const d = imgData.data;
@@ -546,24 +974,40 @@ function applyThresholdInvert(canvas, threshold, invert) {
     const luma = 0.299 * r + 0.587 * g + 0.114 * b;
     let isInk = luma < threshold;
     if (invert) isInk = !isInk;
-    const v = isInk ? 0 : 255;
-    d[i] = v;
-    d[i + 1] = v;
-    d[i + 2] = v;
-    d[i + 3] = 255;
+    d[i] = 0;
+    d[i + 1] = 0;
+    d[i + 2] = 0;
+    d[i + 3] = isInk ? 255 : 0;
   }
   ctx.putImageData(imgData, 0, 0);
 }
 
 function renderPreview() {
   if (!appState.originalImage) return;
+  const size = appState.outputSize;
   const src = drawSourceToCanvas(appState.originalImage);
   const rotated = rotateCanvas(src, appState.rotation);
-  const squared = fitToSquare(rotated, OUTPUT_SIZE, appState.fitMode);
-  previewCanvasEl.width = OUTPUT_SIZE;
-  previewCanvasEl.height = OUTPUT_SIZE;
-  previewCanvasEl.getContext("2d").drawImage(squared, 0, 0);
+  const squared = fitToSquare(rotated, size, appState.fitMode);
+  previewCanvasEl.width = size;
+  previewCanvasEl.height = size;
+  const ctx = previewCanvasEl.getContext("2d", { willReadFrequently: true });
+  ctx.clearRect(0, 0, size, size);
+  ctx.drawImage(squared, 0, 0);
   applyThresholdInvert(previewCanvasEl, appState.threshold, appState.inverted);
+}
+
+/* 出力用canvas: 白背景モードではアルファチャンネルを持たないcanvasに描き直す */
+function buildExportCanvas() {
+  if (appState.outputMode !== "opaque") return previewCanvasEl;
+  const size = previewCanvasEl.width;
+  const out = document.createElement("canvas");
+  out.width = size;
+  out.height = size;
+  const ctx = out.getContext("2d", { alpha: false });
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, size, size);
+  ctx.drawImage(previewCanvasEl, 0, 0);
+  return out;
 }
 
 /* =========================================================
@@ -599,7 +1043,8 @@ function validateCodePoint(value) {
 /* =========================================================
    clipboard.js
    ========================================================= */
-const clipboardSupported = !!(navigator.clipboard && navigator.clipboard.write && window.ClipboardItem);
+const clipboardWriteSupported = !!(navigator.clipboard && navigator.clipboard.write && window.ClipboardItem);
+const clipboardReadSupported = !!(navigator.clipboard && navigator.clipboard.read);
 
 async function copyImageToClipboard(canvas) {
   const item = new ClipboardItem({
@@ -611,6 +1056,14 @@ async function copyImageToClipboard(canvas) {
     }),
   });
   await navigator.clipboard.write([item]);
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+  return false;
 }
 
 function downloadBlob(blob, filename) {
@@ -633,10 +1086,12 @@ function downloadCanvasAsPng(canvas, filename) {
 /* =========================================================
    dictFile.js
    ========================================================= */
-function buildDictLine(reading, char, pos) {
-  return `${reading}\t${char}\t${pos}\r\n`;
+function buildDictLine(reading, word, pos) {
+  return reading + "\t" + word + "\t" + pos + "\r\n";
 }
 
+/* TextEncoder は UTF-8 専用なので UTF-16LE を手組みする。
+   charCodeAt はコードユニット単位なのでサロゲートペア(IVS選択子)も正しく出力される。 */
 function encodeUtf16LeWithBom(text) {
   const units = [0xfeff];
   for (let i = 0; i < text.length; i++) units.push(text.charCodeAt(i));
@@ -647,18 +1102,36 @@ function encodeUtf16LeWithBom(text) {
 }
 
 /* =========================================================
-   fontCompare.js
+   searchUi.js
    ========================================================= */
+function cpLabel(ch) {
+  return Array.from(ch)
+    .map((c) => "U+" + c.codePointAt(0).toString(16).toUpperCase().padStart(4, "0"))
+    .join(" ");
+}
+
+function makeCharChip(ch, onClick) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "char-chip";
+  const big = document.createElement("span");
+  big.className = "big";
+  big.textContent = ch;
+  const cp = document.createElement("span");
+  cp.className = "cp";
+  cp.textContent = cpLabel(ch);
+  btn.appendChild(big);
+  btn.appendChild(cp);
+  btn.addEventListener("click", () => onClick(ch, btn));
+  return btn;
+}
+
 function renderFontCompare(char) {
   fontCompareGridEl.innerHTML = "";
-  if (!char) {
-    fontCompareGridEl.hidden = true;
-    return;
-  }
-  fontCompareGridEl.hidden = false;
-  COMPARE_FONTS.forEach((f) => {
+  for (const f of COMPARE_FONTS) {
+    const available = isFontAvailable(f.family);
     const cell = document.createElement("div");
-    cell.className = "font-compare-cell";
+    cell.className = "font-compare-cell" + (available ? "" : " unavailable");
 
     const glyph = document.createElement("div");
     glyph.className = "glyph";
@@ -671,8 +1144,189 @@ function renderFontCompare(char) {
 
     cell.appendChild(glyph);
     cell.appendChild(name);
+    if (!available) {
+      const missing = document.createElement("div");
+      missing.className = "missing";
+      missing.textContent = "未インストール";
+      cell.appendChild(missing);
+    }
     fontCompareGridEl.appendChild(cell);
-  });
+  }
+}
+
+function selectExistingChar(ch) {
+  appState.selectedExisting = ch;
+  const radio = document.querySelector('input[name="dict-target"][value="existing"]');
+  if (radio) radio.checked = true;
+  appState.dictTarget = "existing";
+  updateTargetPreview();
+  document.querySelectorAll(".char-chip").forEach((el) => el.classList.remove("selected"));
+  showToast("「" + ch + "」を登録対象にしました。");
+}
+
+function renderVariants(char) {
+  variantListEl.innerHTML = "";
+  const variants = lookupVariants(char);
+  if (variants.length === 0) {
+    variantEmptyEl.hidden = false;
+    return;
+  }
+  variantEmptyEl.hidden = true;
+  for (const v of variants) {
+    variantListEl.appendChild(
+      makeCharChip(v, (ch, btn) => {
+        selectExistingChar(ch);
+        btn.classList.add("selected");
+      })
+    );
+  }
+}
+
+function runSearch() {
+  const char = Array.from(searchCharInputEl.value)[0] || "";
+  appState.searchChar = char;
+  ivsScanBtnEl.disabled = !char;
+  if (!char) {
+    searchResultsEl.hidden = true;
+    return;
+  }
+  searchResultsEl.hidden = false;
+  renderFontCompare(char);
+  renderVariants(char);
+  ivsListEl.innerHTML = "";
+  ivsNoteEl.hidden = false;
+  ivsNoteEl.textContent = "「IVS異体字を検出」を押すと、お使いのPCのフォントで実際に表示できる異体字シーケンスを探します。";
+}
+
+function runIvsScan() {
+  const char = appState.searchChar;
+  if (!char) return;
+  ivsNoteEl.hidden = false;
+  ivsNoteEl.textContent = "検出中…";
+  ivsListEl.innerHTML = "";
+  setTimeout(() => {
+    let results = [];
+    try {
+      results = detectIvsVariants(char);
+    } catch (err) {
+      ivsNoteEl.textContent = "検出中にエラーが発生しました。";
+      return;
+    }
+    if (results.length === 0) {
+      ivsNoteEl.textContent = "このPCのフォントで表示できるIVS異体字は見つかりませんでした。";
+      return;
+    }
+    ivsNoteEl.hidden = true;
+    for (const r of results) {
+      const chip = makeCharChip(r.seq, (seq, btn) => {
+        selectExistingChar(seq);
+        btn.classList.add("selected");
+      });
+      chip.querySelector(".big").style.fontFamily = r.font.family;
+      const note = document.createElement("span");
+      note.className = "cp";
+      note.textContent = r.font.label;
+      chip.appendChild(note);
+      ivsListEl.appendChild(chip);
+    }
+  }, 20);
+}
+
+/* =========================================================
+   codepointUi.js
+   ========================================================= */
+const blankCanvas = document.createElement("canvas");
+blankCanvas.width = 24;
+blankCanvas.height = 24;
+const blankCtx = blankCanvas.getContext("2d", { willReadFrequently: true });
+/* 外字が未登録のコードポイントは豆腐(.notdef)が描かれ「インクあり」になってしまうため、
+   確実に未使用のコードポイントの描画結果を基準として、それと同じ字形なら空きとみなす */
+const TOFU_SAMPLE_CPS = [0xe7f8, 0xe7f9, 0xe7fa];
+let tofuHashes = null;
+
+function glyphSignature(cp) {
+  blankCtx.clearRect(0, 0, 24, 24);
+  blankCtx.fillStyle = "#000";
+  blankCtx.textBaseline = "middle";
+  blankCtx.textAlign = "center";
+  blankCtx.font = '18px "MS Gothic","Yu Gothic",sans-serif';
+  blankCtx.fillText(String.fromCodePoint(cp), 12, 12);
+  const data = blankCtx.getImageData(0, 0, 24, 24).data;
+  let h = 2166136261;
+  let ink = 0;
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] > 8) ink++;
+    h ^= data[i];
+    h = Math.imul(h, 16777619);
+  }
+  return { hash: h >>> 0, ink: ink };
+}
+
+function isCodepointUsed(cp) {
+  if (tofuHashes === null) {
+    tofuHashes = new Set(TOFU_SAMPLE_CPS.map((c) => glyphSignature(c).hash));
+  }
+  const sig = glyphSignature(cp);
+  if (sig.ink === 0) return false;
+  return !tofuHashes.has(sig.hash);
+}
+
+function populateCpPages() {
+  const pageCount = Math.ceil((PUA_MAX - PUA_MIN + 1) / CP_PAGE_SIZE);
+  for (let p = 0; p < pageCount; p++) {
+    const start = PUA_MIN + p * CP_PAGE_SIZE;
+    const end = Math.min(start + CP_PAGE_SIZE - 1, PUA_MAX);
+    const opt = document.createElement("option");
+    opt.value = String(p);
+    opt.textContent =
+      "U+" + start.toString(16).toUpperCase() + " 〜 U+" + end.toString(16).toUpperCase();
+    cpPageSelectEl.appendChild(opt);
+  }
+}
+
+function renderCpGrid() {
+  const start = PUA_MIN + appState.cpPage * CP_PAGE_SIZE;
+  const end = Math.min(start + CP_PAGE_SIZE - 1, PUA_MAX);
+  cpGridEl.innerHTML = "";
+  for (let cp = start; cp <= end; cp++) {
+    const hex = cp.toString(16).toUpperCase();
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cp-cell";
+    if (cp === appState.codepoint) btn.classList.add("selected");
+    if (isCodepointUsed(cp)) btn.classList.add("used");
+    btn.title = "U+" + hex + (btn.classList.contains("used") ? " (使用中の可能性)" : " (空き)");
+
+    const glyph = document.createElement("span");
+    glyph.className = "cell-glyph";
+    glyph.textContent = String.fromCodePoint(cp);
+    const label = document.createElement("span");
+    label.className = "cell-hex";
+    label.textContent = hex.slice(-2);
+    btn.appendChild(glyph);
+    btn.appendChild(label);
+    btn.addEventListener("click", () => setCodepoint(cp));
+    cpGridEl.appendChild(btn);
+  }
+  cpPageSelectEl.value = String(appState.cpPage);
+  cpPrevBtnEl.disabled = appState.cpPage === 0;
+  cpNextBtnEl.disabled = start + CP_PAGE_SIZE > PUA_MAX;
+}
+
+function setCodepoint(cp, skipGrid) {
+  appState.codepoint = cp;
+  const hex = cp.toString(16).toUpperCase().padStart(4, "0");
+  codepointInputEl.value = hex;
+  codepointLabelEl.textContent = hex;
+  codepointErrorEl.hidden = true;
+  const page = Math.floor((cp - PUA_MIN) / CP_PAGE_SIZE);
+  if (page !== appState.cpPage) {
+    appState.cpPage = page;
+    renderCpGrid();
+  } else if (!skipGrid) {
+    renderCpGrid();
+  }
+  updateTargetPreview();
 }
 
 /* =========================================================
@@ -689,9 +1343,26 @@ function showToast(message, isError = false) {
   }, 3200);
 }
 
-function normalizedCodepointHex() {
-  const raw = codepointInputEl.value.trim().toUpperCase();
-  return /^[0-9A-F]{4}$/.test(raw) ? raw : "E000";
+function currentHex() {
+  return appState.codepoint.toString(16).toUpperCase().padStart(4, "0");
+}
+
+function currentTargetWord() {
+  if (appState.dictTarget === "existing") return appState.selectedExisting;
+  return String.fromCodePoint(appState.codepoint);
+}
+
+function updateTargetPreview() {
+  const word = currentTargetWord();
+  if (appState.dictTarget === "existing") {
+    targetCharEl.textContent = word || "—";
+    targetDescEl.textContent = word
+      ? "(既存文字 " + cpLabel(word) + ")"
+      : "(Step 0 の検索結果から文字を選んでください)";
+  } else {
+    targetCharEl.textContent = word;
+    targetDescEl.textContent = "(外字 U+" + currentHex() + ")";
+  }
 }
 
 function setImageLoadedState(loaded) {
@@ -700,7 +1371,7 @@ function setImageLoadedState(loaded) {
   fitModeSelectEl.disabled = !loaded;
   thresholdSliderEl.disabled = !loaded;
   downloadImageBtnEl.disabled = !loaded;
-  copyImageBtnEl.disabled = !loaded || !clipboardSupported;
+  copyImageBtnEl.disabled = !loaded || !clipboardWriteSupported;
 }
 
 async function handleImageFile(file) {
@@ -750,6 +1421,50 @@ dropZoneEl.addEventListener("drop", (e) => {
   if (file) handleImageFile(file);
 });
 
+/* スニッピングツール等からの Ctrl+V 貼り付け */
+document.addEventListener("paste", (e) => {
+  const target = e.target;
+  if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+    const items0 = e.clipboardData ? e.clipboardData.items : null;
+    let hasImage = false;
+    if (items0) {
+      for (const it of items0) if (it.type && it.type.startsWith("image/")) hasImage = true;
+    }
+    if (!hasImage) return;
+  }
+  const items = e.clipboardData ? e.clipboardData.items : null;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type && item.type.startsWith("image/")) {
+      const file = item.getAsFile();
+      if (file) {
+        e.preventDefault();
+        handleImageFile(file);
+        showToast("クリップボードの画像を読み込みました。");
+      }
+      return;
+    }
+  }
+});
+
+pasteClipboardBtnEl.addEventListener("click", async () => {
+  try {
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+      const type = item.types.find((t) => t.startsWith("image/"));
+      if (type) {
+        const blob = await item.getType(type);
+        await handleImageFile(new File([blob], "clipboard.png", { type: type }));
+        showToast("クリップボードの画像を読み込みました。");
+        return;
+      }
+    }
+    showToast("クリップボードに画像がありません。", true);
+  } catch (err) {
+    showToast("クリップボードを読み取れませんでした。Ctrl+V をお試しください。", true);
+  }
+});
+
 rotateBtnEl.addEventListener("click", () => {
   appState.rotation = (appState.rotation + 90) % 360;
   renderPreview();
@@ -767,26 +1482,65 @@ thresholdSliderEl.addEventListener("input", () => {
   thresholdValueEl.textContent = String(appState.threshold);
   renderPreview();
 });
+outputSizeSelectEl.addEventListener("change", () => {
+  appState.outputSize = Number(outputSizeSelectEl.value);
+  renderPreview();
+});
+outputModeSelectEl.addEventListener("change", () => {
+  appState.outputMode = outputModeSelectEl.value;
+});
 
 copyImageBtnEl.addEventListener("click", async () => {
   try {
-    await copyImageToClipboard(previewCanvasEl);
+    await copyImageToClipboard(buildExportCanvas());
     showToast("画像をコピーしました。外字エディターに貼り付けてください。");
   } catch (err) {
     showToast("コピーに失敗しました。ダウンロードをご利用ください。", true);
   }
 });
 downloadImageBtnEl.addEventListener("click", () => {
-  downloadCanvasAsPng(previewCanvasEl, `gaiji-${normalizedCodepointHex()}.png`);
+  downloadCanvasAsPng(buildExportCanvas(), "gaiji-" + currentHex() + ".png");
 });
 
 codepointInputEl.addEventListener("input", () => {
-  codepointLabelEl.textContent = normalizedCodepointHex();
+  const raw = codepointInputEl.value.trim().toUpperCase();
+  const check = validateCodePoint(raw);
+  if (!check.valid) {
+    codepointErrorEl.textContent = check.message;
+    codepointErrorEl.hidden = false;
+    return;
+  }
+  codepointErrorEl.hidden = true;
+  setCodepoint(parseInt(raw, 16), true);
+  renderCpGrid();
 });
 
-compareCharInputEl.addEventListener("input", () => {
-  const char = Array.from(compareCharInputEl.value)[0] || "";
-  renderFontCompare(char);
+cpPageSelectEl.addEventListener("change", () => {
+  appState.cpPage = Number(cpPageSelectEl.value);
+  renderCpGrid();
+});
+cpPrevBtnEl.addEventListener("click", () => {
+  if (appState.cpPage > 0) {
+    appState.cpPage--;
+    renderCpGrid();
+  }
+});
+cpNextBtnEl.addEventListener("click", () => {
+  const pageCount = Math.ceil((PUA_MAX - PUA_MIN + 1) / CP_PAGE_SIZE);
+  if (appState.cpPage < pageCount - 1) {
+    appState.cpPage++;
+    renderCpGrid();
+  }
+});
+
+searchCharInputEl.addEventListener("input", runSearch);
+ivsScanBtnEl.addEventListener("click", runIvsScan);
+
+document.querySelectorAll('input[name="dict-target"]').forEach((radio) => {
+  radio.addEventListener("change", () => {
+    appState.dictTarget = radio.value;
+    updateTargetPreview();
+  });
 });
 
 dictFormEl.addEventListener("submit", (e) => {
@@ -802,24 +1556,31 @@ dictFormEl.addEventListener("submit", (e) => {
     readingErrorEl.hidden = true;
   }
 
-  const codepointCheck = validateCodePoint(codepointInputEl.value.trim());
-  if (!codepointCheck.valid) {
-    codepointErrorEl.textContent = codepointCheck.message;
-    codepointErrorEl.hidden = false;
+  const word = currentTargetWord();
+  if (!word) {
+    targetErrorEl.textContent = "登録する文字が選択されていません。Step 0 の検索結果から文字を選ぶか、外字を登録する設定に切り替えてください。";
+    targetErrorEl.hidden = false;
     hasError = true;
   } else {
-    codepointErrorEl.hidden = true;
+    targetErrorEl.hidden = true;
+  }
+
+  if (appState.dictTarget === "gaiji") {
+    const cpCheck = validateCodePoint(codepointInputEl.value.trim());
+    if (!cpCheck.valid) {
+      codepointErrorEl.textContent = cpCheck.message;
+      codepointErrorEl.hidden = false;
+      hasError = true;
+    }
   }
 
   if (hasError) return;
 
-  const reading = readingInputEl.value.trim();
-  const hex = codepointInputEl.value.trim().toUpperCase();
-  const char = String.fromCodePoint(parseInt(hex, 16));
-  const pos = posSelectEl.value;
-  const line = buildDictLine(reading, char, pos);
+  const line = buildDictLine(readingInputEl.value.trim(), word, posSelectEl.value);
   const blob = encodeUtf16LeWithBom(line);
-  downloadBlob(blob, `gaiji-dict-${hex}.txt`);
+  const name =
+    appState.dictTarget === "existing" ? "gaiji-dict-existing.txt" : "gaiji-dict-" + currentHex() + ".txt";
+  downloadBlob(blob, name);
   showToast("辞書ファイルをダウンロードしました。");
 });
 
@@ -838,11 +1599,20 @@ function populatePosOptions() {
 
 function init() {
   populatePosOptions();
-  if (!clipboardSupported) {
+  buildCompatIndex();
+  buildKyujiIndex();
+  buildGroupIndex();
+  populateCpPages();
+  renderCpGrid();
+  setCodepoint(0xe000);
+  if (!clipboardWriteSupported) {
     copyImageBtnEl.hidden = true;
     clipboardUnsupportedNoteEl.hidden = false;
   }
-  codepointLabelEl.textContent = normalizedCodepointHex();
+  if (clipboardReadSupported) {
+    pasteClipboardBtnEl.hidden = false;
+  }
+  updateTargetPreview();
 }
 
 init();
