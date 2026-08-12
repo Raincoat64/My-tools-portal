@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>異体字(外字)作成ツール</title>
+  <style>
+:root {
+  color-scheme: light dark;
+  --bg: #f5f6f4;
+  --panel-bg: #ffffff;
+  --border: #d8dcd4;
+  --text: #1f2a20;
+  --text-muted: #5c6b5e;
+  --accent: #2f6b3a;
+  --accent-contrast: #ffffff;
+  --chip-bg: #eef3ec;
+  --danger: #a5342a;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141814;
+    --panel-bg: #1b201b;
+    --border: #333c33;
+    --text: #e7ece6;
+    --text-muted: #a3ada2;
+    --accent: #6bb37a;
+    --accent-contrast: #0d140e;
+    --chip-bg: #232b23;
+    --danger: #e08579;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+}
+
+a {
+  color: var(--accent);
+}
+
+.app-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+}
+
+.app-header h1 {
+  margin: 0 0 6px;
+  font-size: 1.4rem;
+}
+
+.app-sub {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.tool-main {
+  max-width: 720px;
+  margin: 16px auto;
+  padding: 0 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 16px 18px;
+}
+
+.panel h2 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+}
+
+.disclaimer {
+  border-left: 3px solid var(--accent);
+  background: var(--chip-bg);
+}
+
+.hint-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 8px 0 0;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.field label {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.field .required {
+  color: var(--danger);
+  font-size: 0.7rem;
+  margin-left: 6px;
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+.field input[type="text"],
+.field select {
+  font: inherit;
+  font-size: 1rem;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  color: var(--text);
+  width: 100%;
+  max-width: 320px;
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.8rem;
+  margin: 4px 0 0;
+}
+
+.font-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.font-compare-cell {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 6px;
+  text-align: center;
+  background: var(--chip-bg);
+}
+
+.font-compare-cell .glyph {
+  font-size: 2.4rem;
+  line-height: 1.3;
+}
+
+.font-compare-cell .fontname {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: border-color 0.1s ease, background 0.1s ease;
+}
+
+.drop-zone p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.drop-zone.dragover {
+  border-color: var(--accent);
+  background: var(--chip-bg);
+}
+
+.drop-zone:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+canvas#preview-canvas {
+  display: block;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  max-width: 100%;
+  height: auto;
+}
+
+.controls-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+@media (min-width: 480px) {
+  .controls-grid {
+    grid-template-columns: 1fr 1fr;
+    align-items: end;
+  }
+}
+
+.btn-chip {
+  font: inherit;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--chip-bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.field-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.field-inline select,
+.field-inline input[type="range"] {
+  font: inherit;
+}
+
+button:disabled,
+select:disabled,
+input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.codepoint-display {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0 0 10px;
+}
+
+.output-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  font: inherit;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  cursor: pointer;
+}
+
+.btn-secondary {
+  font: inherit;
+  padding: 8px 18px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+ol.steps {
+  margin: 0;
+  padding-left: 1.3em;
+}
+
+ol.steps li {
+  margin-bottom: 8px;
+}
+
+ol.steps li:last-child {
+  margin-bottom: 0;
+}
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--bg);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  box-shadow: var(--shadow);
+  max-width: 90vw;
+  text-align: center;
+}
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <a href="../index.html" style="display:inline-block;margin-bottom:6px;font-size:0.85rem;color:var(--accent,#2f6b3a);text-decoration:none;">‹ ツール一覧</a>
+    <h1>異体字(外字)作成ツール</h1>
+    <p class="app-sub">画像から Windows 11 の外字(EUDC)を作成し、IME の変換候補として登録するための下ごしらえを行います。すべてブラウザ内で処理し、通信は一切行いません。</p>
+  </header>
+
+  <main class="tool-main">
+
+    <section class="panel" id="existing-check-section">
+      <h2>Step 0. まず既存の文字/IVSで足りないか確認</h2>
+      <p class="hint-text">
+        独自の外字はこのパソコンにフォントを入れないと他の環境では正しく表示されません。まずは既にあるUnicode文字やIVS(異体字シーケンス)で目的の字形が見つからないか確認し、見つからない場合だけ以下でカスタム外字の作成に進んでください。
+      </p>
+      <ul style="font-size:0.85rem;color:var(--text-muted);margin:10px 0 0;padding-left:1.2em;">
+        <li>変換候補の一覧やIMEの拡張候補表示に「IVS」「異体字」の項目が出ないか確認する</li>
+        <li>スタートメニューで「IMEパッド」を検索して開き、文字一覧でUnicode内の近い字形を探す</li>
+      </ul>
+      <div class="field" style="margin-top:14px;">
+        <label for="compare-char-input">比べたい文字を1文字入力すると、このパソコンに入っている複数の書体で並べて表示します(任意)</label>
+        <input type="text" id="compare-char-input" maxlength="4" placeholder="例: 葛" />
+      </div>
+      <div id="font-compare-grid" class="font-compare-grid" hidden></div>
+    </section>
+
+    <section class="panel" id="upload-section">
+      <h2>1. 画像を選択</h2>
+      <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="画像を選択">
+        <input type="file" id="image-input" accept="image/*" hidden />
+        <p>クリックまたはドラッグ&amp;ドロップで画像を選択</p>
+      </div>
+      <p id="image-error" class="field-error" hidden></p>
+    </section>
+
+    <section class="panel" id="adjust-section">
+      <h2>2. 調整</h2>
+      <canvas id="preview-canvas" width="256" height="256"></canvas>
+      <div class="controls-grid">
+        <button type="button" id="rotate-btn" class="btn-chip" disabled>↻ 90°回転</button>
+        <label class="switch-row"><input type="checkbox" id="invert-toggle" disabled /> 白黒反転</label>
+        <label class="field-inline">切り抜き
+          <select id="fit-mode-select" disabled>
+            <option value="contain">全体を収める(余白あり)</option>
+            <option value="cover">正方形に敷き詰める(切り取り)</option>
+          </select>
+        </label>
+        <label class="field-inline">2値化しきい値: <span id="threshold-value">128</span>
+          <input type="range" id="threshold-slider" min="0" max="255" value="128" disabled />
+        </label>
+      </div>
+    </section>
+
+    <section class="panel" id="output-section">
+      <h2>3. 貼り付け用画像</h2>
+      <p class="codepoint-display">登録先コードポイント: U+<span id="codepoint-label">E000</span></p>
+      <div class="output-actions">
+        <button type="button" id="copy-image-btn" class="btn-primary" disabled>画像をコピー</button>
+        <button type="button" id="download-image-btn" class="btn-secondary" disabled>画像をダウンロード</button>
+      </div>
+      <p id="clipboard-unsupported-note" class="hint-text" hidden>
+        このブラウザではクリップボードへの画像コピーに対応していません。「画像をダウンロード」をご利用ください。
+      </p>
+    </section>
+
+    <section class="panel" id="dict-section">
+      <h2>4. IME辞書登録情報</h2>
+      <form id="dict-form">
+        <div class="field">
+          <label for="reading-input">読み(ひらがな)<span class="required">必須</span></label>
+          <input type="text" id="reading-input" autocomplete="off" />
+          <p class="field-error" id="reading-error" hidden></p>
+        </div>
+        <div class="field">
+          <label for="codepoint-input">コードポイント (U+, E000〜E757)</label>
+          <input type="text" id="codepoint-input" value="E000" maxlength="4" autocomplete="off" />
+          <p class="field-error" id="codepoint-error" hidden></p>
+        </div>
+        <div class="field">
+          <label for="pos-select">品詞</label>
+          <select id="pos-select"></select>
+        </div>
+        <div class="field">
+          <label for="memo-input">メモ/表示名(任意・自分の管理用。ファイルには含まれません)</label>
+          <input type="text" id="memo-input" autocomplete="off" />
+        </div>
+        <button type="submit" id="generate-dict-btn" class="btn-primary">辞書ファイルをダウンロード</button>
+      </form>
+    </section>
+
+    <section class="panel disclaimer" id="instructions-section">
+      <h2>手順</h2>
+      <ol class="steps">
+        <li>まず Step 0 で、既存のUnicode文字やIVSの異体字で足りないか確認する</li>
+        <li>上のツールで画像を調整し「画像をコピー」を押す(対応していないブラウザでは「画像をダウンロード」して保存する)</li>
+        <li><code>Win+R</code> またはスタートメニューの検索で「外字エディター」(<code>eudcedit.exe</code>)を開き、上に表示されているコードポイントを選択して <code>Ctrl+V</code> で貼り付け、保存する</li>
+        <li>スタートメニューの検索で「ユーザー辞書ツール」を開き、「ツール」→「テキストファイルからの登録」でダウンロードした辞書ファイル(<code>gaiji-dict-XXXX.txt</code>)を読み込む</li>
+        <li>IMEを切り替えて登録した読みを入力し、変換候補に作成した外字が表示されることを確認する</li>
+      </ol>
+      <p class="hint-text">補足: 辞書ファイルの読み込みに失敗する場合は、メモ帳で開き直して文字コードをUTF-8またはANSIに変更して保存し直すと解決することがあります。</p>
+    </section>
+
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+
+<script>
+/* =========================================================
+   constants.js
+   ========================================================= */
+const OUTPUT_SIZE = 256;
+const PUA_MIN = 0xe000;
+const PUA_MAX = 0xe757;
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
+const POS_OPTIONS = ["名詞", "固有名詞", "人名", "姓", "名", "地名", "組織", "短縮よみ"];
+const COMPARE_FONTS = [
+  { label: "游明朝", family: '"Yu Mincho","游明朝",serif' },
+  { label: "MS明朝", family: '"MS Mincho","ＭＳ 明朝",serif' },
+  { label: "メイリオ", family: '"Meiryo","メイリオ",sans-serif' },
+  { label: "游ゴシック", family: '"Yu Gothic","游ゴシック",sans-serif' },
+  { label: "MSゴシック", family: '"MS Gothic","ＭＳ ゴシック",sans-serif' },
+];
+
+/* =========================================================
+   state.js
+   ========================================================= */
+const appState = {
+  originalImage: null,
+  rotation: 0,
+  fitMode: "contain",
+  threshold: 128,
+  inverted: false,
+};
+
+/* =========================================================
+   domRefs.js
+   ========================================================= */
+const dropZoneEl = document.getElementById("drop-zone");
+const imageInputEl = document.getElementById("image-input");
+const imageErrorEl = document.getElementById("image-error");
+const previewCanvasEl = document.getElementById("preview-canvas");
+const rotateBtnEl = document.getElementById("rotate-btn");
+const invertToggleEl = document.getElementById("invert-toggle");
+const fitModeSelectEl = document.getElementById("fit-mode-select");
+const thresholdSliderEl = document.getElementById("threshold-slider");
+const thresholdValueEl = document.getElementById("threshold-value");
+const codepointLabelEl = document.getElementById("codepoint-label");
+const copyImageBtnEl = document.getElementById("copy-image-btn");
+const downloadImageBtnEl = document.getElementById("download-image-btn");
+const clipboardUnsupportedNoteEl = document.getElementById("clipboard-unsupported-note");
+const dictFormEl = document.getElementById("dict-form");
+const readingInputEl = document.getElementById("reading-input");
+const readingErrorEl = document.getElementById("reading-error");
+const codepointInputEl = document.getElementById("codepoint-input");
+const codepointErrorEl = document.getElementById("codepoint-error");
+const posSelectEl = document.getElementById("pos-select");
+const compareCharInputEl = document.getElementById("compare-char-input");
+const fontCompareGridEl = document.getElementById("font-compare-grid");
+const toastEl = document.getElementById("toast");
+
+/* =========================================================
+   imageProcessing.js
+   ========================================================= */
+function loadImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("画像の読み込みに失敗しました。"));
+      img.src = reader.result;
+    };
+    reader.onerror = () => reject(new Error("ファイルの読み込みに失敗しました。"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function drawSourceToCanvas(img) {
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  c.getContext("2d").drawImage(img, 0, 0);
+  return c;
+}
+
+function rotateCanvas(srcCanvas, degrees) {
+  const rad = (degrees * Math.PI) / 180;
+  const swap = degrees % 180 !== 0;
+  const w = srcCanvas.width;
+  const h = srcCanvas.height;
+  const out = document.createElement("canvas");
+  out.width = swap ? h : w;
+  out.height = swap ? w : h;
+  const ctx = out.getContext("2d");
+  ctx.translate(out.width / 2, out.height / 2);
+  ctx.rotate(rad);
+  ctx.drawImage(srcCanvas, -w / 2, -h / 2);
+  return out;
+}
+
+function fitToSquare(srcCanvas, size, mode) {
+  const out = document.createElement("canvas");
+  out.width = size;
+  out.height = size;
+  const ctx = out.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, size, size);
+
+  const sw = srcCanvas.width;
+  const sh = srcCanvas.height;
+  const scale = mode === "cover" ? Math.max(size / sw, size / sh) : Math.min(size / sw, size / sh);
+  const dw = sw * scale;
+  const dh = sh * scale;
+  ctx.drawImage(srcCanvas, (size - dw) / 2, (size - dh) / 2, dw, dh);
+  return out;
+}
+
+function applyThresholdInvert(canvas, threshold, invert) {
+  const ctx = canvas.getContext("2d");
+  const { width, height } = canvas;
+  const imgData = ctx.getImageData(0, 0, width, height);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const a = d[i + 3] / 255;
+    const r = d[i] * a + 255 * (1 - a);
+    const g = d[i + 1] * a + 255 * (1 - a);
+    const b = d[i + 2] * a + 255 * (1 - a);
+    const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    let isInk = luma < threshold;
+    if (invert) isInk = !isInk;
+    const v = isInk ? 0 : 255;
+    d[i] = v;
+    d[i + 1] = v;
+    d[i + 2] = v;
+    d[i + 3] = 255;
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+function renderPreview() {
+  if (!appState.originalImage) return;
+  const src = drawSourceToCanvas(appState.originalImage);
+  const rotated = rotateCanvas(src, appState.rotation);
+  const squared = fitToSquare(rotated, OUTPUT_SIZE, appState.fitMode);
+  previewCanvasEl.width = OUTPUT_SIZE;
+  previewCanvasEl.height = OUTPUT_SIZE;
+  previewCanvasEl.getContext("2d").drawImage(squared, 0, 0);
+  applyThresholdInvert(previewCanvasEl, appState.threshold, appState.inverted);
+}
+
+/* =========================================================
+   validation.js
+   ========================================================= */
+function validateImageFile(file) {
+  if (!file.type.startsWith("image/")) {
+    return { valid: false, message: "画像ファイルを選択してください。" };
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    return { valid: false, message: "ファイルサイズが大きすぎます(20MBまで)。" };
+  }
+  return { valid: true };
+}
+
+function validateReading(value) {
+  if (!value) return { valid: false, message: "読み(ひらがな)を入力してください。" };
+  if (!/^[ぁ-ゖー]+$/.test(value)) return { valid: false, message: "ひらがなで入力してください。" };
+  return { valid: true };
+}
+
+function validateCodePoint(value) {
+  if (!/^[0-9A-Fa-f]{4}$/.test(value)) {
+    return { valid: false, message: "16進数4桁(例: E000)で入力してください。" };
+  }
+  const num = parseInt(value, 16);
+  if (num < PUA_MIN || num > PUA_MAX) {
+    return { valid: false, message: "E000〜E757 の範囲で入力してください(外字エディターの既定編集範囲)。" };
+  }
+  return { valid: true };
+}
+
+/* =========================================================
+   clipboard.js
+   ========================================================= */
+const clipboardSupported = !!(navigator.clipboard && navigator.clipboard.write && window.ClipboardItem);
+
+async function copyImageToClipboard(canvas) {
+  const item = new ClipboardItem({
+    "image/png": new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("画像の生成に失敗しました。"));
+      }, "image/png");
+    }),
+  });
+  await navigator.clipboard.write([item]);
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function downloadCanvasAsPng(canvas, filename) {
+  canvas.toBlob((blob) => {
+    if (blob) downloadBlob(blob, filename);
+  }, "image/png");
+}
+
+/* =========================================================
+   dictFile.js
+   ========================================================= */
+function buildDictLine(reading, char, pos) {
+  return `${reading}\t${char}\t${pos}\r\n`;
+}
+
+function encodeUtf16LeWithBom(text) {
+  const units = [0xfeff];
+  for (let i = 0; i < text.length; i++) units.push(text.charCodeAt(i));
+  const buf = new ArrayBuffer(units.length * 2);
+  const view = new DataView(buf);
+  units.forEach((u, i) => view.setUint16(i * 2, u, true));
+  return new Blob([buf], { type: "text/plain" });
+}
+
+/* =========================================================
+   fontCompare.js
+   ========================================================= */
+function renderFontCompare(char) {
+  fontCompareGridEl.innerHTML = "";
+  if (!char) {
+    fontCompareGridEl.hidden = true;
+    return;
+  }
+  fontCompareGridEl.hidden = false;
+  COMPARE_FONTS.forEach((f) => {
+    const cell = document.createElement("div");
+    cell.className = "font-compare-cell";
+
+    const glyph = document.createElement("div");
+    glyph.className = "glyph";
+    glyph.style.fontFamily = f.family;
+    glyph.textContent = char;
+
+    const name = document.createElement("div");
+    name.className = "fontname";
+    name.textContent = f.label;
+
+    cell.appendChild(glyph);
+    cell.appendChild(name);
+    fontCompareGridEl.appendChild(cell);
+  });
+}
+
+/* =========================================================
+   ui.js
+   ========================================================= */
+function showToast(message, isError = false) {
+  toastEl.textContent = message;
+  toastEl.hidden = false;
+  toastEl.style.background = isError ? "var(--danger)" : "var(--text)";
+  toastEl.style.color = isError ? "#fff" : "var(--bg)";
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => {
+    toastEl.hidden = true;
+  }, 3200);
+}
+
+function normalizedCodepointHex() {
+  const raw = codepointInputEl.value.trim().toUpperCase();
+  return /^[0-9A-F]{4}$/.test(raw) ? raw : "E000";
+}
+
+function setImageLoadedState(loaded) {
+  rotateBtnEl.disabled = !loaded;
+  invertToggleEl.disabled = !loaded;
+  fitModeSelectEl.disabled = !loaded;
+  thresholdSliderEl.disabled = !loaded;
+  downloadImageBtnEl.disabled = !loaded;
+  copyImageBtnEl.disabled = !loaded || !clipboardSupported;
+}
+
+async function handleImageFile(file) {
+  const check = validateImageFile(file);
+  if (!check.valid) {
+    imageErrorEl.textContent = check.message;
+    imageErrorEl.hidden = false;
+    return;
+  }
+  imageErrorEl.hidden = true;
+  try {
+    const img = await loadImageFile(file);
+    appState.originalImage = img;
+    appState.rotation = 0;
+    renderPreview();
+    setImageLoadedState(true);
+  } catch (err) {
+    imageErrorEl.textContent = err.message || "画像の読み込みに失敗しました。";
+    imageErrorEl.hidden = false;
+  }
+}
+
+dropZoneEl.addEventListener("click", () => imageInputEl.click());
+dropZoneEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    imageInputEl.click();
+  }
+});
+imageInputEl.addEventListener("change", () => {
+  if (imageInputEl.files[0]) handleImageFile(imageInputEl.files[0]);
+});
+["dragover", "dragenter"].forEach((evt) =>
+  dropZoneEl.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropZoneEl.classList.add("dragover");
+  })
+);
+["dragleave", "drop"].forEach((evt) =>
+  dropZoneEl.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropZoneEl.classList.remove("dragover");
+  })
+);
+dropZoneEl.addEventListener("drop", (e) => {
+  const file = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (file) handleImageFile(file);
+});
+
+rotateBtnEl.addEventListener("click", () => {
+  appState.rotation = (appState.rotation + 90) % 360;
+  renderPreview();
+});
+invertToggleEl.addEventListener("change", () => {
+  appState.inverted = invertToggleEl.checked;
+  renderPreview();
+});
+fitModeSelectEl.addEventListener("change", () => {
+  appState.fitMode = fitModeSelectEl.value;
+  renderPreview();
+});
+thresholdSliderEl.addEventListener("input", () => {
+  appState.threshold = Number(thresholdSliderEl.value);
+  thresholdValueEl.textContent = String(appState.threshold);
+  renderPreview();
+});
+
+copyImageBtnEl.addEventListener("click", async () => {
+  try {
+    await copyImageToClipboard(previewCanvasEl);
+    showToast("画像をコピーしました。外字エディターに貼り付けてください。");
+  } catch (err) {
+    showToast("コピーに失敗しました。ダウンロードをご利用ください。", true);
+  }
+});
+downloadImageBtnEl.addEventListener("click", () => {
+  downloadCanvasAsPng(previewCanvasEl, `gaiji-${normalizedCodepointHex()}.png`);
+});
+
+codepointInputEl.addEventListener("input", () => {
+  codepointLabelEl.textContent = normalizedCodepointHex();
+});
+
+compareCharInputEl.addEventListener("input", () => {
+  const char = Array.from(compareCharInputEl.value)[0] || "";
+  renderFontCompare(char);
+});
+
+dictFormEl.addEventListener("submit", (e) => {
+  e.preventDefault();
+  let hasError = false;
+
+  const readingCheck = validateReading(readingInputEl.value.trim());
+  if (!readingCheck.valid) {
+    readingErrorEl.textContent = readingCheck.message;
+    readingErrorEl.hidden = false;
+    hasError = true;
+  } else {
+    readingErrorEl.hidden = true;
+  }
+
+  const codepointCheck = validateCodePoint(codepointInputEl.value.trim());
+  if (!codepointCheck.valid) {
+    codepointErrorEl.textContent = codepointCheck.message;
+    codepointErrorEl.hidden = false;
+    hasError = true;
+  } else {
+    codepointErrorEl.hidden = true;
+  }
+
+  if (hasError) return;
+
+  const reading = readingInputEl.value.trim();
+  const hex = codepointInputEl.value.trim().toUpperCase();
+  const char = String.fromCodePoint(parseInt(hex, 16));
+  const pos = posSelectEl.value;
+  const line = buildDictLine(reading, char, pos);
+  const blob = encodeUtf16LeWithBom(line);
+  downloadBlob(blob, `gaiji-dict-${hex}.txt`);
+  showToast("辞書ファイルをダウンロードしました。");
+});
+
+/* =========================================================
+   main.js
+   ========================================================= */
+function populatePosOptions() {
+  POS_OPTIONS.forEach((label) => {
+    const opt = document.createElement("option");
+    opt.value = label;
+    opt.textContent = label;
+    posSelectEl.appendChild(opt);
+  });
+  posSelectEl.value = "名詞";
+}
+
+function init() {
+  populatePosOptions();
+  if (!clipboardSupported) {
+    copyImageBtnEl.hidden = true;
+    clipboardUnsupportedNoteEl.hidden = false;
+  }
+  codepointLabelEl.textContent = normalizedCodepointHex();
+}
+
+init();
+</script>
+</body>
+</html>

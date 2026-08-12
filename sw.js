@@ -1,4 +1,4 @@
-const CACHE_NAME = "law-tools-portal-v2";
+const CACHE_NAME = "law-tools-portal-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,6 +8,7 @@ const APP_SHELL = [
   "./icons/apple-touch-icon.png",
   "./tools/kouatsu-gas-law-viewer.html",
   "./tools/lp-law-viewer.html",
+  "./tools/gaiji-maker.html",
 ];
 
 self.addEventListener("install", (event) => {
