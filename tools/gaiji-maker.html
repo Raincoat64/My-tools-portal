@@ -435,6 +435,52 @@ input:disabled {
   margin: 0 0 10px;
 }
 
+.warn-box {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--danger);
+  border-left: 3px solid var(--danger);
+  border-radius: 0 8px 8px 0;
+  background: var(--chip-bg);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.verify-row {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.verify-cell {
+  text-align: center;
+}
+
+.verify-glyph {
+  width: 96px;
+  height: 96px;
+  line-height: 96px;
+  font-size: 84px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: #000;
+}
+
+.verify-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+input[type="file"] {
+  font: inherit;
+  font-size: 0.85rem;
+  max-width: 100%;
+}
+
 .output-actions {
   display: flex;
   gap: 10px;
@@ -623,14 +669,66 @@ code {
       <p class="field-error" id="codepoint-error" hidden></p>
     </section>
 
-    <section class="panel" id="output-section">
-      <h2>4. 貼り付け用画像</h2>
+    <section class="panel" id="font-section">
+      <h2>4. 外字フォントを生成(推奨)</h2>
+      <p class="hint-text" style="margin-top:0;">
+        画像から輪郭を起こして外字フォント(EUDC.TTE)を直接作ります。クリップボードも外字エディターも使わないため、黒潰れは起きません。
+      </p>
+
+      <div class="warn-box">
+        <strong>既に外字を登録している場合は必ず読み込んでください。</strong>
+        読み込まずに生成すると、これまでの外字が入っていないフォントになります。既存ファイルは通常
+        <code>C:\Windows\Fonts\EUDC.TTE</code> にあります(差し替える前にコピーを取っておいてください)。
+      </div>
+
+      <div class="field">
+        <label for="existing-font-input">既存の EUDC.TTE を読み込む(任意)</label>
+        <input type="file" id="existing-font-input" accept=".tte,.ttf,.TTE,.TTF" />
+        <p class="hint-text" id="existing-font-status">未選択(新規フォントとして生成します)</p>
+        <p class="field-error" id="existing-font-error" hidden></p>
+      </div>
+
       <div class="output-actions">
-        <button type="button" id="copy-image-btn" class="btn-primary" disabled>画像をコピー</button>
-        <button type="button" id="download-image-btn" class="btn-secondary" disabled>画像をダウンロード</button>
+        <button type="button" id="build-font-btn" class="btn-primary" disabled>外字フォントを生成</button>
+        <button type="button" id="download-font-btn" class="btn-secondary" hidden>EUDC.TTE をダウンロード</button>
+      </div>
+
+      <div id="font-verify" hidden>
+        <h3>生成結果の確認(このブラウザで実際にフォントを読み込んで描画しています)</h3>
+        <div class="verify-row">
+          <div class="verify-cell">
+            <div class="verify-glyph" id="verify-glyph">&nbsp;</div>
+            <div class="verify-label">生成フォントでの表示</div>
+          </div>
+          <div class="verify-cell">
+            <p class="hint-text" id="verify-summary" style="margin:0;"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:16px;">
+        <label for="font-path-input">フォントの配置先パス(.reg に書き込まれます)</label>
+        <input type="text" id="font-path-input" value="C:\Users\ユーザー名\Documents\EUDC.TTE" autocomplete="off" style="max-width:100%;" />
+        <p class="hint-text">「ユーザー名」の部分はご自身のものに置き換えてください。管理者権限は不要です。</p>
+      </div>
+      <div class="output-actions">
+        <button type="button" id="download-reg-btn" class="btn-secondary">登録用 .reg をダウンロード</button>
+      </div>
+    </section>
+
+    <section class="panel" id="output-section">
+      <h2>5. 補助: 画像として出力(外字エディターを使う場合)</h2>
+      <p class="hint-text" style="margin-top:0;">
+        外字エディターに<strong>クリップボード経由で貼り付けると黒く潰れます</strong>(ブラウザは32bit画像しかクリップボードに置けないため)。
+        外字エディターを使う場合は、モノクロBMPを保存 → ペイントで開く → <code>Ctrl+A</code> → <code>Ctrl+C</code> → 外字エディターで貼り付け、の順でお試しください。
+      </p>
+      <div class="output-actions">
+        <button type="button" id="download-bmp-btn" class="btn-secondary" disabled>モノクロBMPをダウンロード</button>
+        <button type="button" id="download-image-btn" class="btn-secondary" disabled>PNGをダウンロード</button>
+        <button type="button" id="copy-image-btn" class="btn-secondary" disabled>画像をコピー(非推奨)</button>
       </div>
       <p id="clipboard-unsupported-note" class="hint-text" hidden>
-        このブラウザではクリップボードへの画像コピーに対応していません。「画像をダウンロード」をご利用ください。
+        このブラウザではクリップボードへの画像コピーに対応していません。
       </p>
     </section>
 
@@ -665,13 +763,17 @@ code {
       <h2>手順</h2>
       <ol class="steps">
         <li>Step 0 で既存のUnicode文字・異体字・IVSを検索する。目的の字が見つかればそれを登録すればよく、外字を作る必要はない</li>
-        <li>見つからない場合、画像を読み込んで調整し「画像をコピー」を押す</li>
-        <li><code>Win+R</code> またはスタートメニューの検索で「外字エディター」(<code>eudcedit.exe</code>)を開き、選択したコードポイントを指定して <code>Ctrl+V</code> で貼り付け、保存する</li>
+        <li><strong>既に外字を登録している場合</strong>は、<code>C:\Windows\Fonts\EUDC.TTE</code> をコピーしてバックアップを取り、Step 4 の「既存の EUDC.TTE を読み込む」で読み込ませる(読み込まないと既存の外字が失われます)</li>
+        <li>画像を読み込んで調整し、登録先コードポイントを選ぶ</li>
+        <li>「外字フォントを生成」を押す。生成結果のプレビューで字形が正しいか確認したうえで、<code>EUDC.TTE</code> と <code>.reg</code> をダウンロードする</li>
+        <li><code>EUDC.TTE</code> を .reg に書いたパス(既定では <code>ドキュメント</code> フォルダ)に置き、<code>.reg</code> ファイルをダブルクリックして登録する</li>
+        <li>サインアウト → サインインし直す(または再起動する)。メモ帳などで対象のコードポイントが表示されれば成功</li>
         <li>スタートメニューの検索で「ユーザー辞書ツール」を開き、「ツール」→「テキストファイルからの登録」でダウンロードした辞書ファイル(<code>gaiji-dict-XXXX.txt</code>)を読み込む</li>
         <li>IMEを切り替えて登録した読みを入力し、変換候補に目的の文字が表示されることを確認する</li>
       </ol>
-      <p class="hint-text">補足1: 貼り付けた画像が黒く潰れる場合は、出力サイズを 64×64 にする / 出力モードを「白背景」にする / 一度ペイントに貼ってからコピーし直す、のいずれかをお試しください。</p>
-      <p class="hint-text">補足2: 辞書ファイルの読み込みに失敗する場合は、メモ帳で開き直して文字コードをUTF-8またはANSIに変更して保存し直すと解決することがあります。</p>
+      <p class="hint-text">補足1: クリップボード経由で外字エディターに貼り付けると黒く潰れます。これはブラウザが32bit画像しかクリップボードに置けず、外字エディター側がそれを正しく解釈できないためで、ツール側では回避できません。上記のフォント生成の手順をご利用ください。</p>
+      <p class="hint-text">補足2: どうしても外字エディターを使いたい場合は、Step 5 でモノクロBMPを保存し、ペイントで開いて <code>Ctrl+A</code> → <code>Ctrl+C</code> でコピーしてから外字エディターに貼り付けてください。</p>
+      <p class="hint-text">補足3: 辞書ファイルの読み込みに失敗する場合は、メモ帳で開き直して文字コードをUTF-8またはANSIに変更して保存し直すと解決することがあります。</p>
     </section>
 
   </main>
@@ -735,6 +837,8 @@ const appState = {
   searchChar: "",
   selectedExisting: "",
   dictTarget: "gaiji",
+  existingFont: null,
+  generatedFont: null,
 };
 
 /* =========================================================
@@ -761,6 +865,17 @@ const cpPrevBtnEl = document.getElementById("cp-prev-btn");
 const cpNextBtnEl = document.getElementById("cp-next-btn");
 const copyImageBtnEl = document.getElementById("copy-image-btn");
 const downloadImageBtnEl = document.getElementById("download-image-btn");
+const downloadBmpBtnEl = document.getElementById("download-bmp-btn");
+const existingFontInputEl = document.getElementById("existing-font-input");
+const existingFontStatusEl = document.getElementById("existing-font-status");
+const existingFontErrorEl = document.getElementById("existing-font-error");
+const buildFontBtnEl = document.getElementById("build-font-btn");
+const downloadFontBtnEl = document.getElementById("download-font-btn");
+const fontVerifyEl = document.getElementById("font-verify");
+const verifyGlyphEl = document.getElementById("verify-glyph");
+const verifySummaryEl = document.getElementById("verify-summary");
+const fontPathInputEl = document.getElementById("font-path-input");
+const downloadRegBtnEl = document.getElementById("download-reg-btn");
 const clipboardUnsupportedNoteEl = document.getElementById("clipboard-unsupported-note");
 const dictFormEl = document.getElementById("dict-form");
 const readingInputEl = document.getElementById("reading-input");
@@ -1084,6 +1199,446 @@ function downloadCanvasAsPng(canvas, filename) {
 }
 
 /* =========================================================
+   ttfBuilder.js — 外字フォント(TrueType)の生成とマージ
+   外部ライブラリなし。既存グリフの glyf バイト列はそのまま引き継ぐため無損失。
+   ========================================================= */
+const UNITS_PER_EM = 1024;
+const FONT_ASCENT = 880;
+const FONT_DESCENT = -144;
+
+function u8(n) { return [n & 0xff]; }
+function u16(n) { return [(n >> 8) & 0xff, n & 0xff]; }
+function i16(n) { if (n < 0) n += 0x10000; return u16(n); }
+function u32(n) { return [(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff]; }
+function tag4(s) { return [s.charCodeAt(0), s.charCodeAt(1), s.charCodeAt(2), s.charCodeAt(3)]; }
+function pad4(arr) { while (arr.length % 4 !== 0) arr.push(0); return arr; }
+
+function sfntChecksum(bytes) {
+  let sum = 0;
+  for (let i = 0; i < bytes.length; i += 4) {
+    const b0 = bytes[i] || 0, b1 = bytes[i + 1] || 0, b2 = bytes[i + 2] || 0, b3 = bytes[i + 3] || 0;
+    sum = (sum + (((b0 << 24) >>> 0) + (b1 << 16) + (b2 << 8) + b3)) >>> 0;
+  }
+  return sum >>> 0;
+}
+
+/* 2値グリッド → 極大矩形の集合。横ランをまとめ、同じ範囲が続く行を貪欲に統合する */
+function bitmapToRects(grid, size) {
+  const used = new Uint8Array(size * size);
+  const rects = [];
+  for (let y = 0; y < size; y++) {
+    let x = 0;
+    while (x < size) {
+      if (!grid[y * size + x] || used[y * size + x]) { x++; continue; }
+      let x2 = x;
+      while (x2 + 1 < size && grid[y * size + x2 + 1] && !used[y * size + x2 + 1]) x2++;
+      let y2 = y;
+      while (y2 + 1 < size) {
+        let ok = true;
+        for (let xx = x; xx <= x2; xx++) {
+          if (!grid[(y2 + 1) * size + xx] || used[(y2 + 1) * size + xx]) { ok = false; break; }
+        }
+        if (!ok) break;
+        y2++;
+      }
+      for (let yy = y; yy <= y2; yy++) for (let xx = x; xx <= x2; xx++) used[yy * size + xx] = 1;
+      rects.push({ x0: x, y0: y, x1: x2 + 1, y1: y2 + 1 });
+      x = x2 + 1;
+    }
+  }
+  return rects;
+}
+
+function rectsToContours(rects, size, em) {
+  const scale = em / size;
+  const ascent = Math.round((FONT_ASCENT / UNITS_PER_EM) * em);
+  return rects.map((r) => {
+    const left = Math.round(r.x0 * scale);
+    const right = Math.round(r.x1 * scale);
+    const top = Math.round(ascent - r.y0 * scale);
+    const bottom = Math.round(ascent - r.y1 * scale);
+    return [
+      { x: left, y: bottom }, { x: left, y: top },
+      { x: right, y: top }, { x: right, y: bottom },
+    ];
+  });
+}
+
+function buildGlyfBytes(contours) {
+  if (contours.length === 0) return { bytes: [], nPoints: 0, nContours: 0 };
+  let xMin = Infinity, yMin = Infinity, xMax = -Infinity, yMax = -Infinity;
+  for (const c of contours) for (const p of c) {
+    if (p.x < xMin) xMin = p.x;
+    if (p.y < yMin) yMin = p.y;
+    if (p.x > xMax) xMax = p.x;
+    if (p.y > yMax) yMax = p.y;
+  }
+  const out = [];
+  out.push(...i16(contours.length));
+  out.push(...i16(xMin), ...i16(yMin), ...i16(xMax), ...i16(yMax));
+  let acc = 0;
+  for (const c of contours) { acc += c.length; out.push(...u16(acc - 1)); }
+  out.push(...u16(0));
+  const points = [];
+  for (const c of contours) for (const p of c) points.push(p);
+  for (let i = 0; i < points.length; i++) out.push(...u8(0x01));
+  let prevX = 0;
+  for (const p of points) { out.push(...i16(p.x - prevX)); prevX = p.x; }
+  let prevY = 0;
+  for (const p of points) { out.push(...i16(p.y - prevY)); prevY = p.y; }
+  pad4(out);
+  return { bytes: out, nPoints: points.length, nContours: contours.length };
+}
+
+function buildCmapTable(mappings) {
+  const cps = Array.from(mappings.keys()).sort((a, b) => a - b);
+  const segments = [];
+  let i = 0;
+  while (i < cps.length) {
+    const startCp = cps[i];
+    let end = i;
+    while (
+      end + 1 < cps.length &&
+      cps[end + 1] === cps[end] + 1 &&
+      mappings.get(cps[end + 1]) === mappings.get(cps[end]) + 1
+    ) end++;
+    segments.push({ start: startCp, end: cps[end], delta: (mappings.get(startCp) - startCp) & 0xffff });
+    i = end + 1;
+  }
+  segments.push({ start: 0xffff, end: 0xffff, delta: 1 });
+
+  const segCount = segments.length;
+  const sub = [];
+  sub.push(...u16(4), ...u16(16 + segCount * 8), ...u16(0), ...u16(segCount * 2));
+  const searchRange = 2 * Math.pow(2, Math.floor(Math.log2(segCount)));
+  sub.push(...u16(searchRange), ...u16(Math.log2(searchRange / 2)), ...u16(segCount * 2 - searchRange));
+  for (const s of segments) sub.push(...u16(s.end));
+  sub.push(...u16(0));
+  for (const s of segments) sub.push(...u16(s.start));
+  for (const s of segments) sub.push(...i16(s.delta > 0x7fff ? s.delta - 0x10000 : s.delta));
+  for (const s of segments) sub.push(...u16(0));
+
+  const out = [];
+  out.push(...u16(0), ...u16(1), ...u16(3), ...u16(1), ...u32(12));
+  out.push(...sub);
+  return out;
+}
+
+function buildNameTable(familyName) {
+  const records = [
+    [1, familyName], [2, "Regular"], [3, familyName + " 1.0"],
+    [4, familyName], [5, "Version 1.0"], [6, familyName.replace(/\s/g, "")],
+  ];
+  const strings = [];
+  const recs = [];
+  let offset = 0;
+  for (const [id, str] of records) {
+    const utf16 = [];
+    for (let i = 0; i < str.length; i++) utf16.push(...u16(str.charCodeAt(i)));
+    recs.push({ id: id, len: utf16.length, off: offset });
+    strings.push(...utf16);
+    offset += utf16.length;
+  }
+  const out = [];
+  out.push(...u16(0), ...u16(records.length), ...u16(6 + records.length * 12));
+  for (const r of recs) out.push(...u16(3), ...u16(1), ...u16(0x409), ...u16(r.id), ...u16(r.len), ...u16(r.off));
+  out.push(...strings);
+  return out;
+}
+
+function buildOS2Table(firstChar, lastChar, em) {
+  const out = [];
+  out.push(...u16(4), ...i16(em), ...u16(400), ...u16(5), ...u16(0));
+  out.push(...i16(650), ...i16(1300), ...i16(650), ...i16(1300));
+  out.push(...i16(650), ...i16(1300), ...i16(650), ...i16(500));
+  out.push(...i16(50), ...i16(300), ...i16(0));
+  for (let i = 0; i < 10; i++) out.push(0);
+  out.push(...u32(0), ...u32(0), ...u32(0), ...u32(0));
+  out.push(...tag4("EUDC"), ...u16(0x0040), ...u16(firstChar), ...u16(lastChar));
+  out.push(...i16(FONT_ASCENT), ...i16(FONT_DESCENT), ...i16(0));
+  out.push(...u16(FONT_ASCENT), ...u16(-FONT_DESCENT));
+  out.push(...u32(0x00000001), ...u32(0));
+  out.push(...i16(500), ...i16(700), ...u16(0), ...u16(0x20), ...u16(1));
+  return out;
+}
+
+function assembleSfnt(tables) {
+  const tagsSorted = Object.keys(tables).sort();
+  const numTables = tagsSorted.length;
+  const searchRange = 16 * Math.pow(2, Math.floor(Math.log2(numTables)));
+  const out = [];
+  out.push(...u32(0x00010000), ...u16(numTables), ...u16(searchRange));
+  out.push(...u16(Math.log2(searchRange / 16)), ...u16(numTables * 16 - searchRange));
+
+  let offset = 12 + numTables * 16;
+  const records = [];
+  const bodies = [];
+  for (const t of tagsSorted) {
+    const data = tables[t].slice();
+    pad4(data);
+    records.push({ tag: t, checkSum: sfntChecksum(data), offset: offset, length: tables[t].length });
+    bodies.push(data);
+    offset += data.length;
+  }
+  for (const r of records) out.push(...tag4(r.tag), ...u32(r.checkSum), ...u32(r.offset), ...u32(r.length));
+  for (const b of bodies) out.push(...b);
+
+  const headRec = records.find((r) => r.tag === "head");
+  if (headRec) {
+    const adj = (0xb1b0afba - sfntChecksum(out)) >>> 0;
+    const p = headRec.offset + 8;
+    out[p] = (adj >>> 24) & 0xff;
+    out[p + 1] = (adj >>> 16) & 0xff;
+    out[p + 2] = (adj >>> 8) & 0xff;
+    out[p + 3] = adj & 0xff;
+  }
+  return new Uint8Array(out);
+}
+
+function parseExistingFont(u) {
+  const dv = new DataView(u.buffer, u.byteOffset, u.byteLength);
+  if (dv.getUint32(0) !== 0x00010000 && dv.getUint32(0) !== 0x74727565) {
+    throw new Error("TrueType形式のフォントではありません。EUDC.TTE を指定してください。");
+  }
+  const numTables = dv.getUint16(4);
+  const tables = {};
+  for (let i = 0; i < numTables; i++) {
+    const p = 12 + i * 16;
+    let t = "";
+    for (let k = 0; k < 4; k++) t += String.fromCharCode(dv.getUint8(p + k));
+    tables[t] = { offset: dv.getUint32(p + 8), length: dv.getUint32(p + 12) };
+  }
+  if (!tables["glyf"] || !tables["loca"]) {
+    throw new Error("このフォントはTrueTypeアウトライン(glyf)を持っていません。");
+  }
+  const headOff = tables["head"].offset;
+  const indexToLocFormat = dv.getInt16(headOff + 50);
+  const unitsPerEm = dv.getUint16(headOff + 18);
+  const numGlyphs = dv.getUint16(tables["maxp"].offset + 4);
+
+  const loca = [];
+  const locaOff = tables["loca"].offset;
+  for (let i = 0; i <= numGlyphs; i++) {
+    loca.push(indexToLocFormat === 0 ? dv.getUint16(locaOff + i * 2) * 2 : dv.getUint32(locaOff + i * 4));
+  }
+  const glyfOff = tables["glyf"].offset;
+  const glyphBytes = [];
+  for (let i = 0; i < numGlyphs; i++) {
+    glyphBytes.push(Array.from(u.subarray(glyfOff + loca[i], glyfOff + loca[i + 1])));
+  }
+  const numberOfHMetrics = dv.getUint16(tables["hhea"].offset + 34);
+  const hmtxOff = tables["hmtx"].offset;
+  const advances = [];
+  for (let i = 0; i < numberOfHMetrics; i++) advances.push(dv.getUint16(hmtxOff + i * 4));
+
+  const cmapMappings = new Map();
+  const cmapOff = tables["cmap"].offset;
+  const nSub = dv.getUint16(cmapOff + 2);
+  for (let i = 0; i < nSub; i++) {
+    const subOff = cmapOff + dv.getUint32(cmapOff + 4 + i * 8 + 4);
+    const format = dv.getUint16(subOff);
+    if (format === 4) {
+      const segCountX2 = dv.getUint16(subOff + 6);
+      const segCount = segCountX2 / 2;
+      const endBase = subOff + 14;
+      const startBase = endBase + segCountX2 + 2;
+      const deltaBase = startBase + segCountX2;
+      const rangeBase = deltaBase + segCountX2;
+      for (let s = 0; s < segCount; s++) {
+        const end = dv.getUint16(endBase + s * 2);
+        const start = dv.getUint16(startBase + s * 2);
+        const delta = dv.getInt16(deltaBase + s * 2);
+        const rangeOff = dv.getUint16(rangeBase + s * 2);
+        if (start === 0xffff) continue;
+        for (let c = start; c <= end && c !== 0x10000; c++) {
+          let g;
+          if (rangeOff === 0) g = (c + delta) & 0xffff;
+          else {
+            const gi = rangeBase + s * 2 + rangeOff + (c - start) * 2;
+            if (gi + 1 >= u.byteLength) continue;
+            g = dv.getUint16(gi);
+            if (g !== 0) g = (g + delta) & 0xffff;
+          }
+          if (g !== 0 && g < numGlyphs) cmapMappings.set(c, g);
+        }
+      }
+    } else if (format === 12) {
+      const nGroups = dv.getUint32(subOff + 12);
+      for (let g = 0; g < nGroups; g++) {
+        const gOff = subOff + 16 + g * 12;
+        const sc = dv.getUint32(gOff), ec = dv.getUint32(gOff + 4), sg = dv.getUint32(gOff + 8);
+        for (let c = sc; c <= ec; c++) if (sg + (c - sc) < numGlyphs) cmapMappings.set(c, sg + (c - sc));
+      }
+    }
+  }
+  return { dv: dv, u: u, tables: tables, numGlyphs: numGlyphs, glyphBytes: glyphBytes,
+           advances: advances, cmapMappings: cmapMappings, unitsPerEm: unitsPerEm };
+}
+
+/* glyphSpecs: [{ codepoint, grid, size }] / existing: Uint8Array | null */
+function buildEudcFont(glyphSpecs, existing, familyName) {
+  familyName = familyName || "EUDC";
+  let glyphBytesList = [[]];
+  let advances = [UNITS_PER_EM];
+  let mappings = new Map();
+  let carried = null;
+  let maxPoints = 0, maxContours = 0;
+  let em = UNITS_PER_EM;
+
+  if (existing) {
+    carried = parseExistingFont(existing);
+    em = carried.unitsPerEm;
+    glyphBytesList = carried.glyphBytes.map((g) => g.slice());
+    advances = [];
+    for (let i = 0; i < carried.numGlyphs; i++) {
+      advances.push(i < carried.advances.length ? carried.advances[i] : carried.advances[carried.advances.length - 1] || em);
+    }
+    mappings = new Map(carried.cmapMappings);
+    maxPoints = carried.dv.getUint16(carried.tables["maxp"].offset + 6);
+    maxContours = carried.dv.getUint16(carried.tables["maxp"].offset + 8);
+  }
+
+  for (const spec of glyphSpecs) {
+    const rects = bitmapToRects(spec.grid, spec.size);
+    const contours = rectsToContours(rects, spec.size, em);
+    const g = buildGlyfBytes(contours);
+    let gid = mappings.get(spec.codepoint);
+    // 同じコードポイントが既にあれば置換、無ければ末尾に追加
+    if (gid === undefined || gid === 0 || gid >= glyphBytesList.length) {
+      gid = glyphBytesList.length;
+      glyphBytesList.push(g.bytes);
+      advances.push(em);
+    } else {
+      glyphBytesList[gid] = g.bytes;
+      advances[gid] = em;
+    }
+    mappings.set(spec.codepoint, gid);
+    if (g.nPoints > maxPoints) maxPoints = g.nPoints;
+    if (g.nContours > maxContours) maxContours = g.nContours;
+  }
+
+  const numGlyphs = glyphBytesList.length;
+
+  const glyf = [];
+  const loca = [];
+  for (const gb of glyphBytesList) { loca.push(glyf.length); glyf.push(...gb); }
+  loca.push(glyf.length);
+  const locaBytes = [];
+  for (const o of loca) locaBytes.push(...u32(o));
+
+  /* lsb はグリフ自身の xMin と一致させる(ずれると描画位置が横にずれる) */
+  const hmtx = [];
+  for (let i = 0; i < numGlyphs; i++) {
+    const gb = glyphBytesList[i];
+    let lsb = 0;
+    if (gb.length >= 4) {
+      lsb = (gb[2] << 8) | gb[3];
+      if (lsb > 0x7fff) lsb -= 0x10000;
+    }
+    hmtx.push(...u16(advances[i] || em), ...i16(lsb));
+  }
+
+  const cmap = buildCmapTable(mappings);
+  const cps = Array.from(mappings.keys());
+  const firstChar = cps.length ? Math.min.apply(null, cps) : 0;
+  const lastChar = cps.length ? Math.max.apply(null, cps) : 0;
+
+  const tables = {};
+  if (existing) {
+    const DROP = ["glyf", "loca", "cmap", "hmtx", "hhea", "maxp", "head", "DSIG", "hdmx", "LTSH", "VDMX"];
+    for (const t of Object.keys(carried.tables)) {
+      if (DROP.indexOf(t) !== -1) continue;
+      const info = carried.tables[t];
+      tables[t] = Array.from(carried.u.subarray(info.offset, info.offset + info.length));
+    }
+    const h = Array.from(carried.u.subarray(carried.tables["head"].offset, carried.tables["head"].offset + 54));
+    h[50] = 0; h[51] = 1;
+    h[8] = h[9] = h[10] = h[11] = 0;
+    tables["head"] = h;
+    const hh = Array.from(carried.u.subarray(carried.tables["hhea"].offset, carried.tables["hhea"].offset + 36));
+    hh[34] = (numGlyphs >> 8) & 0xff; hh[35] = numGlyphs & 0xff;
+    tables["hhea"] = hh;
+    const mp = Array.from(carried.u.subarray(carried.tables["maxp"].offset, carried.tables["maxp"].offset + 32));
+    mp[4] = (numGlyphs >> 8) & 0xff; mp[5] = numGlyphs & 0xff;
+    mp[6] = (maxPoints >> 8) & 0xff; mp[7] = maxPoints & 0xff;
+    mp[8] = (maxContours >> 8) & 0xff; mp[9] = maxContours & 0xff;
+    tables["maxp"] = mp;
+  } else {
+    const head = [];
+    head.push(...u32(0x00010000), ...u32(0x00010000), ...u32(0), ...u32(0x5f0f3cf5));
+    head.push(...u16(0x000b), ...u16(em));
+    head.push(...u32(0), ...u32(0), ...u32(0), ...u32(0));
+    head.push(...i16(0), ...i16(FONT_DESCENT), ...i16(em), ...i16(FONT_ASCENT));
+    head.push(...u16(0), ...u16(8), ...i16(2), ...i16(1), ...i16(0));
+    tables["head"] = head;
+
+    const hhea = [];
+    hhea.push(...u32(0x00010000), ...i16(FONT_ASCENT), ...i16(FONT_DESCENT), ...i16(0));
+    hhea.push(...u16(em), ...i16(0), ...i16(0), ...i16(em));
+    hhea.push(...i16(1), ...i16(0), ...i16(0), ...i16(0), ...i16(0), ...i16(0), ...i16(0), ...i16(0));
+    hhea.push(...u16(numGlyphs));
+    tables["hhea"] = hhea;
+
+    const maxp = [];
+    maxp.push(...u32(0x00010000), ...u16(numGlyphs), ...u16(maxPoints), ...u16(maxContours));
+    maxp.push(...u16(0), ...u16(0), ...u16(2), ...u16(0), ...u16(0), ...u16(0), ...u16(0));
+    maxp.push(...u16(0), ...u16(0), ...u16(0), ...u16(0));
+    tables["maxp"] = maxp;
+
+    tables["name"] = buildNameTable(familyName);
+    tables["post"] = [].concat(u32(0x00030000), u32(0), i16(0), i16(0), u32(0), u32(0), u32(0), u32(0), u32(0));
+    tables["OS/2"] = buildOS2Table(firstChar, lastChar, em);
+  }
+
+  tables["glyf"] = glyf;
+  tables["loca"] = locaBytes;
+  tables["cmap"] = cmap;
+  tables["hmtx"] = hmtx;
+  return assembleSfnt(tables);
+}
+
+/* =========================================================
+   bmpFile.js — 1bpp モノクロBMP(外字エディター経由用)
+   ========================================================= */
+function buildMonochromeBmp(grid, size) {
+  const rowBytes = Math.ceil(size / 8);
+  const stride = Math.ceil(rowBytes / 4) * 4;
+  const pixelBytes = stride * size;
+  const fileSize = 14 + 40 + 8 + pixelBytes;
+  const bytes = new Uint8Array(fileSize);
+  const dv = new DataView(bytes.buffer);
+  let p = 0;
+  bytes[p++] = 0x42; bytes[p++] = 0x4d;          // "BM"
+  dv.setUint32(p, fileSize, true); p += 4;
+  dv.setUint32(p, 0, true); p += 4;
+  dv.setUint32(p, 14 + 40 + 8, true); p += 4;    // 画素データ開始位置
+  dv.setUint32(p, 40, true); p += 4;             // BITMAPINFOHEADER
+  dv.setInt32(p, size, true); p += 4;
+  dv.setInt32(p, size, true); p += 4;            // 正 = 下から上
+  dv.setUint16(p, 1, true); p += 2;              // planes
+  dv.setUint16(p, 1, true); p += 2;              // biBitCount = 1
+  dv.setUint32(p, 0, true); p += 4;              // BI_RGB
+  dv.setUint32(p, pixelBytes, true); p += 4;
+  dv.setInt32(p, 2835, true); p += 4;
+  dv.setInt32(p, 2835, true); p += 4;
+  dv.setUint32(p, 2, true); p += 4;              // 使用色数
+  dv.setUint32(p, 0, true); p += 4;
+  // パレット: 0 = 黒, 1 = 白
+  bytes[p++] = 0x00; bytes[p++] = 0x00; bytes[p++] = 0x00; bytes[p++] = 0x00;
+  bytes[p++] = 0xff; bytes[p++] = 0xff; bytes[p++] = 0xff; bytes[p++] = 0x00;
+  const base = 14 + 40 + 8;
+  for (let y = 0; y < size; y++) {
+    const srcY = size - 1 - y;                   // BMPは下から上
+    for (let x = 0; x < size; x++) {
+      if (!grid[srcY * size + x]) {              // ink=0 のところを白(ビット1)にする
+        bytes[base + y * stride + (x >> 3)] |= 0x80 >> (x & 7);
+      }
+    }
+  }
+  return bytes;
+}
+
+/* =========================================================
    dictFile.js
    ========================================================= */
 function buildDictLine(reading, word, pos) {
@@ -1371,6 +1926,8 @@ function setImageLoadedState(loaded) {
   fitModeSelectEl.disabled = !loaded;
   thresholdSliderEl.disabled = !loaded;
   downloadImageBtnEl.disabled = !loaded;
+  downloadBmpBtnEl.disabled = !loaded;
+  buildFontBtnEl.disabled = !loaded;
   copyImageBtnEl.disabled = !loaded || !clipboardWriteSupported;
 }
 
@@ -1488,6 +2045,130 @@ outputSizeSelectEl.addEventListener("change", () => {
 });
 outputModeSelectEl.addEventListener("change", () => {
   appState.outputMode = outputModeSelectEl.value;
+});
+
+/* ---- 外字フォント生成 ---- */
+function getBinaryGrid() {
+  const size = previewCanvasEl.width;
+  const ctx = previewCanvasEl.getContext("2d", { willReadFrequently: true });
+  const d = ctx.getImageData(0, 0, size, size).data;
+  const grid = new Uint8Array(size * size);
+  for (let i = 0, p = 0; i < d.length; i += 4, p++) grid[p] = d[i + 3] > 127 ? 1 : 0;
+  return { grid: grid, size: size };
+}
+
+existingFontInputEl.addEventListener("change", async () => {
+  const file = existingFontInputEl.files[0];
+  existingFontErrorEl.hidden = true;
+  if (!file) {
+    appState.existingFont = null;
+    existingFontStatusEl.textContent = "未選択(新規フォントとして生成します)";
+    return;
+  }
+  try {
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const info = parseExistingFont(buf);
+    appState.existingFont = buf;
+    existingFontStatusEl.textContent =
+      "読み込み済み: " + file.name + " — 既存グリフ " + info.numGlyphs + "個 / 登録済みコードポイント " +
+      info.cmapMappings.size + "個。これらを保持したまま追加します。";
+  } catch (err) {
+    appState.existingFont = null;
+    existingFontStatusEl.textContent = "未選択(新規フォントとして生成します)";
+    existingFontErrorEl.textContent = err.message || "フォントを読み込めませんでした。";
+    existingFontErrorEl.hidden = false;
+  }
+});
+
+async function verifyGeneratedFont(fontBytes, codepoint) {
+  const family = "EudcVerify" + Date.now();
+  const face = new FontFace(family, fontBytes.buffer.slice(fontBytes.byteOffset, fontBytes.byteOffset + fontBytes.byteLength));
+  await face.load();
+  document.fonts.add(face);
+
+  // 生成フォントで描画し、元の2値画像と画素単位で突き合わせる
+  const src = getBinaryGrid();
+  const c = document.createElement("canvas");
+  c.width = src.size;
+  c.height = src.size;
+  const g = c.getContext("2d", { willReadFrequently: true });
+  g.clearRect(0, 0, src.size, src.size);
+  g.fillStyle = "#000";
+  g.font = src.size + "px " + family;
+  g.textBaseline = "alphabetic";
+  g.fillText(String.fromCodePoint(codepoint), 0, Math.round((FONT_ASCENT / UNITS_PER_EM) * src.size));
+  const d = g.getImageData(0, 0, src.size, src.size).data;
+  let diff = 0;
+  for (let i = 3, p = 0; i < d.length; i += 4, p++) {
+    if ((d[i] > 127 ? 1 : 0) !== src.grid[p]) diff++;
+  }
+  const total = src.size * src.size;
+  return { family: family, diff: diff, total: total, match: (100 * (1 - diff / total)) };
+}
+
+buildFontBtnEl.addEventListener("click", async () => {
+  if (!appState.originalImage) return;
+  buildFontBtnEl.disabled = true;
+  buildFontBtnEl.textContent = "生成中…";
+  try {
+    const src = getBinaryGrid();
+    let inked = 0;
+    for (let i = 0; i < src.grid.length; i++) inked += src.grid[i];
+    if (inked === 0) {
+      showToast("画像が空です。しきい値を調整してください。", true);
+      return;
+    }
+    const font = buildEudcFont(
+      [{ codepoint: appState.codepoint, grid: src.grid, size: src.size }],
+      appState.existingFont,
+      "EUDC"
+    );
+    appState.generatedFont = font;
+
+    const v = await verifyGeneratedFont(font, appState.codepoint);
+    fontVerifyEl.hidden = false;
+    verifyGlyphEl.style.fontFamily = v.family;
+    verifyGlyphEl.textContent = String.fromCodePoint(appState.codepoint);
+    verifySummaryEl.innerHTML =
+      "フォントの読み込みに成功しました。<br>元画像との一致率: <strong>" + v.match.toFixed(1) +
+      "%</strong>(不一致 " + v.diff + " / " + v.total + " 画素)<br>サイズ: " +
+      (font.length / 1024).toFixed(1) + " KB";
+    downloadFontBtnEl.hidden = false;
+    showToast("外字フォントを生成しました。");
+  } catch (err) {
+    fontVerifyEl.hidden = true;
+    downloadFontBtnEl.hidden = true;
+    showToast("フォントの生成に失敗しました: " + (err.message || err), true);
+  } finally {
+    buildFontBtnEl.disabled = false;
+    buildFontBtnEl.textContent = "外字フォントを生成";
+  }
+});
+
+downloadFontBtnEl.addEventListener("click", () => {
+  if (!appState.generatedFont) return;
+  downloadBlob(new Blob([appState.generatedFont], { type: "font/ttf" }), "EUDC.TTE");
+});
+
+downloadRegBtnEl.addEventListener("click", () => {
+  const path = fontPathInputEl.value.trim();
+  if (!path) {
+    showToast("フォントの配置先パスを入力してください。", true);
+    return;
+  }
+  const escaped = path.replace(/\\/g, "\\\\");
+  const text =
+    "Windows Registry Editor Version 5.00\r\n\r\n" +
+    "[HKEY_CURRENT_USER\\EUDC\\932]\r\n" +
+    '"SystemDefaultEUDCFont"="' + escaped + '"\r\n';
+  downloadBlob(encodeUtf16LeWithBom(text), "eudc-register.reg");
+  showToast(".reg ファイルをダウンロードしました。");
+});
+
+downloadBmpBtnEl.addEventListener("click", () => {
+  const src = getBinaryGrid();
+  const bmp = buildMonochromeBmp(src.grid, src.size);
+  downloadBlob(new Blob([bmp], { type: "image/bmp" }), "gaiji-" + currentHex() + ".bmp");
 });
 
 copyImageBtnEl.addEventListener("click", async () => {
