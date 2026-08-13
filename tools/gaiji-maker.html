@@ -651,6 +651,9 @@ code {
             <option value="opaque">白背景(アルファなし)</option>
           </select>
         </label>
+        <label class="field-inline">字面サイズ(フォント生成時): <span id="glyph-scale-value">90</span>%
+          <input type="range" id="glyph-scale-slider" min="60" max="100" value="90" />
+        </label>
       </div>
       <p class="hint-text">外字エディターに貼り付けて黒く潰れる場合は、出力モードを「白背景」に切り替えるか、一度ペイントに貼り付けてからコピーし直して貼り付けてください。</p>
     </section>
@@ -832,6 +835,7 @@ const appState = {
   inverted: false,
   outputSize: 64,
   outputMode: "transparent",
+  glyphScale: 0.9,
   codepoint: 0xe000,
   cpPage: 0,
   searchChar: "",
@@ -856,6 +860,8 @@ const thresholdSliderEl = document.getElementById("threshold-slider");
 const thresholdValueEl = document.getElementById("threshold-value");
 const outputSizeSelectEl = document.getElementById("output-size-select");
 const outputModeSelectEl = document.getElementById("output-mode-select");
+const glyphScaleSliderEl = document.getElementById("glyph-scale-slider");
+const glyphScaleValueEl = document.getElementById("glyph-scale-value");
 const codepointLabelEl = document.getElementById("codepoint-label");
 const codepointInputEl = document.getElementById("codepoint-input");
 const codepointErrorEl = document.getElementById("codepoint-error");
@@ -946,21 +952,18 @@ function lookupVariants(ch) {
    fontDetect.js
    ========================================================= */
 const fontAvailabilityCache = new Map();
-const measureCanvas = document.createElement("canvas");
-const measureCtx = measureCanvas.getContext("2d");
 
+/* 日本語フォントは全角送り幅がどれも同一なので measureText の幅比較では判定できない。
+   実際に描画したピクセルを比較し、3つの総称フォールバックすべてと異なる場合に導入済みとみなす。 */
 function isFontAvailable(family) {
   if (fontAvailabilityCache.has(family)) return fontAvailabilityCache.get(family);
-  const sample = "永漢字あ";
-  const baselines = ["monospace", "serif", "sans-serif"];
-  let available = false;
-  for (const base of baselines) {
-    measureCtx.font = "48px " + base;
-    const baseWidth = measureCtx.measureText(sample).width;
-    measureCtx.font = "48px " + family + "," + base;
-    const testWidth = measureCtx.measureText(sample).width;
-    if (Math.abs(testWidth - baseWidth) > 0.5) {
-      available = true;
+  const sample = "永";
+  let available = true;
+  for (const base of ["monospace", "serif", "sans-serif"]) {
+    const baseHash = hashGlyph(sample, base).hash;
+    const testHash = hashGlyph(sample, family + "," + base).hash;
+    if (testHash === baseHash) {
+      available = false;
       break;
     }
   }
@@ -996,11 +999,13 @@ function hashGlyph(text, family) {
   return { hash: h >>> 0, ink };
 }
 
+/* 導入判定でフォントを除外しない。未導入ならフォールバックで描画されるだけで、
+   その場合は基底文字と「基底＋異体字選択子」が同一に描画されるため誤検出にならない。
+   判定を誤っても検出漏れが起きないようにするのが目的。 */
 function detectIvsVariants(baseChar) {
   const found = [];
-  const seen = new Set();
+  const seenGlyphs = new Set();
   for (const font of COMPARE_FONTS) {
-    if (!isFontAvailable(font.family)) continue;
     const baseInfo = hashGlyph(baseChar, font.family);
     if (baseInfo.ink === 0) continue;
     for (let vs = 0xe0100; vs <= 0xe01ef; vs++) {
@@ -1008,9 +1013,9 @@ function detectIvsVariants(baseChar) {
       const info = hashGlyph(seq, font.family);
       if (info.ink === 0) continue;
       if (info.hash === baseInfo.hash) continue;
-      const key = font.label + ":" + info.hash;
-      if (seen.has(key)) continue;
-      seen.add(key);
+      // 同じ字形が複数フォント経由で重複しないよう、字形ハッシュ全体で重複排除する
+      if (seenGlyphs.has(info.hash)) continue;
+      seenGlyphs.add(info.hash);
       found.push({ seq: seq, vs: vs, font: font });
     }
   }
@@ -1249,14 +1254,41 @@ function bitmapToRects(grid, size) {
   return rects;
 }
 
-function rectsToContours(rects, size, em) {
-  const scale = em / size;
-  const ascent = Math.round((FONT_ASCENT / UNITS_PER_EM) * em);
+/* インクの外接矩形を求める。余白量に左右されずに字面を揃えるために使う */
+function inkBounds(grid, size) {
+  let minX = size, minY = size, maxX = -1, maxY = -1;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      if (!grid[y * size + x]) continue;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+  if (maxX < 0) return null;
+  return { x0: minX, y0: minY, x1: maxX + 1, y1: maxY + 1 };
+}
+
+/* インク外接矩形を em枠の指定割合(字面率)に合わせて拡大し、表意文字em枠の中心に配置する。
+   元画像の余白量に関係なく、周囲の文字と揃った大きさで出力するための写像。 */
+function rectsToContours(rects, size, em, glyphScale, bounds) {
+  const ascent = (FONT_ASCENT / UNITS_PER_EM) * em;
+  const descent = (FONT_DESCENT / UNITS_PER_EM) * em;
+  const target = em * glyphScale;
+  const b = bounds || { x0: 0, y0: 0, x1: size, y1: size };
+  const inkW = b.x1 - b.x0;
+  const inkH = b.y1 - b.y0;
+  const scale = target / Math.max(inkW, inkH);      // 縦横比は保持する
+  const centerY = (ascent + descent) / 2;
+  const offsetX = em / 2 - ((b.x0 + b.x1) / 2) * scale;
+  const offsetY = centerY + ((b.y0 + b.y1) / 2) * scale;
+
   return rects.map((r) => {
-    const left = Math.round(r.x0 * scale);
-    const right = Math.round(r.x1 * scale);
-    const top = Math.round(ascent - r.y0 * scale);
-    const bottom = Math.round(ascent - r.y1 * scale);
+    const left = Math.round(r.x0 * scale + offsetX);
+    const right = Math.round(r.x1 * scale + offsetX);
+    const top = Math.round(offsetY - r.y0 * scale);
+    const bottom = Math.round(offsetY - r.y1 * scale);
     return [
       { x: left, y: bottom }, { x: left, y: top },
       { x: right, y: top }, { x: right, y: bottom },
@@ -1324,25 +1356,64 @@ function buildCmapTable(mappings) {
   return out;
 }
 
+/* 英語(0x409)と日本語(0x411)の両方のレコードを持たせる */
 function buildNameTable(familyName) {
-  const records = [
+  const base = [
     [1, familyName], [2, "Regular"], [3, familyName + " 1.0"],
     [4, familyName], [5, "Version 1.0"], [6, familyName.replace(/\s/g, "")],
   ];
+  const records = [];
+  for (const [id, str] of base) records.push([0x409, id, str]);
+  for (const [id, str] of base) records.push([0x411, id, str]);
+
   const strings = [];
   const recs = [];
   let offset = 0;
-  for (const [id, str] of records) {
+  for (const [lang, id, str] of records) {
     const utf16 = [];
     for (let i = 0; i < str.length; i++) utf16.push(...u16(str.charCodeAt(i)));
-    recs.push({ id: id, len: utf16.length, off: offset });
+    recs.push({ lang: lang, id: id, len: utf16.length, off: offset });
     strings.push(...utf16);
     offset += utf16.length;
   }
   const out = [];
   out.push(...u16(0), ...u16(records.length), ...u16(6 + records.length * 12));
-  for (const r of recs) out.push(...u16(3), ...u16(1), ...u16(0x409), ...u16(r.id), ...u16(r.len), ...u16(r.off));
+  for (const r of recs) out.push(...u16(3), ...u16(1), ...u16(r.lang), ...u16(r.id), ...u16(r.len), ...u16(r.off));
   out.push(...strings);
+  return out;
+}
+
+/* post v2.0 — グリフ名を持たせる。v3.0(名前なし)だと文字パレット等の
+   文字情報欄が名前を取得できず黒点・□になるため。
+   names[i] が null のグリフは標準名(.notdef)を使い、それ以外は追加名として書き出す。 */
+function buildPostV2(names) {
+  const out = [];
+  out.push(...u32(0x00020000));                 // version 2.0
+  out.push(...u32(0));                          // italicAngle
+  out.push(...i16(-100), ...i16(50));           // underlinePosition / Thickness
+  out.push(...u32(0));                          // isFixedPitch
+  out.push(...u32(0), ...u32(0), ...u32(0), ...u32(0)); // memType
+  out.push(...u16(names.length));
+
+  const extras = [];
+  const indices = [];
+  for (const nm of names) {
+    if (nm === null) {
+      indices.push(0);                          // 標準名 .notdef
+    } else {
+      indices.push(258 + extras.length);
+      extras.push(nm);
+    }
+  }
+  for (const idx of indices) out.push(...u16(idx));
+  for (const nm of extras) {
+    const bytes = [];
+    for (let i = 0; i < nm.length && bytes.length < 63; i++) {
+      const c = nm.charCodeAt(i);
+      bytes.push(c < 128 ? c : 0x5f);           // ASCII のみ
+    }
+    out.push(bytes.length, ...bytes);
+  }
   return out;
 }
 
@@ -1500,7 +1571,8 @@ function buildEudcFont(glyphSpecs, existing, familyName) {
 
   for (const spec of glyphSpecs) {
     const rects = bitmapToRects(spec.grid, spec.size);
-    const contours = rectsToContours(rects, spec.size, em);
+    const bounds = inkBounds(spec.grid, spec.size);
+    const contours = rectsToContours(rects, spec.size, em, spec.glyphScale || 0.9, bounds);
     const g = buildGlyfBytes(contours);
     let gid = mappings.get(spec.codepoint);
     // 同じコードポイントが既にあれば置換、無ければ末尾に追加
@@ -1543,9 +1615,21 @@ function buildEudcFont(glyphSpecs, existing, familyName) {
   const firstChar = cps.length ? Math.min.apply(null, cps) : 0;
   const lastChar = cps.length ? Math.max.apply(null, cps) : 0;
 
+  /* グリフ名: cmapに載っているものは uniXXXX、それ以外は gN。グリフ0は標準の .notdef */
+  const gidToCp = new Map();
+  mappings.forEach((gid, cp) => { if (!gidToCp.has(gid)) gidToCp.set(gid, cp); });
+  const glyphNames = [];
+  for (let i = 0; i < numGlyphs; i++) {
+    if (i === 0) { glyphNames.push(null); continue; }
+    const cp = gidToCp.get(i);
+    glyphNames.push(cp !== undefined
+      ? "uni" + cp.toString(16).toUpperCase().padStart(4, "0")
+      : "g" + i);
+  }
+
   const tables = {};
   if (existing) {
-    const DROP = ["glyf", "loca", "cmap", "hmtx", "hhea", "maxp", "head", "DSIG", "hdmx", "LTSH", "VDMX"];
+    const DROP = ["glyf", "loca", "cmap", "hmtx", "hhea", "maxp", "head", "post", "DSIG", "hdmx", "LTSH", "VDMX"];
     for (const t of Object.keys(carried.tables)) {
       if (DROP.indexOf(t) !== -1) continue;
       const info = carried.tables[t];
@@ -1586,10 +1670,10 @@ function buildEudcFont(glyphSpecs, existing, familyName) {
     tables["maxp"] = maxp;
 
     tables["name"] = buildNameTable(familyName);
-    tables["post"] = [].concat(u32(0x00030000), u32(0), i16(0), i16(0), u32(0), u32(0), u32(0), u32(0), u32(0));
     tables["OS/2"] = buildOS2Table(firstChar, lastChar, em);
   }
 
+  tables["post"] = buildPostV2(glyphNames);
   tables["glyf"] = glyf;
   tables["loca"] = locaBytes;
   tables["cmap"] = cmap;
@@ -1768,7 +1852,9 @@ function runIvsScan() {
       return;
     }
     if (results.length === 0) {
-      ivsNoteEl.textContent = "このPCのフォントで表示できるIVS異体字は見つかりませんでした。";
+      ivsNoteEl.textContent =
+        "このPCのフォントで表示できるIVS異体字は見つかりませんでした。" +
+        "この文字にIVS異体字が登録されていないか、お使いのフォントが対応していない可能性があります。";
       return;
     }
     ivsNoteEl.hidden = true;
@@ -2046,6 +2132,10 @@ outputSizeSelectEl.addEventListener("change", () => {
 outputModeSelectEl.addEventListener("change", () => {
   appState.outputMode = outputModeSelectEl.value;
 });
+glyphScaleSliderEl.addEventListener("input", () => {
+  appState.glyphScale = Number(glyphScaleSliderEl.value) / 100;
+  glyphScaleValueEl.textContent = glyphScaleSliderEl.value;
+});
 
 /* ---- 外字フォント生成 ---- */
 function getBinaryGrid() {
@@ -2086,24 +2176,59 @@ async function verifyGeneratedFont(fontBytes, codepoint) {
   await face.load();
   document.fonts.add(face);
 
-  // 生成フォントで描画し、元の2値画像と画素単位で突き合わせる
+  // 生成フォントで描画し、字形が保たれているかを比較する。
+  // 字面サイズ調整によって位置と大きさは意図的に変わるため、
+  // 両者をインクの外接矩形で正規化してから形の一致率を測る。
   const src = getBinaryGrid();
+  const N = 3; // 描画のずれを吸収するため元より大きめに描く
+  const canvasSize = src.size * N;
   const c = document.createElement("canvas");
-  c.width = src.size;
-  c.height = src.size;
+  c.width = canvasSize;
+  c.height = canvasSize;
   const g = c.getContext("2d", { willReadFrequently: true });
-  g.clearRect(0, 0, src.size, src.size);
+  g.clearRect(0, 0, canvasSize, canvasSize);
   g.fillStyle = "#000";
-  g.font = src.size + "px " + family;
+  g.font = canvasSize + "px " + family;
   g.textBaseline = "alphabetic";
-  g.fillText(String.fromCodePoint(codepoint), 0, Math.round((FONT_ASCENT / UNITS_PER_EM) * src.size));
-  const d = g.getImageData(0, 0, src.size, src.size).data;
-  let diff = 0;
-  for (let i = 3, p = 0; i < d.length; i += 4, p++) {
-    if ((d[i] > 127 ? 1 : 0) !== src.grid[p]) diff++;
+  g.fillText(String.fromCodePoint(codepoint), 0, Math.round((FONT_ASCENT / UNITS_PER_EM) * canvasSize));
+  const d = g.getImageData(0, 0, canvasSize, canvasSize).data;
+  const rendered = new Uint8Array(canvasSize * canvasSize);
+  for (let i = 3, p = 0; i < d.length; i += 4, p++) rendered[p] = d[i] > 127 ? 1 : 0;
+
+  const srcB = inkBounds(src.grid, src.size);
+  const renB = inkBounds(rendered, canvasSize);
+  if (!srcB || !renB) {
+    return { family: family, match: 0, aspectSrc: 0, aspectRen: 0, empty: true };
   }
-  const total = src.size * src.size;
-  return { family: family, diff: diff, total: total, match: (100 * (1 - diff / total)) };
+  // 外接矩形を共通の 48×48 に正規化して形を比較する
+  const M = 48;
+  function normalize(grid, size, b) {
+    const out = new Uint8Array(M * M);
+    const w = b.x1 - b.x0, h = b.y1 - b.y0;
+    for (let y = 0; y < M; y++) {
+      for (let x = 0; x < M; x++) {
+        const sx = b.x0 + Math.floor((x * w) / M);
+        const sy = b.y0 + Math.floor((y * h) / M);
+        out[y * M + x] = grid[sy * size + sx];
+      }
+    }
+    return out;
+  }
+  const a = normalize(src.grid, src.size, srcB);
+  const b2 = normalize(rendered, canvasSize, renB);
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b2[i]) diff++;
+  return {
+    family: family,
+    match: 100 * (1 - diff / a.length),
+    diff: diff,
+    total: a.length,
+    aspectSrc: (srcB.x1 - srcB.x0) / (srcB.y1 - srcB.y0),
+    aspectRen: (renB.x1 - renB.x0) / (renB.y1 - renB.y0),
+    fillRatio: (renB.x1 - renB.x0) >= (renB.y1 - renB.y0)
+      ? (renB.x1 - renB.x0) / canvasSize
+      : (renB.y1 - renB.y0) / canvasSize,
+  };
 }
 
 buildFontBtnEl.addEventListener("click", async () => {
@@ -2119,7 +2244,7 @@ buildFontBtnEl.addEventListener("click", async () => {
       return;
     }
     const font = buildEudcFont(
-      [{ codepoint: appState.codepoint, grid: src.grid, size: src.size }],
+      [{ codepoint: appState.codepoint, grid: src.grid, size: src.size, glyphScale: appState.glyphScale }],
       appState.existingFont,
       "EUDC"
     );
@@ -2130,8 +2255,9 @@ buildFontBtnEl.addEventListener("click", async () => {
     verifyGlyphEl.style.fontFamily = v.family;
     verifyGlyphEl.textContent = String.fromCodePoint(appState.codepoint);
     verifySummaryEl.innerHTML =
-      "フォントの読み込みに成功しました。<br>元画像との一致率: <strong>" + v.match.toFixed(1) +
-      "%</strong>(不一致 " + v.diff + " / " + v.total + " 画素)<br>サイズ: " +
+      "フォントの読み込みに成功しました。<br>字形の一致率: <strong>" + v.match.toFixed(1) +
+      "%</strong>(外接矩形で正規化して比較)<br>字面率: <strong>" +
+      (v.fillRatio * 100).toFixed(0) + "%</strong>(em枠に対する大きさ)<br>サイズ: " +
       (font.length / 1024).toFixed(1) + " KB";
     downloadFontBtnEl.hidden = false;
     showToast("外字フォントを生成しました。");
