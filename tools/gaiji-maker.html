@@ -733,14 +733,6 @@ code {
         </div>
       </div>
 
-      <div class="field" style="margin-top:16px;">
-        <label for="font-path-input">フォントの配置先パス(.reg に書き込まれます)</label>
-        <input type="text" id="font-path-input" value="C:\Users\ユーザー名\Documents\EUDC.TTE" autocomplete="off" style="max-width:100%;" />
-        <p class="hint-text">「ユーザー名」の部分はご自身のものに置き換えてください。管理者権限は不要です。</p>
-      </div>
-      <div class="output-actions">
-        <button type="button" id="download-reg-btn" class="btn-secondary">登録用 .reg をダウンロード</button>
-      </div>
     </section>
 
     <section class="panel" id="output-section">
@@ -792,8 +784,8 @@ code {
         <li>Step 0 で既存のUnicode文字・異体字・IVSを検索する。目的の字が見つかればそれを登録すればよく、外字を作る必要はない</li>
         <li><strong>既に外字を登録している場合</strong>は、<code>C:\Windows\Fonts\EUDC.TTE</code> をコピーしてバックアップを取り、Step 4 の「既存の EUDC.TTE を読み込む」で読み込ませる(読み込まないと既存の外字が失われます)</li>
         <li>画像を読み込んで調整し、登録先コードポイントを選ぶ</li>
-        <li>「外字フォントを生成」を押す。生成結果のプレビューで字形が正しいか確認したうえで、<code>EUDC.TTE</code> と <code>.reg</code> をダウンロードする</li>
-        <li><code>EUDC.TTE</code> を .reg に書いたパス(既定では <code>ドキュメント</code> フォルダ)に置き、<code>.reg</code> ファイルをダブルクリックして登録する</li>
+        <li>「外字フォントを生成」を押す。生成結果のプレビューで字形が正しいか確認したうえで、<code>EUDC.TTE</code> をダウンロードする</li>
+        <li>ダウンロードした <code>EUDC.TTE</code> を、既存の外字フォントと同じ場所(通常 <code>C:\Windows\Fonts\EUDC.TTE</code>)に置いて差し替える</li>
         <li>サインアウト → サインインし直す(または再起動する)。メモ帳などで対象のコードポイントが表示されれば成功</li>
         <li>スタートメニューの検索で「ユーザー辞書ツール」を開き、「ツール」→「テキストファイルからの登録」でダウンロードした辞書ファイル(<code>gaiji-dict-XXXX.txt</code>)を読み込む</li>
         <li>IMEを切り替えて登録した読みを入力し、変換候補に目的の文字が表示されることを確認する</li>
@@ -904,8 +896,6 @@ const downloadFontBtnEl = document.getElementById("download-font-btn");
 const fontVerifyEl = document.getElementById("font-verify");
 const verifyGlyphEl = document.getElementById("verify-glyph");
 const verifySummaryEl = document.getElementById("verify-summary");
-const fontPathInputEl = document.getElementById("font-path-input");
-const downloadRegBtnEl = document.getElementById("download-reg-btn");
 const clipboardUnsupportedNoteEl = document.getElementById("clipboard-unsupported-note");
 const dictFormEl = document.getElementById("dict-form");
 const readingInputEl = document.getElementById("reading-input");
@@ -2365,21 +2355,6 @@ buildFontBtnEl.addEventListener("click", async () => {
 downloadFontBtnEl.addEventListener("click", () => {
   if (!appState.generatedFont) return;
   downloadBlob(new Blob([appState.generatedFont], { type: "font/ttf" }), "EUDC.TTE");
-});
-
-downloadRegBtnEl.addEventListener("click", () => {
-  const path = fontPathInputEl.value.trim();
-  if (!path) {
-    showToast("フォントの配置先パスを入力してください。", true);
-    return;
-  }
-  const escaped = path.replace(/\\/g, "\\\\");
-  const text =
-    "Windows Registry Editor Version 5.00\r\n\r\n" +
-    "[HKEY_CURRENT_USER\\EUDC\\932]\r\n" +
-    '"SystemDefaultEUDCFont"="' + escaped + '"\r\n';
-  downloadBlob(encodeUtf16LeWithBom(text), "eudc-register.reg");
-  showToast(".reg ファイルをダウンロードしました。");
 });
 
 downloadBmpBtnEl.addEventListener("click", () => {
