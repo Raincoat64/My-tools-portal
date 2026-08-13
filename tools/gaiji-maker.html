@@ -1,0 +1,2519 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>異体字(外字)作成ツール</title>
+  <!--
+    埋め込みデータの出典:
+      旧字体対応表 (773組) は kyujitai.js (https://github.com/hakatashi/kyujitai.js) の
+      data/kyujitai.json より抽出。MIT License, Copyright (c) hakatashi.
+      互換漢字の対応は実行時に String.prototype.normalize("NFD") から導出しており、
+      データの埋め込みや通信は行っていません。
+  -->
+  <style>
+:root {
+  color-scheme: light dark;
+  --bg: #f5f6f4;
+  --panel-bg: #ffffff;
+  --border: #d8dcd4;
+  --text: #1f2a20;
+  --text-muted: #5c6b5e;
+  --accent: #2f6b3a;
+  --accent-contrast: #ffffff;
+  --chip-bg: #eef3ec;
+  --danger: #a5342a;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141814;
+    --panel-bg: #1b201b;
+    --border: #333c33;
+    --text: #e7ece6;
+    --text-muted: #a3ada2;
+    --accent: #6bb37a;
+    --accent-contrast: #0d140e;
+    --chip-bg: #232b23;
+    --danger: #e08579;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+}
+
+a {
+  color: var(--accent);
+}
+
+.app-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+}
+
+.app-header h1 {
+  margin: 0 0 6px;
+  font-size: 1.4rem;
+}
+
+.app-sub {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.tool-main {
+  max-width: 760px;
+  margin: 16px auto;
+  padding: 0 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 16px 18px;
+}
+
+.panel h2 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+}
+
+.panel h3 {
+  margin: 16px 0 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.disclaimer {
+  border-left: 3px solid var(--accent);
+  background: var(--chip-bg);
+}
+
+.hint-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 8px 0 0;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.field label {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.field .required {
+  color: var(--danger);
+  font-size: 0.7rem;
+  margin-left: 6px;
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+.field input[type="text"],
+.field select {
+  font: inherit;
+  font-size: 1rem;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  color: var(--text);
+  width: 100%;
+  max-width: 320px;
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.8rem;
+  margin: 4px 0 0;
+}
+
+/* ---- 検索(Step 0) ---- */
+.search-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+#search-char-input {
+  font-size: 1.4rem;
+  width: 6em;
+  text-align: center;
+}
+
+.result-group {
+  margin-top: 14px;
+}
+
+.char-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.char-chip {
+  font: inherit;
+  min-width: 76px;
+  padding: 8px 6px 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--chip-bg);
+  color: var(--text);
+  text-align: center;
+  line-height: 1.25;
+}
+
+.chip-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  justify-content: center;
+}
+
+.chip-btn {
+  font: inherit;
+  font-size: 0.68rem;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-bg);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chip-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.char-chip.selected {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+}
+
+.char-chip .big {
+  font-size: 1.9rem;
+  display: block;
+}
+
+.char-chip .cp {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 2px;
+}
+
+.empty-note {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 6px 0 0;
+}
+
+.font-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.font-compare-cell {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 6px;
+  text-align: center;
+  background: var(--chip-bg);
+}
+
+.font-compare-cell.unavailable {
+  opacity: 0.45;
+}
+
+.font-compare-cell .glyph {
+  font-size: 2.3rem;
+  line-height: 1.3;
+}
+
+.font-compare-cell .fontname {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.font-compare-cell .missing {
+  font-size: 0.6rem;
+  color: var(--danger);
+}
+
+/* ---- 画像アップロード ---- */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 24px 16px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: border-color 0.1s ease, background 0.1s ease;
+}
+
+.drop-zone p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.drop-zone.dragover {
+  border-color: var(--accent);
+  background: var(--chip-bg);
+}
+
+.drop-zone:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.canvas-wrap {
+  width: 256px;
+  height: 256px;
+  max-width: 100%;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background-image:
+    linear-gradient(45deg, #c8c8c8 25%, transparent 25%),
+    linear-gradient(-45deg, #c8c8c8 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #c8c8c8 75%),
+    linear-gradient(-45deg, transparent 75%, #c8c8c8 75%);
+  background-color: #fff;
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+}
+
+canvas#preview-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.controls-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+@media (min-width: 480px) {
+  .controls-grid {
+    grid-template-columns: 1fr 1fr;
+    align-items: end;
+  }
+}
+
+.btn-chip {
+  font: inherit;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--chip-bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.field-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.field-inline select,
+.field-inline input[type="range"] {
+  font: inherit;
+}
+
+button:disabled,
+select:disabled,
+input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- コードポイント選択 ---- */
+.cp-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.cp-grid {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 2px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+@media (max-width: 560px) {
+  .cp-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+}
+
+.cp-cell {
+  font: inherit;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel-bg);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.cp-cell:hover {
+  border-color: var(--accent);
+}
+
+.cp-cell.selected {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+}
+
+.cp-cell.used {
+  background: var(--chip-bg);
+}
+
+.cp-cell.selected.used {
+  background: var(--accent);
+}
+
+.cp-cell .cell-glyph {
+  font-size: 1.05rem;
+}
+
+.cp-cell .cell-hex {
+  font-size: 0.5rem;
+  color: var(--text-muted);
+}
+
+.cp-cell.selected .cell-hex {
+  color: var(--accent-contrast);
+}
+
+.codepoint-display {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0 0 10px;
+}
+
+.warn-box {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--danger);
+  border-left: 3px solid var(--danger);
+  border-radius: 0 8px 8px 0;
+  background: var(--chip-bg);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.verify-row {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.verify-cell {
+  text-align: center;
+}
+
+.verify-glyph {
+  width: 96px;
+  height: 96px;
+  line-height: 96px;
+  font-size: 84px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: #000;
+}
+
+.verify-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+input[type="file"] {
+  font: inherit;
+  font-size: 0.85rem;
+  max-width: 100%;
+}
+
+.output-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  font: inherit;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  cursor: pointer;
+}
+
+.btn-secondary {
+  font: inherit;
+  padding: 8px 18px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.radio-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.target-preview {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  background: var(--chip-bg);
+  border-radius: 6px;
+}
+
+.target-preview .big {
+  font-size: 1.6rem;
+  vertical-align: middle;
+  color: var(--text);
+}
+
+ol.steps {
+  margin: 0;
+  padding-left: 1.3em;
+}
+
+ol.steps li {
+  margin-bottom: 8px;
+}
+
+ol.steps li:last-child {
+  margin-bottom: 0;
+}
+
+code {
+  background: var(--chip-bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--bg);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  box-shadow: var(--shadow);
+  max-width: 90vw;
+  text-align: center;
+}
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <a href="../index.html" style="display:inline-block;margin-bottom:6px;font-size:0.85rem;color:var(--accent,#2f6b3a);text-decoration:none;">‹ ツール一覧</a>
+    <h1>異体字(外字)作成ツール</h1>
+    <p class="app-sub">画像から Windows 11 の外字(EUDC)を作成し、IME の変換候補として登録するための下ごしらえを行います。すべてブラウザ内で処理し、通信は一切行いません。</p>
+  </header>
+
+  <main class="tool-main">
+
+    <section class="panel" id="existing-check-section">
+      <h2>Step 0. まず既存の文字で足りないか検索</h2>
+      <p class="hint-text">
+        独自の外字はこのパソコンにフォントを入れないと他の環境では表示されません。まずは既存のUnicode文字やIVS(異体字シーケンス)で目的の字形が無いか検索し、見つからない場合だけカスタム外字の作成に進んでください。
+      </p>
+      <div class="field" style="margin-top:12px;">
+        <label for="search-char-input">基準となる漢字を1文字入力/貼り付け</label>
+        <div class="search-row">
+          <input type="text" id="search-char-input" maxlength="4" placeholder="例: 崎" autocomplete="off" />
+          <button type="button" id="ivs-scan-btn" class="btn-chip" disabled>IVS異体字を検出</button>
+        </div>
+      </div>
+
+      <div id="search-results" hidden>
+        <div class="result-group">
+          <h3>書体ごとの字形</h3>
+          <div id="font-compare-grid" class="font-compare-grid"></div>
+        </div>
+
+        <div class="result-group">
+          <h3>異体字・旧字体・互換漢字</h3>
+          <div id="variant-list" class="char-list"></div>
+          <p id="variant-empty" class="empty-note" hidden>この文字に対応する異体字は見つかりませんでした。</p>
+        </div>
+
+        <div class="field" id="manual-copy-row" hidden>
+          <label for="manual-copy-input">自動コピーができない環境のため、こちらから手動でコピーしてください(Ctrl+C)</label>
+          <input type="text" id="manual-copy-input" readonly style="font-size:1.4rem;" />
+        </div>
+
+        <div class="result-group">
+          <h3>IVS異体字(このPCのフォントで表示できるもの)</h3>
+          <div id="ivs-list" class="char-list"></div>
+          <p id="ivs-note" class="empty-note">「IVS異体字を検出」を押すと、お使いのPCのフォントで実際に表示できる異体字シーケンスを探します。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="upload-section">
+      <h2>1. 画像を選択</h2>
+      <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="画像を選択">
+        <input type="file" id="image-input" accept="image/*" hidden />
+        <p>クリック / ドラッグ&amp;ドロップ / <code>Ctrl+V</code> で貼り付け</p>
+        <p class="hint-text" style="margin-top:6px;">スニッピングツールで切り取ってそのまま Ctrl+V できます。</p>
+      </div>
+      <div class="output-actions" style="margin-top:10px;">
+        <button type="button" id="paste-clipboard-btn" class="btn-secondary" hidden>クリップボードから貼り付け</button>
+      </div>
+      <p id="image-error" class="field-error" hidden></p>
+    </section>
+
+    <section class="panel" id="adjust-section">
+      <h2>2. 調整</h2>
+      <div class="canvas-wrap">
+        <canvas id="preview-canvas" width="64" height="64"></canvas>
+      </div>
+      <div class="controls-grid">
+        <button type="button" id="rotate-btn" class="btn-chip" disabled>↻ 90°回転</button>
+        <label class="switch-row"><input type="checkbox" id="invert-toggle" disabled /> 白黒反転</label>
+        <label class="field-inline">切り抜き
+          <select id="fit-mode-select" disabled>
+            <option value="contain">全体を収める(余白あり)</option>
+            <option value="cover">正方形に敷き詰める(切り取り)</option>
+          </select>
+        </label>
+        <label class="field-inline">2値化しきい値: <span id="threshold-value">128</span>
+          <input type="range" id="threshold-slider" min="0" max="255" value="128" disabled />
+        </label>
+        <label class="field-inline">出力サイズ
+          <select id="output-size-select">
+            <option value="64">64×64 (外字エディター標準)</option>
+            <option value="128">128×128</option>
+            <option value="256">256×256</option>
+          </select>
+        </label>
+        <label class="field-inline">出力モード
+          <select id="output-mode-select">
+            <option value="transparent">透過(背景なし)</option>
+            <option value="opaque">白背景(アルファなし)</option>
+          </select>
+        </label>
+        <label class="field-inline">字面サイズ(フォント生成時): <span id="glyph-scale-value">90</span>%
+          <input type="range" id="glyph-scale-slider" min="60" max="100" value="90" />
+        </label>
+      </div>
+      <p class="hint-text">外字エディターに貼り付けて黒く潰れる場合は、出力モードを「白背景」に切り替えるか、一度ペイントに貼り付けてからコピーし直して貼り付けてください。</p>
+    </section>
+
+    <section class="panel" id="codepoint-section">
+      <h2>3. 登録先コードポイントを選択</h2>
+      <p class="codepoint-display">登録先: U+<span id="codepoint-label">E000</span></p>
+      <div class="cp-toolbar">
+        <button type="button" id="cp-prev-btn" class="btn-chip">‹ 前</button>
+        <select id="cp-page-select"></select>
+        <button type="button" id="cp-next-btn" class="btn-chip">次 ›</button>
+        <input type="text" id="codepoint-input" value="E000" maxlength="4" autocomplete="off" style="font:inherit;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--panel-bg);color:var(--text);width:6em;" />
+      </div>
+      <div id="cp-grid" class="cp-grid"></div>
+      <p class="hint-text">網掛けのセットは既に外字が登録されている可能性があります(お使いのPCの外字フォントで判定)。空いているコードを選んでください。</p>
+      <p class="field-error" id="codepoint-error" hidden></p>
+    </section>
+
+    <section class="panel" id="font-section">
+      <h2>4. 外字フォントを生成(推奨)</h2>
+      <p class="hint-text" style="margin-top:0;">
+        画像から輪郭を起こして外字フォント(EUDC.TTE)を直接作ります。クリップボードも外字エディターも使わないため、黒潰れは起きません。
+      </p>
+
+      <div class="warn-box">
+        <strong>既に外字を登録している場合は必ず読み込んでください。</strong>
+        読み込まずに生成すると、これまでの外字が入っていないフォントになります。既存ファイルは通常
+        <code>C:\Windows\Fonts\EUDC.TTE</code> にあります(差し替える前にコピーを取っておいてください)。
+      </div>
+
+      <div class="field">
+        <label for="existing-font-input">既存の EUDC.TTE を読み込む(任意)</label>
+        <input type="file" id="existing-font-input" accept=".tte,.ttf,.TTE,.TTF" />
+        <p class="hint-text" id="existing-font-status">未選択(新規フォントとして生成します)</p>
+        <p class="field-error" id="existing-font-error" hidden></p>
+      </div>
+
+      <div class="output-actions">
+        <button type="button" id="build-font-btn" class="btn-primary" disabled>外字フォントを生成</button>
+        <button type="button" id="download-font-btn" class="btn-secondary" hidden>EUDC.TTE をダウンロード</button>
+      </div>
+
+      <div id="font-verify" hidden>
+        <h3>生成結果の確認(このブラウザで実際にフォントを読み込んで描画しています)</h3>
+        <div class="verify-row">
+          <div class="verify-cell">
+            <div class="verify-glyph" id="verify-glyph">&nbsp;</div>
+            <div class="verify-label">生成フォントでの表示</div>
+          </div>
+          <div class="verify-cell">
+            <p class="hint-text" id="verify-summary" style="margin:0;"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:16px;">
+        <label for="font-path-input">フォントの配置先パス(.reg に書き込まれます)</label>
+        <input type="text" id="font-path-input" value="C:\Users\ユーザー名\Documents\EUDC.TTE" autocomplete="off" style="max-width:100%;" />
+        <p class="hint-text">「ユーザー名」の部分はご自身のものに置き換えてください。管理者権限は不要です。</p>
+      </div>
+      <div class="output-actions">
+        <button type="button" id="download-reg-btn" class="btn-secondary">登録用 .reg をダウンロード</button>
+      </div>
+    </section>
+
+    <section class="panel" id="output-section">
+      <h2>5. 補助: 画像として出力(外字エディターを使う場合)</h2>
+      <p class="hint-text" style="margin-top:0;">
+        外字エディターに<strong>クリップボード経由で貼り付けると黒く潰れます</strong>(ブラウザは32bit画像しかクリップボードに置けないため)。
+        外字エディターを使う場合は、モノクロBMPを保存 → ペイントで開く → <code>Ctrl+A</code> → <code>Ctrl+C</code> → 外字エディターで貼り付け、の順でお試しください。
+      </p>
+      <div class="output-actions">
+        <button type="button" id="download-bmp-btn" class="btn-secondary" disabled>モノクロBMPをダウンロード</button>
+        <button type="button" id="download-image-btn" class="btn-secondary" disabled>PNGをダウンロード</button>
+        <button type="button" id="copy-image-btn" class="btn-secondary" disabled>画像をコピー(非推奨)</button>
+      </div>
+      <p id="clipboard-unsupported-note" class="hint-text" hidden>
+        このブラウザではクリップボードへの画像コピーに対応していません。
+      </p>
+    </section>
+
+    <section class="panel" id="dict-section">
+      <h2>5. IME辞書登録情報</h2>
+      <div class="radio-row">
+        <label><input type="radio" name="dict-target" value="gaiji" checked /> 外字(上で選んだコードポイント)を登録する</label>
+        <label><input type="radio" name="dict-target" value="existing" /> Step 0 の検索で見つけた既存文字を登録する(外字の作成は不要)</label>
+      </div>
+      <p class="target-preview" id="target-preview">登録される語句: <span class="big" id="target-char">—</span> <span id="target-desc"></span></p>
+      <form id="dict-form">
+        <div class="field">
+          <label for="reading-input">読み(ひらがな)<span class="required">必須</span></label>
+          <input type="text" id="reading-input" autocomplete="off" />
+          <p class="field-error" id="reading-error" hidden></p>
+        </div>
+        <div class="field">
+          <label for="pos-select">品詞</label>
+          <select id="pos-select"></select>
+        </div>
+        <div class="field">
+          <label for="memo-input">メモ/表示名(任意・自分の管理用。ファイルには含まれません)</label>
+          <input type="text" id="memo-input" autocomplete="off" />
+        </div>
+        <p class="field-error" id="target-error" hidden></p>
+        <button type="submit" id="generate-dict-btn" class="btn-primary">辞書ファイルをダウンロード</button>
+      </form>
+      <p class="hint-text">IVS(異体字シーケンス)を含む語句は、MS-IMEのユーザー辞書が受け付けない場合があります。その際は基底文字のみで登録し、変換後にIVSを適用してください。</p>
+    </section>
+
+    <section class="panel disclaimer" id="instructions-section">
+      <h2>手順</h2>
+      <ol class="steps">
+        <li>Step 0 で既存のUnicode文字・異体字・IVSを検索する。目的の字が見つかればそれを登録すればよく、外字を作る必要はない</li>
+        <li><strong>既に外字を登録している場合</strong>は、<code>C:\Windows\Fonts\EUDC.TTE</code> をコピーしてバックアップを取り、Step 4 の「既存の EUDC.TTE を読み込む」で読み込ませる(読み込まないと既存の外字が失われます)</li>
+        <li>画像を読み込んで調整し、登録先コードポイントを選ぶ</li>
+        <li>「外字フォントを生成」を押す。生成結果のプレビューで字形が正しいか確認したうえで、<code>EUDC.TTE</code> と <code>.reg</code> をダウンロードする</li>
+        <li><code>EUDC.TTE</code> を .reg に書いたパス(既定では <code>ドキュメント</code> フォルダ)に置き、<code>.reg</code> ファイルをダブルクリックして登録する</li>
+        <li>サインアウト → サインインし直す(または再起動する)。メモ帳などで対象のコードポイントが表示されれば成功</li>
+        <li>スタートメニューの検索で「ユーザー辞書ツール」を開き、「ツール」→「テキストファイルからの登録」でダウンロードした辞書ファイル(<code>gaiji-dict-XXXX.txt</code>)を読み込む</li>
+        <li>IMEを切り替えて登録した読みを入力し、変換候補に目的の文字が表示されることを確認する</li>
+      </ol>
+      <p class="hint-text">補足1: クリップボード経由で外字エディターに貼り付けると黒く潰れます。これはブラウザが32bit画像しかクリップボードに置けず、外字エディター側がそれを正しく解釈できないためで、ツール側では回避できません。上記のフォント生成の手順をご利用ください。</p>
+      <p class="hint-text">補足2: どうしても外字エディターを使いたい場合は、Step 5 でモノクロBMPを保存し、ペイントで開いて <code>Ctrl+A</code> → <code>Ctrl+C</code> でコピーしてから外字エディターに貼り付けてください。</p>
+      <p class="hint-text">補足3: 辞書ファイルの読み込みに失敗する場合は、メモ帳で開き直して文字コードをUTF-8またはANSIに変更して保存し直すと解決することがあります。</p>
+    </section>
+
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+
+<script>
+/* =========================================================
+   constants.js
+   ========================================================= */
+const PUA_MIN = 0xe000;
+const PUA_MAX = 0xe757;
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
+const POS_OPTIONS = ["名詞", "固有名詞", "人名", "姓", "名", "地名", "組織", "短縮よみ"];
+const CP_PAGE_SIZE = 256;
+
+const COMPARE_FONTS = [
+  { label: "游明朝", family: '"Yu Mincho","游明朝"' },
+  { label: "MS明朝", family: '"MS Mincho","ＭＳ 明朝"' },
+  { label: "BIZ UD明朝", family: '"BIZ UDMincho","BIZ UD明朝"' },
+  { label: "IPAmj明朝", family: '"IPAmjMincho","IPAmj明朝"' },
+  { label: "メイリオ", family: '"Meiryo","メイリオ"' },
+  { label: "游ゴシック", family: '"Yu Gothic","游ゴシック"' },
+  { label: "MSゴシック", family: '"MS Gothic","ＭＳ ゴシック"' },
+  { label: "SimSun(宋体)", family: '"SimSun","宋体"' },
+  { label: "SimHei(黑体)", family: '"SimHei","黑体"' },
+  { label: "MingLiU(繁体)", family: '"MingLiU","細明體"' },
+  { label: "Batang(韓)", family: '"Batang","바탕"' },
+];
+
+/* 旧字体対応表: kyujitai.js (MIT, hakatashi) の data/kyujitai.json より抽出
+   KYUJI_PAIRS は [新字体][旧字体] の2文字ずつ、KYUJI_VS は対応する
+   異体字選択子の U+E0100 からのオフセット(1桁) */
+const KYUJI_PAIRS = "万萬与與両兩並竝乗乘乱亂乳乳争爭亜亞仏佛仮假会會伝傳伴伴余餘体體価價侮侮併倂侵侵倹儉偽僞偉偉偏偏傑傑僧僧充充児兒免免党黨内內全全兼兼円圓冊册写寫冴冱処處判判券券割割剣劍剤劑剰剩励勵労勞効效勅敕勉勉勤勤勝勝勧勸勲勳包包区區医醫半半卑卑即卽巻卷参參及及収收双雙叙敍号號台臺吸吸周周啄啄喝喝啓啓喫喫嘆嘆器器嘱囑噴噴団團囲圍図圖国國圏圈圧壓坪坪城城尭堯塚塚塀塀堕墮塁壘墜墜墳墳塩鹽増增墨墨壊壞壌壤壮壯壱壹売賣声聲変變夢夢契契奥奧奨奬姫姬媛媛婿壻嫌嫌嬢孃学學孤孤実實宝寶害害宵宵寛寬寝寢寿壽対對専專将將尋尋尊尊導導当當尚尙単單巣巢営營厳嚴尽盡届屆属屬層層岳嶽峡峽崩崩巌巖巡巡巨巨巽巽帯帶帰歸帽帽幣幣平平広廣庁廳廊廊廃廢廉廉弊弊弐貳弥彌弾彈彦彥径徑従從徴徵徳德応應忍忍急急恒恆悔悔恵惠悩惱恋戀悪惡悦悅惨慘情情愉愉慎愼慨慨憎憎憤憤懐懷懲懲成成戦戰戯戲戸戶戻戾所所房房扇扇扉扉払拂扱扱抜拔択擇拝拜担擔拠據拡擴拒拒挟挾挿插捜搜挙擧掲揭捨捨掃掃援援揺搖摂攝撃擊敏敏教敎数數断斷既既旧舊昼晝晋晉晩晚暑暑暁曉暦曆晴晴暖暖曙曙朗朗来來条條枢樞栄榮梅梅桟棧桜櫻検檢棚棚楽樂楼樓槙槇様樣概槪構構横橫権權欄欄欠缺欧歐歓歡歩步歴歷残殘殴毆殺殺殻殼毎每気氣没沒沢澤泡泡海海浄淨浅淺涙淚浜濱浮浮渉涉渇渴渚渚渓溪渋澁済濟清淸温溫満滿港港湿濕湾灣滞滯漢漢溝溝滝瀧潜潛瀬瀨灰灰灯燈炉爐為爲点點煮煮焼燒煙煙爵爵犠犧状狀狭狹独獨猪猪猟獵献獻猶猶獣獸獲獲琢琢瑶瑤瓶甁産產画畫異異畳疊痴癡癒癒発發益益盗盜県縣真眞瞬瞬矩矩研硏砕碎硝硝碑碑社社祈祈祉祉祐祐祖祖祝祝神神祥祥禎禎禍禍福福礼禮禄祿禅禪秘祕称稱税稅程程穀穀稲稻穂穗穏穩穫穫穣穰突突窃竊節節粋粹精精糸絲約約経經終終絵繪続續継繼緒緖緑綠練練緯緯編編総總縄繩縁緣繁繁縦縱繊纖繭繭缶罐署署羽羽翁翁習習翼翼翻翻者者聡聰聴聽粛肅肖肖肩肩胞胞胆膽脱脫脳腦臓臟臭臭舎舍舗舖舞舞艶艷芸藝茎莖荘莊著著蔵藏薫薰薬藥蘭蘭虚虛虜虜虫蟲蚕蠶蛍螢蛮蠻衛衞装裝褐褐褒襃要要覆覆覇霸視視覚覺覧覽観觀触觸訳譯証證評評誠誠誕誕請請調調誉譽読讀謁謁諸諸謡謠謹謹謙謙講講謄謄譲讓豊豐賓賓賛贊贈贈赳赳践踐転轉軽輕辞辭込込迅迅迎迎近近返返迫迫迭迭述述迷迷追追退退送送逃逃逆逆透透逐逐途途通通逝逝速速造造連連逮逮週週進進遂遂遇遇遊遊運運遍遍過過道道達達違違遠遠遣遣適適遭遭遮遮遵遵遷遷選選遺遺避避還還辺邊逓遞逸逸遥遙遅遲郎郞都都郷鄕酌酌酔醉醸釀釈釋釣釣鉄鐵鉱鑛銭錢鋭銳鋳鑄錬鍊録錄鎮鎭関關闘鬪降降陥陷隆隆険險随隨隠隱隣鄰隷隸雅雅雑雜難難霊靈青靑静靜響響頼賴頻頻顔顏類類顕顯飢飢飯飯飲飮飼飼飾飾餅餠餓餓館館飽飽駅驛駆驅騒騷騰騰験驗髄髓髪髮竜龍鶏鷄麟麟麦麥黄黃黒黑黙默黛黛斉齊斎齋歯齒齢齡亀龜逢逢芦芦飴飴溢溢茨茨鰯鰯淫淫迂迂厩厩噂噂餌餌襖襖迦迦牙牙廻廻恢恢晦晦蟹蟹葛葛鞄鞄釜釜翰翰翫翫徽徽祇祇汲汲灸灸笈笈卿卿饗饗僅僅喰喰櫛櫛屑屑粂粂祁祁隙隙倦倦捲捲牽牽鍵鍵諺諺巷巷梗梗膏膏鵠鵠甑甑叉叉榊榊薩薩鯖鯖錆錆鮫鮫餐餐杓杓灼灼酋酋楯楯薯薯藷藷哨哨鞘鞘杖杖蝕蝕訊訊逗逗摺摺撰撰煎煎煽煽穿穿箭箭詮詮噌噌遡遡揃揃遜遜腿腿蛸蛸辿辿樽樽歎歎註註瀦瀦捗捗槌槌鎚鎚辻辻挺挺鄭鄭擢擢溺溺兎兎堵堵屠屠賭賭瀞瀞遁遁謎謎灘灘楢楢禰禰牌牌這這秤秤駁駁箸箸叛叛挽挽誹誹樋樋稗稗逼逼謬謬豹豹廟廟瀕瀕斧斧蔽蔽瞥瞥蔑蔑篇篇娩娩鞭鞭庖庖蓬蓬鱒鱒迄迄儲儲餅餅籾籾爺爺鑓鑓愈愈猷猷漣漣煉煉簾簾榔榔屢屢冤冤叟叟咬咬嘲嘲囀囀徘徘扁扁棘棘橙橙狡狡甕甕甦甦疼疼祟祟竈竈筵筵篝篝腱腱艘艘芒芒虔虔蜃蜃蠅蠅訝訝靄靄靱靱騙騙鴉鴉史史交交朕朕告吿寧寧邦邦拳拳機機空空竟竟記記億億次次前前化化紀紀延延屡屢湾灣幾幾虐虐誤誤亘亙凜凛刃刄呉吳回囘妊姙娯娛強强携攜旅旅曽曾歳歲粘黏糾糺絶絕萌萠説說祷禱鎌鐮閲閱麺麵祢禰";
+const KYUJI_VS = "01000010000001000101003121201001100000110000000001120100100001000001011120103000000100110012000000000021000101003002100000012100000000010010113001110010310000000101100000000110103031000011110110000010000011100000003000010001130200000010000010000000000000000100000100000000010001100010000001200000002020000020010100131001010101000101000000100002010100010100000031000100300023211000111000010020100100010000000010110100000011211000000111000013000011111111111121111111101112111111121131111111100100000300010000000000301000002000001000001001101110001000002000010000011111111513111121011111111112111011111101111013111111111111111111111121111111111111111111111111112111111111111111111111111111111112111200210131111100121101111111122021111100511122211142001110000000001010000000001";
+
+/* kyujitai に含まれない人名・戸籍で頻出の異体字グループ(手書き補完) */
+const VARIANT_GROUPS = [
+  "崎﨑嵜㟢", "高髙", "富冨", "島嶋嶌", "柳栁", "桧檜", "吉𠮷", "村邨",
+  "峰峯", "舘館", "沖冲", "晃晄", "凛凜", "鴎鷗", "桑桒", "斎齋", "辺邉",
+  "浜濵", "剣劒劔釼", "亘亙", "涼凉", "芦蘆", "藪薮籔", "竈竃", "籠篭",
+  "曽曾", "瀬瀨",
+];
+
+/* 正規分解を持たない互換漢字(14字)のうち、基底文字が確実なもの */
+const COMPAT_EXTRA = [["﨑", "崎"], ["﨔", "欅"], ["﨟", "臘"]];
+
+/* =========================================================
+   state.js
+   ========================================================= */
+const appState = {
+  originalImage: null,
+  rotation: 0,
+  fitMode: "contain",
+  threshold: 128,
+  inverted: false,
+  outputSize: 64,
+  outputMode: "transparent",
+  glyphScale: 0.9,
+  codepoint: 0xe000,
+  cpPage: 0,
+  searchChar: "",
+  selectedExisting: "",
+  dictTarget: "gaiji",
+  existingFont: null,
+  generatedFont: null,
+};
+
+/* =========================================================
+   domRefs.js
+   ========================================================= */
+const dropZoneEl = document.getElementById("drop-zone");
+const imageInputEl = document.getElementById("image-input");
+const imageErrorEl = document.getElementById("image-error");
+const pasteClipboardBtnEl = document.getElementById("paste-clipboard-btn");
+const previewCanvasEl = document.getElementById("preview-canvas");
+const rotateBtnEl = document.getElementById("rotate-btn");
+const invertToggleEl = document.getElementById("invert-toggle");
+const fitModeSelectEl = document.getElementById("fit-mode-select");
+const thresholdSliderEl = document.getElementById("threshold-slider");
+const thresholdValueEl = document.getElementById("threshold-value");
+const outputSizeSelectEl = document.getElementById("output-size-select");
+const outputModeSelectEl = document.getElementById("output-mode-select");
+const glyphScaleSliderEl = document.getElementById("glyph-scale-slider");
+const glyphScaleValueEl = document.getElementById("glyph-scale-value");
+const codepointLabelEl = document.getElementById("codepoint-label");
+const codepointInputEl = document.getElementById("codepoint-input");
+const codepointErrorEl = document.getElementById("codepoint-error");
+const cpGridEl = document.getElementById("cp-grid");
+const cpPageSelectEl = document.getElementById("cp-page-select");
+const cpPrevBtnEl = document.getElementById("cp-prev-btn");
+const cpNextBtnEl = document.getElementById("cp-next-btn");
+const copyImageBtnEl = document.getElementById("copy-image-btn");
+const downloadImageBtnEl = document.getElementById("download-image-btn");
+const downloadBmpBtnEl = document.getElementById("download-bmp-btn");
+const existingFontInputEl = document.getElementById("existing-font-input");
+const existingFontStatusEl = document.getElementById("existing-font-status");
+const existingFontErrorEl = document.getElementById("existing-font-error");
+const buildFontBtnEl = document.getElementById("build-font-btn");
+const downloadFontBtnEl = document.getElementById("download-font-btn");
+const fontVerifyEl = document.getElementById("font-verify");
+const verifyGlyphEl = document.getElementById("verify-glyph");
+const verifySummaryEl = document.getElementById("verify-summary");
+const fontPathInputEl = document.getElementById("font-path-input");
+const downloadRegBtnEl = document.getElementById("download-reg-btn");
+const clipboardUnsupportedNoteEl = document.getElementById("clipboard-unsupported-note");
+const dictFormEl = document.getElementById("dict-form");
+const readingInputEl = document.getElementById("reading-input");
+const readingErrorEl = document.getElementById("reading-error");
+const posSelectEl = document.getElementById("pos-select");
+const targetErrorEl = document.getElementById("target-error");
+const targetCharEl = document.getElementById("target-char");
+const targetDescEl = document.getElementById("target-desc");
+const searchCharInputEl = document.getElementById("search-char-input");
+const searchResultsEl = document.getElementById("search-results");
+const fontCompareGridEl = document.getElementById("font-compare-grid");
+const variantListEl = document.getElementById("variant-list");
+const variantEmptyEl = document.getElementById("variant-empty");
+const ivsListEl = document.getElementById("ivs-list");
+const ivsNoteEl = document.getElementById("ivs-note");
+const ivsScanBtnEl = document.getElementById("ivs-scan-btn");
+const manualCopyRowEl = document.getElementById("manual-copy-row");
+const manualCopyInputEl = document.getElementById("manual-copy-input");
+const toastEl = document.getElementById("toast");
+
+/* =========================================================
+   variantData.js  — 異体字の索引を組み立てる
+   ========================================================= */
+const variantIndex = new Map();
+
+function linkVariants(a, b) {
+  if (a === b) return;
+  if (!variantIndex.has(a)) variantIndex.set(a, new Set());
+  if (!variantIndex.has(b)) variantIndex.set(b, new Set());
+  variantIndex.get(a).add(b);
+  variantIndex.get(b).add(a);
+}
+
+/* 互換漢字は normalize("NFD") から実行時に導出する(データ埋め込み不要) */
+function buildCompatIndex() {
+  const ranges = [[0xf900, 0xfad9], [0x2f800, 0x2fa1d]];
+  for (const [start, end] of ranges) {
+    for (let cp = start; cp <= end; cp++) {
+      const ch = String.fromCodePoint(cp);
+      const nfd = ch.normalize("NFD");
+      if (nfd !== ch && Array.from(nfd).length === 1) linkVariants(nfd, ch);
+    }
+  }
+  for (const [compat, base] of COMPAT_EXTRA) linkVariants(base, compat);
+}
+
+function buildKyujiIndex() {
+  for (let i = 0; i * 2 + 1 < KYUJI_PAIRS.length; i++) {
+    const shin = KYUJI_PAIRS[i * 2];
+    const kyu = KYUJI_PAIRS[i * 2 + 1];
+    linkVariants(shin, kyu);
+  }
+}
+
+function buildGroupIndex() {
+  for (const group of VARIANT_GROUPS) {
+    const chars = Array.from(group);
+    for (let i = 0; i < chars.length; i++) {
+      for (let j = i + 1; j < chars.length; j++) linkVariants(chars[i], chars[j]);
+    }
+  }
+}
+
+function lookupVariants(ch) {
+  const set = variantIndex.get(ch);
+  return set ? Array.from(set) : [];
+}
+
+/* =========================================================
+   fontDetect.js
+   ========================================================= */
+const fontAvailabilityCache = new Map();
+
+/* 日本語フォントは全角送り幅がどれも同一なので measureText の幅比較では判定できない。
+   実際に描画したピクセルを比較し、3つの総称フォールバックすべてと異なる場合に導入済みとみなす。 */
+function isFontAvailable(family) {
+  if (fontAvailabilityCache.has(family)) return fontAvailabilityCache.get(family);
+  const sample = "永";
+  let available = true;
+  for (const base of ["monospace", "serif", "sans-serif"]) {
+    const baseHash = hashGlyph(sample, base).hash;
+    const testHash = hashGlyph(sample, family + "," + base).hash;
+    if (testHash === baseHash) {
+      available = false;
+      break;
+    }
+  }
+  fontAvailabilityCache.set(family, available);
+  return available;
+}
+
+/* =========================================================
+   ivsDetect.js — 実際に字形が変わるIVSだけを実フォントから探す
+   ========================================================= */
+const IVS_CANVAS_SIZE = 48;
+const ivsCanvas = document.createElement("canvas");
+ivsCanvas.width = IVS_CANVAS_SIZE;
+ivsCanvas.height = IVS_CANVAS_SIZE;
+const ivsCtx = ivsCanvas.getContext("2d", { willReadFrequently: true });
+
+function hashGlyph(text, family) {
+  ivsCtx.clearRect(0, 0, IVS_CANVAS_SIZE, IVS_CANVAS_SIZE);
+  ivsCtx.fillStyle = "#000";
+  ivsCtx.textBaseline = "middle";
+  ivsCtx.textAlign = "center";
+  ivsCtx.font = "36px " + family;
+  ivsCtx.fillText(text, IVS_CANVAS_SIZE / 2, IVS_CANVAS_SIZE / 2);
+  const data = ivsCtx.getImageData(0, 0, IVS_CANVAS_SIZE, IVS_CANVAS_SIZE).data;
+  let h = 2166136261;
+  let ink = 0;
+  for (let i = 3; i < data.length; i += 4) {
+    const v = data[i];
+    if (v > 8) ink++;
+    h ^= v;
+    h = Math.imul(h, 16777619);
+  }
+  return { hash: h >>> 0, ink };
+}
+
+/* 導入判定でフォントを除外しない。未導入ならフォールバックで描画されるだけで、
+   その場合は基底文字と「基底＋異体字選択子」が同一に描画されるため誤検出にならない。
+   判定を誤っても検出漏れが起きないようにするのが目的。 */
+function detectIvsVariants(baseChar) {
+  const found = [];
+  const seenGlyphs = new Set();
+  for (const font of COMPARE_FONTS) {
+    const baseInfo = hashGlyph(baseChar, font.family);
+    if (baseInfo.ink === 0) continue;
+    for (let vs = 0xe0100; vs <= 0xe01ef; vs++) {
+      const seq = baseChar + String.fromCodePoint(vs);
+      const info = hashGlyph(seq, font.family);
+      if (info.ink === 0) continue;
+      if (info.hash === baseInfo.hash) continue;
+      // 同じ字形が複数フォント経由で重複しないよう、字形ハッシュ全体で重複排除する
+      if (seenGlyphs.has(info.hash)) continue;
+      seenGlyphs.add(info.hash);
+      found.push({ seq: seq, vs: vs, font: font });
+    }
+  }
+  return found;
+}
+
+/* =========================================================
+   imageProcessing.js
+   ========================================================= */
+function loadImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("画像の読み込みに失敗しました。"));
+      img.src = reader.result;
+    };
+    reader.onerror = () => reject(new Error("ファイルの読み込みに失敗しました。"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function drawSourceToCanvas(img) {
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  c.getContext("2d").drawImage(img, 0, 0);
+  return c;
+}
+
+function rotateCanvas(srcCanvas, degrees) {
+  const rad = (degrees * Math.PI) / 180;
+  const swap = degrees % 180 !== 0;
+  const w = srcCanvas.width;
+  const h = srcCanvas.height;
+  const out = document.createElement("canvas");
+  out.width = swap ? h : w;
+  out.height = swap ? w : h;
+  const ctx = out.getContext("2d");
+  ctx.translate(out.width / 2, out.height / 2);
+  ctx.rotate(rad);
+  ctx.drawImage(srcCanvas, -w / 2, -h / 2);
+  return out;
+}
+
+/* 背景は塗らず透過のままにする(外字エディターでの黒潰れ対策) */
+function fitToSquare(srcCanvas, size, mode) {
+  const out = document.createElement("canvas");
+  out.width = size;
+  out.height = size;
+  const ctx = out.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  const sw = srcCanvas.width;
+  const sh = srcCanvas.height;
+  const scale = mode === "cover" ? Math.max(size / sw, size / sh) : Math.min(size / sw, size / sh);
+  const dw = sw * scale;
+  const dh = sh * scale;
+  ctx.drawImage(srcCanvas, (size - dw) / 2, (size - dh) / 2, dw, dh);
+  return out;
+}
+
+/* 2値化: 線画は不透明な黒、背景はアルファ0の完全透過にする */
+function applyThresholdInvert(canvas, threshold, invert) {
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const { width, height } = canvas;
+  const imgData = ctx.getImageData(0, 0, width, height);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const a = d[i + 3] / 255;
+    const r = d[i] * a + 255 * (1 - a);
+    const g = d[i + 1] * a + 255 * (1 - a);
+    const b = d[i + 2] * a + 255 * (1 - a);
+    const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    let isInk = luma < threshold;
+    if (invert) isInk = !isInk;
+    d[i] = 0;
+    d[i + 1] = 0;
+    d[i + 2] = 0;
+    d[i + 3] = isInk ? 255 : 0;
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+function renderPreview() {
+  if (!appState.originalImage) return;
+  const size = appState.outputSize;
+  const src = drawSourceToCanvas(appState.originalImage);
+  const rotated = rotateCanvas(src, appState.rotation);
+  const squared = fitToSquare(rotated, size, appState.fitMode);
+  previewCanvasEl.width = size;
+  previewCanvasEl.height = size;
+  const ctx = previewCanvasEl.getContext("2d", { willReadFrequently: true });
+  ctx.clearRect(0, 0, size, size);
+  ctx.drawImage(squared, 0, 0);
+  applyThresholdInvert(previewCanvasEl, appState.threshold, appState.inverted);
+}
+
+/* 出力用canvas: 白背景モードではアルファチャンネルを持たないcanvasに描き直す */
+function buildExportCanvas() {
+  if (appState.outputMode !== "opaque") return previewCanvasEl;
+  const size = previewCanvasEl.width;
+  const out = document.createElement("canvas");
+  out.width = size;
+  out.height = size;
+  const ctx = out.getContext("2d", { alpha: false });
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, size, size);
+  ctx.drawImage(previewCanvasEl, 0, 0);
+  return out;
+}
+
+/* =========================================================
+   validation.js
+   ========================================================= */
+function validateImageFile(file) {
+  if (!file.type.startsWith("image/")) {
+    return { valid: false, message: "画像ファイルを選択してください。" };
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    return { valid: false, message: "ファイルサイズが大きすぎます(20MBまで)。" };
+  }
+  return { valid: true };
+}
+
+function validateReading(value) {
+  if (!value) return { valid: false, message: "読み(ひらがな)を入力してください。" };
+  if (!/^[ぁ-ゖー]+$/.test(value)) return { valid: false, message: "ひらがなで入力してください。" };
+  return { valid: true };
+}
+
+function validateCodePoint(value) {
+  if (!/^[0-9A-Fa-f]{4}$/.test(value)) {
+    return { valid: false, message: "16進数4桁(例: E000)で入力してください。" };
+  }
+  const num = parseInt(value, 16);
+  if (num < PUA_MIN || num > PUA_MAX) {
+    return { valid: false, message: "E000〜E757 の範囲で入力してください(外字エディターの既定編集範囲)。" };
+  }
+  return { valid: true };
+}
+
+/* =========================================================
+   clipboard.js
+   ========================================================= */
+const clipboardWriteSupported = !!(navigator.clipboard && navigator.clipboard.write && window.ClipboardItem);
+const clipboardReadSupported = !!(navigator.clipboard && navigator.clipboard.read);
+
+async function copyImageToClipboard(canvas) {
+  const item = new ClipboardItem({
+    "image/png": new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("画像の生成に失敗しました。"));
+      }, "image/png");
+    }),
+  });
+  await navigator.clipboard.write([item]);
+}
+
+/* このHTMLは file:// で直接開かれることがある。その場合 navigator.clipboard は
+   セキュアコンテキストでないため使えないので、execCommand へ落とす。
+   どちらも駄目なときは手動コピー用の入力欄を出し、黙って失敗させない。 */
+async function copyTextWithFallback(text) {
+  try {
+    if (window.isSecureContext && navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (err) {
+    /* execCommand 経路へ続行 */
+  }
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.position = "fixed";
+  ta.style.top = "-1000px";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  ta.setSelectionRange(0, text.length);
+  let ok = false;
+  try {
+    ok = document.execCommand("copy");
+  } catch (err) {
+    ok = false;
+  }
+  ta.remove();
+  return ok;
+}
+
+/* 自動コピーが両方とも失敗したときの受け皿。文字を選択済みの状態で表示する */
+function showManualCopyFallback(text) {
+  manualCopyRowEl.hidden = false;
+  manualCopyInputEl.value = text;
+  manualCopyInputEl.focus();
+  manualCopyInputEl.select();
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function downloadCanvasAsPng(canvas, filename) {
+  canvas.toBlob((blob) => {
+    if (blob) downloadBlob(blob, filename);
+  }, "image/png");
+}
+
+/* =========================================================
+   ttfBuilder.js — 外字フォント(TrueType)の生成とマージ
+   外部ライブラリなし。既存グリフの glyf バイト列はそのまま引き継ぐため無損失。
+   ========================================================= */
+const UNITS_PER_EM = 1024;
+const FONT_ASCENT = 880;
+const FONT_DESCENT = -144;
+
+function u8(n) { return [n & 0xff]; }
+function u16(n) { return [(n >> 8) & 0xff, n & 0xff]; }
+function i16(n) { if (n < 0) n += 0x10000; return u16(n); }
+function u32(n) { return [(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff]; }
+function tag4(s) { return [s.charCodeAt(0), s.charCodeAt(1), s.charCodeAt(2), s.charCodeAt(3)]; }
+function pad4(arr) { while (arr.length % 4 !== 0) arr.push(0); return arr; }
+
+function sfntChecksum(bytes) {
+  let sum = 0;
+  for (let i = 0; i < bytes.length; i += 4) {
+    const b0 = bytes[i] || 0, b1 = bytes[i + 1] || 0, b2 = bytes[i + 2] || 0, b3 = bytes[i + 3] || 0;
+    sum = (sum + (((b0 << 24) >>> 0) + (b1 << 16) + (b2 << 8) + b3)) >>> 0;
+  }
+  return sum >>> 0;
+}
+
+/* 2値グリッド → 極大矩形の集合。横ランをまとめ、同じ範囲が続く行を貪欲に統合する */
+function bitmapToRects(grid, size) {
+  const used = new Uint8Array(size * size);
+  const rects = [];
+  for (let y = 0; y < size; y++) {
+    let x = 0;
+    while (x < size) {
+      if (!grid[y * size + x] || used[y * size + x]) { x++; continue; }
+      let x2 = x;
+      while (x2 + 1 < size && grid[y * size + x2 + 1] && !used[y * size + x2 + 1]) x2++;
+      let y2 = y;
+      while (y2 + 1 < size) {
+        let ok = true;
+        for (let xx = x; xx <= x2; xx++) {
+          if (!grid[(y2 + 1) * size + xx] || used[(y2 + 1) * size + xx]) { ok = false; break; }
+        }
+        if (!ok) break;
+        y2++;
+      }
+      for (let yy = y; yy <= y2; yy++) for (let xx = x; xx <= x2; xx++) used[yy * size + xx] = 1;
+      rects.push({ x0: x, y0: y, x1: x2 + 1, y1: y2 + 1 });
+      x = x2 + 1;
+    }
+  }
+  return rects;
+}
+
+/* インクの外接矩形を求める。余白量に左右されずに字面を揃えるために使う */
+function inkBounds(grid, size) {
+  let minX = size, minY = size, maxX = -1, maxY = -1;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      if (!grid[y * size + x]) continue;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+  if (maxX < 0) return null;
+  return { x0: minX, y0: minY, x1: maxX + 1, y1: maxY + 1 };
+}
+
+/* インク外接矩形を em枠の指定割合(字面率)に合わせて拡大し、表意文字em枠の中心に配置する。
+   元画像の余白量に関係なく、周囲の文字と揃った大きさで出力するための写像。 */
+function rectsToContours(rects, size, em, glyphScale, bounds) {
+  const ascent = (FONT_ASCENT / UNITS_PER_EM) * em;
+  const descent = (FONT_DESCENT / UNITS_PER_EM) * em;
+  const target = em * glyphScale;
+  const b = bounds || { x0: 0, y0: 0, x1: size, y1: size };
+  const inkW = b.x1 - b.x0;
+  const inkH = b.y1 - b.y0;
+  const scale = target / Math.max(inkW, inkH);      // 縦横比は保持する
+  const centerY = (ascent + descent) / 2;
+  const offsetX = em / 2 - ((b.x0 + b.x1) / 2) * scale;
+  const offsetY = centerY + ((b.y0 + b.y1) / 2) * scale;
+
+  return rects.map((r) => {
+    const left = Math.round(r.x0 * scale + offsetX);
+    const right = Math.round(r.x1 * scale + offsetX);
+    const top = Math.round(offsetY - r.y0 * scale);
+    const bottom = Math.round(offsetY - r.y1 * scale);
+    return [
+      { x: left, y: bottom }, { x: left, y: top },
+      { x: right, y: top }, { x: right, y: bottom },
+    ];
+  });
+}
+
+function buildGlyfBytes(contours) {
+  if (contours.length === 0) return { bytes: [], nPoints: 0, nContours: 0 };
+  let xMin = Infinity, yMin = Infinity, xMax = -Infinity, yMax = -Infinity;
+  for (const c of contours) for (const p of c) {
+    if (p.x < xMin) xMin = p.x;
+    if (p.y < yMin) yMin = p.y;
+    if (p.x > xMax) xMax = p.x;
+    if (p.y > yMax) yMax = p.y;
+  }
+  const out = [];
+  out.push(...i16(contours.length));
+  out.push(...i16(xMin), ...i16(yMin), ...i16(xMax), ...i16(yMax));
+  let acc = 0;
+  for (const c of contours) { acc += c.length; out.push(...u16(acc - 1)); }
+  out.push(...u16(0));
+  const points = [];
+  for (const c of contours) for (const p of c) points.push(p);
+  for (let i = 0; i < points.length; i++) out.push(...u8(0x01));
+  let prevX = 0;
+  for (const p of points) { out.push(...i16(p.x - prevX)); prevX = p.x; }
+  let prevY = 0;
+  for (const p of points) { out.push(...i16(p.y - prevY)); prevY = p.y; }
+  pad4(out);
+  return { bytes: out, nPoints: points.length, nContours: contours.length };
+}
+
+function buildCmapTable(mappings) {
+  const cps = Array.from(mappings.keys()).sort((a, b) => a - b);
+  const segments = [];
+  let i = 0;
+  while (i < cps.length) {
+    const startCp = cps[i];
+    let end = i;
+    while (
+      end + 1 < cps.length &&
+      cps[end + 1] === cps[end] + 1 &&
+      mappings.get(cps[end + 1]) === mappings.get(cps[end]) + 1
+    ) end++;
+    segments.push({ start: startCp, end: cps[end], delta: (mappings.get(startCp) - startCp) & 0xffff });
+    i = end + 1;
+  }
+  segments.push({ start: 0xffff, end: 0xffff, delta: 1 });
+
+  const segCount = segments.length;
+  const sub = [];
+  sub.push(...u16(4), ...u16(16 + segCount * 8), ...u16(0), ...u16(segCount * 2));
+  const searchRange = 2 * Math.pow(2, Math.floor(Math.log2(segCount)));
+  sub.push(...u16(searchRange), ...u16(Math.log2(searchRange / 2)), ...u16(segCount * 2 - searchRange));
+  for (const s of segments) sub.push(...u16(s.end));
+  sub.push(...u16(0));
+  for (const s of segments) sub.push(...u16(s.start));
+  for (const s of segments) sub.push(...i16(s.delta > 0x7fff ? s.delta - 0x10000 : s.delta));
+  for (const s of segments) sub.push(...u16(0));
+
+  const out = [];
+  out.push(...u16(0), ...u16(1), ...u16(3), ...u16(1), ...u32(12));
+  out.push(...sub);
+  return out;
+}
+
+/* 英語(0x409)と日本語(0x411)の両方のレコードを持たせる */
+function buildNameTable(familyName) {
+  const base = [
+    [1, familyName], [2, "Regular"], [3, familyName + " 1.0"],
+    [4, familyName], [5, "Version 1.0"], [6, familyName.replace(/\s/g, "")],
+  ];
+  const records = [];
+  for (const [id, str] of base) records.push([0x409, id, str]);
+  for (const [id, str] of base) records.push([0x411, id, str]);
+
+  const strings = [];
+  const recs = [];
+  let offset = 0;
+  for (const [lang, id, str] of records) {
+    const utf16 = [];
+    for (let i = 0; i < str.length; i++) utf16.push(...u16(str.charCodeAt(i)));
+    recs.push({ lang: lang, id: id, len: utf16.length, off: offset });
+    strings.push(...utf16);
+    offset += utf16.length;
+  }
+  const out = [];
+  out.push(...u16(0), ...u16(records.length), ...u16(6 + records.length * 12));
+  for (const r of recs) out.push(...u16(3), ...u16(1), ...u16(r.lang), ...u16(r.id), ...u16(r.len), ...u16(r.off));
+  out.push(...strings);
+  return out;
+}
+
+/* post v2.0 — グリフ名を持たせる。v3.0(名前なし)だと文字パレット等の
+   文字情報欄が名前を取得できず黒点・□になるため。
+   names[i] が null のグリフは標準名(.notdef)を使い、それ以外は追加名として書き出す。 */
+function buildPostV2(names) {
+  const out = [];
+  out.push(...u32(0x00020000));                 // version 2.0
+  out.push(...u32(0));                          // italicAngle
+  out.push(...i16(-100), ...i16(50));           // underlinePosition / Thickness
+  out.push(...u32(0));                          // isFixedPitch
+  out.push(...u32(0), ...u32(0), ...u32(0), ...u32(0)); // memType
+  out.push(...u16(names.length));
+
+  const extras = [];
+  const indices = [];
+  for (const nm of names) {
+    if (nm === null) {
+      indices.push(0);                          // 標準名 .notdef
+    } else {
+      indices.push(258 + extras.length);
+      extras.push(nm);
+    }
+  }
+  for (const idx of indices) out.push(...u16(idx));
+  for (const nm of extras) {
+    const bytes = [];
+    for (let i = 0; i < nm.length && bytes.length < 63; i++) {
+      const c = nm.charCodeAt(i);
+      bytes.push(c < 128 ? c : 0x5f);           // ASCII のみ
+    }
+    out.push(bytes.length, ...bytes);
+  }
+  return out;
+}
+
+function buildOS2Table(firstChar, lastChar, em) {
+  const out = [];
+  out.push(...u16(4), ...i16(em), ...u16(400), ...u16(5), ...u16(0));
+  out.push(...i16(650), ...i16(1300), ...i16(650), ...i16(1300));
+  out.push(...i16(650), ...i16(1300), ...i16(650), ...i16(500));
+  out.push(...i16(50), ...i16(300), ...i16(0));
+  for (let i = 0; i < 10; i++) out.push(0);
+  out.push(...u32(0), ...u32(0), ...u32(0), ...u32(0));
+  out.push(...tag4("EUDC"), ...u16(0x0040), ...u16(firstChar), ...u16(lastChar));
+  out.push(...i16(FONT_ASCENT), ...i16(FONT_DESCENT), ...i16(0));
+  out.push(...u16(FONT_ASCENT), ...u16(-FONT_DESCENT));
+  out.push(...u32(0x00000001), ...u32(0));
+  out.push(...i16(500), ...i16(700), ...u16(0), ...u16(0x20), ...u16(1));
+  return out;
+}
+
+function assembleSfnt(tables) {
+  const tagsSorted = Object.keys(tables).sort();
+  const numTables = tagsSorted.length;
+  const searchRange = 16 * Math.pow(2, Math.floor(Math.log2(numTables)));
+  const out = [];
+  out.push(...u32(0x00010000), ...u16(numTables), ...u16(searchRange));
+  out.push(...u16(Math.log2(searchRange / 16)), ...u16(numTables * 16 - searchRange));
+
+  let offset = 12 + numTables * 16;
+  const records = [];
+  const bodies = [];
+  for (const t of tagsSorted) {
+    const data = tables[t].slice();
+    pad4(data);
+    records.push({ tag: t, checkSum: sfntChecksum(data), offset: offset, length: tables[t].length });
+    bodies.push(data);
+    offset += data.length;
+  }
+  for (const r of records) out.push(...tag4(r.tag), ...u32(r.checkSum), ...u32(r.offset), ...u32(r.length));
+  for (const b of bodies) out.push(...b);
+
+  const headRec = records.find((r) => r.tag === "head");
+  if (headRec) {
+    const adj = (0xb1b0afba - sfntChecksum(out)) >>> 0;
+    const p = headRec.offset + 8;
+    out[p] = (adj >>> 24) & 0xff;
+    out[p + 1] = (adj >>> 16) & 0xff;
+    out[p + 2] = (adj >>> 8) & 0xff;
+    out[p + 3] = adj & 0xff;
+  }
+  return new Uint8Array(out);
+}
+
+function parseExistingFont(u) {
+  const dv = new DataView(u.buffer, u.byteOffset, u.byteLength);
+  if (dv.getUint32(0) !== 0x00010000 && dv.getUint32(0) !== 0x74727565) {
+    throw new Error("TrueType形式のフォントではありません。EUDC.TTE を指定してください。");
+  }
+  const numTables = dv.getUint16(4);
+  const tables = {};
+  for (let i = 0; i < numTables; i++) {
+    const p = 12 + i * 16;
+    let t = "";
+    for (let k = 0; k < 4; k++) t += String.fromCharCode(dv.getUint8(p + k));
+    tables[t] = { offset: dv.getUint32(p + 8), length: dv.getUint32(p + 12) };
+  }
+  if (!tables["glyf"] || !tables["loca"]) {
+    throw new Error("このフォントはTrueTypeアウトライン(glyf)を持っていません。");
+  }
+  const headOff = tables["head"].offset;
+  const indexToLocFormat = dv.getInt16(headOff + 50);
+  const unitsPerEm = dv.getUint16(headOff + 18);
+  const numGlyphs = dv.getUint16(tables["maxp"].offset + 4);
+
+  const loca = [];
+  const locaOff = tables["loca"].offset;
+  for (let i = 0; i <= numGlyphs; i++) {
+    loca.push(indexToLocFormat === 0 ? dv.getUint16(locaOff + i * 2) * 2 : dv.getUint32(locaOff + i * 4));
+  }
+  const glyfOff = tables["glyf"].offset;
+  const glyphBytes = [];
+  for (let i = 0; i < numGlyphs; i++) {
+    glyphBytes.push(Array.from(u.subarray(glyfOff + loca[i], glyfOff + loca[i + 1])));
+  }
+  const numberOfHMetrics = dv.getUint16(tables["hhea"].offset + 34);
+  const hmtxOff = tables["hmtx"].offset;
+  const advances = [];
+  for (let i = 0; i < numberOfHMetrics; i++) advances.push(dv.getUint16(hmtxOff + i * 4));
+
+  const cmapMappings = new Map();
+  const cmapOff = tables["cmap"].offset;
+  const nSub = dv.getUint16(cmapOff + 2);
+  for (let i = 0; i < nSub; i++) {
+    const subOff = cmapOff + dv.getUint32(cmapOff + 4 + i * 8 + 4);
+    const format = dv.getUint16(subOff);
+    if (format === 4) {
+      const segCountX2 = dv.getUint16(subOff + 6);
+      const segCount = segCountX2 / 2;
+      const endBase = subOff + 14;
+      const startBase = endBase + segCountX2 + 2;
+      const deltaBase = startBase + segCountX2;
+      const rangeBase = deltaBase + segCountX2;
+      for (let s = 0; s < segCount; s++) {
+        const end = dv.getUint16(endBase + s * 2);
+        const start = dv.getUint16(startBase + s * 2);
+        const delta = dv.getInt16(deltaBase + s * 2);
+        const rangeOff = dv.getUint16(rangeBase + s * 2);
+        if (start === 0xffff) continue;
+        for (let c = start; c <= end && c !== 0x10000; c++) {
+          let g;
+          if (rangeOff === 0) g = (c + delta) & 0xffff;
+          else {
+            const gi = rangeBase + s * 2 + rangeOff + (c - start) * 2;
+            if (gi + 1 >= u.byteLength) continue;
+            g = dv.getUint16(gi);
+            if (g !== 0) g = (g + delta) & 0xffff;
+          }
+          if (g !== 0 && g < numGlyphs) cmapMappings.set(c, g);
+        }
+      }
+    } else if (format === 12) {
+      const nGroups = dv.getUint32(subOff + 12);
+      for (let g = 0; g < nGroups; g++) {
+        const gOff = subOff + 16 + g * 12;
+        const sc = dv.getUint32(gOff), ec = dv.getUint32(gOff + 4), sg = dv.getUint32(gOff + 8);
+        for (let c = sc; c <= ec; c++) if (sg + (c - sc) < numGlyphs) cmapMappings.set(c, sg + (c - sc));
+      }
+    }
+  }
+  return { dv: dv, u: u, tables: tables, numGlyphs: numGlyphs, glyphBytes: glyphBytes,
+           advances: advances, cmapMappings: cmapMappings, unitsPerEm: unitsPerEm };
+}
+
+/* glyphSpecs: [{ codepoint, grid, size }] / existing: Uint8Array | null */
+function buildEudcFont(glyphSpecs, existing, familyName) {
+  familyName = familyName || "EUDC";
+  let glyphBytesList = [[]];
+  let advances = [UNITS_PER_EM];
+  let mappings = new Map();
+  let carried = null;
+  let maxPoints = 0, maxContours = 0;
+  let em = UNITS_PER_EM;
+
+  if (existing) {
+    carried = parseExistingFont(existing);
+    em = carried.unitsPerEm;
+    glyphBytesList = carried.glyphBytes.map((g) => g.slice());
+    advances = [];
+    for (let i = 0; i < carried.numGlyphs; i++) {
+      advances.push(i < carried.advances.length ? carried.advances[i] : carried.advances[carried.advances.length - 1] || em);
+    }
+    mappings = new Map(carried.cmapMappings);
+    maxPoints = carried.dv.getUint16(carried.tables["maxp"].offset + 6);
+    maxContours = carried.dv.getUint16(carried.tables["maxp"].offset + 8);
+  }
+
+  for (const spec of glyphSpecs) {
+    const rects = bitmapToRects(spec.grid, spec.size);
+    const bounds = inkBounds(spec.grid, spec.size);
+    const contours = rectsToContours(rects, spec.size, em, spec.glyphScale || 0.9, bounds);
+    const g = buildGlyfBytes(contours);
+    let gid = mappings.get(spec.codepoint);
+    // 同じコードポイントが既にあれば置換、無ければ末尾に追加
+    if (gid === undefined || gid === 0 || gid >= glyphBytesList.length) {
+      gid = glyphBytesList.length;
+      glyphBytesList.push(g.bytes);
+      advances.push(em);
+    } else {
+      glyphBytesList[gid] = g.bytes;
+      advances[gid] = em;
+    }
+    mappings.set(spec.codepoint, gid);
+    if (g.nPoints > maxPoints) maxPoints = g.nPoints;
+    if (g.nContours > maxContours) maxContours = g.nContours;
+  }
+
+  const numGlyphs = glyphBytesList.length;
+
+  const glyf = [];
+  const loca = [];
+  for (const gb of glyphBytesList) { loca.push(glyf.length); glyf.push(...gb); }
+  loca.push(glyf.length);
+  const locaBytes = [];
+  for (const o of loca) locaBytes.push(...u32(o));
+
+  /* lsb はグリフ自身の xMin と一致させる(ずれると描画位置が横にずれる) */
+  const hmtx = [];
+  for (let i = 0; i < numGlyphs; i++) {
+    const gb = glyphBytesList[i];
+    let lsb = 0;
+    if (gb.length >= 4) {
+      lsb = (gb[2] << 8) | gb[3];
+      if (lsb > 0x7fff) lsb -= 0x10000;
+    }
+    hmtx.push(...u16(advances[i] || em), ...i16(lsb));
+  }
+
+  const cmap = buildCmapTable(mappings);
+  const cps = Array.from(mappings.keys());
+  const firstChar = cps.length ? Math.min.apply(null, cps) : 0;
+  const lastChar = cps.length ? Math.max.apply(null, cps) : 0;
+
+  /* グリフ名: cmapに載っているものは uniXXXX、それ以外は gN。グリフ0は標準の .notdef */
+  const gidToCp = new Map();
+  mappings.forEach((gid, cp) => { if (!gidToCp.has(gid)) gidToCp.set(gid, cp); });
+  const glyphNames = [];
+  for (let i = 0; i < numGlyphs; i++) {
+    if (i === 0) { glyphNames.push(null); continue; }
+    const cp = gidToCp.get(i);
+    glyphNames.push(cp !== undefined
+      ? "uni" + cp.toString(16).toUpperCase().padStart(4, "0")
+      : "g" + i);
+  }
+
+  const tables = {};
+  if (existing) {
+    const DROP = ["glyf", "loca", "cmap", "hmtx", "hhea", "maxp", "head", "post", "DSIG", "hdmx", "LTSH", "VDMX"];
+    for (const t of Object.keys(carried.tables)) {
+      if (DROP.indexOf(t) !== -1) continue;
+      const info = carried.tables[t];
+      tables[t] = Array.from(carried.u.subarray(info.offset, info.offset + info.length));
+    }
+    const h = Array.from(carried.u.subarray(carried.tables["head"].offset, carried.tables["head"].offset + 54));
+    h[50] = 0; h[51] = 1;
+    h[8] = h[9] = h[10] = h[11] = 0;
+    tables["head"] = h;
+    const hh = Array.from(carried.u.subarray(carried.tables["hhea"].offset, carried.tables["hhea"].offset + 36));
+    hh[34] = (numGlyphs >> 8) & 0xff; hh[35] = numGlyphs & 0xff;
+    tables["hhea"] = hh;
+    const mp = Array.from(carried.u.subarray(carried.tables["maxp"].offset, carried.tables["maxp"].offset + 32));
+    mp[4] = (numGlyphs >> 8) & 0xff; mp[5] = numGlyphs & 0xff;
+    mp[6] = (maxPoints >> 8) & 0xff; mp[7] = maxPoints & 0xff;
+    mp[8] = (maxContours >> 8) & 0xff; mp[9] = maxContours & 0xff;
+    tables["maxp"] = mp;
+  } else {
+    const head = [];
+    head.push(...u32(0x00010000), ...u32(0x00010000), ...u32(0), ...u32(0x5f0f3cf5));
+    head.push(...u16(0x000b), ...u16(em));
+    head.push(...u32(0), ...u32(0), ...u32(0), ...u32(0));
+    head.push(...i16(0), ...i16(FONT_DESCENT), ...i16(em), ...i16(FONT_ASCENT));
+    head.push(...u16(0), ...u16(8), ...i16(2), ...i16(1), ...i16(0));
+    tables["head"] = head;
+
+    const hhea = [];
+    hhea.push(...u32(0x00010000), ...i16(FONT_ASCENT), ...i16(FONT_DESCENT), ...i16(0));
+    hhea.push(...u16(em), ...i16(0), ...i16(0), ...i16(em));
+    hhea.push(...i16(1), ...i16(0), ...i16(0), ...i16(0), ...i16(0), ...i16(0), ...i16(0), ...i16(0));
+    hhea.push(...u16(numGlyphs));
+    tables["hhea"] = hhea;
+
+    const maxp = [];
+    maxp.push(...u32(0x00010000), ...u16(numGlyphs), ...u16(maxPoints), ...u16(maxContours));
+    maxp.push(...u16(0), ...u16(0), ...u16(2), ...u16(0), ...u16(0), ...u16(0), ...u16(0));
+    maxp.push(...u16(0), ...u16(0), ...u16(0), ...u16(0));
+    tables["maxp"] = maxp;
+
+    tables["name"] = buildNameTable(familyName);
+    tables["OS/2"] = buildOS2Table(firstChar, lastChar, em);
+  }
+
+  tables["post"] = buildPostV2(glyphNames);
+  tables["glyf"] = glyf;
+  tables["loca"] = locaBytes;
+  tables["cmap"] = cmap;
+  tables["hmtx"] = hmtx;
+  return assembleSfnt(tables);
+}
+
+/* =========================================================
+   bmpFile.js — 1bpp モノクロBMP(外字エディター経由用)
+   ========================================================= */
+function buildMonochromeBmp(grid, size) {
+  const rowBytes = Math.ceil(size / 8);
+  const stride = Math.ceil(rowBytes / 4) * 4;
+  const pixelBytes = stride * size;
+  const fileSize = 14 + 40 + 8 + pixelBytes;
+  const bytes = new Uint8Array(fileSize);
+  const dv = new DataView(bytes.buffer);
+  let p = 0;
+  bytes[p++] = 0x42; bytes[p++] = 0x4d;          // "BM"
+  dv.setUint32(p, fileSize, true); p += 4;
+  dv.setUint32(p, 0, true); p += 4;
+  dv.setUint32(p, 14 + 40 + 8, true); p += 4;    // 画素データ開始位置
+  dv.setUint32(p, 40, true); p += 4;             // BITMAPINFOHEADER
+  dv.setInt32(p, size, true); p += 4;
+  dv.setInt32(p, size, true); p += 4;            // 正 = 下から上
+  dv.setUint16(p, 1, true); p += 2;              // planes
+  dv.setUint16(p, 1, true); p += 2;              // biBitCount = 1
+  dv.setUint32(p, 0, true); p += 4;              // BI_RGB
+  dv.setUint32(p, pixelBytes, true); p += 4;
+  dv.setInt32(p, 2835, true); p += 4;
+  dv.setInt32(p, 2835, true); p += 4;
+  dv.setUint32(p, 2, true); p += 4;              // 使用色数
+  dv.setUint32(p, 0, true); p += 4;
+  // パレット: 0 = 黒, 1 = 白
+  bytes[p++] = 0x00; bytes[p++] = 0x00; bytes[p++] = 0x00; bytes[p++] = 0x00;
+  bytes[p++] = 0xff; bytes[p++] = 0xff; bytes[p++] = 0xff; bytes[p++] = 0x00;
+  const base = 14 + 40 + 8;
+  for (let y = 0; y < size; y++) {
+    const srcY = size - 1 - y;                   // BMPは下から上
+    for (let x = 0; x < size; x++) {
+      if (!grid[srcY * size + x]) {              // ink=0 のところを白(ビット1)にする
+        bytes[base + y * stride + (x >> 3)] |= 0x80 >> (x & 7);
+      }
+    }
+  }
+  return bytes;
+}
+
+/* =========================================================
+   dictFile.js
+   ========================================================= */
+function buildDictLine(reading, word, pos) {
+  return reading + "\t" + word + "\t" + pos + "\r\n";
+}
+
+/* TextEncoder は UTF-8 専用なので UTF-16LE を手組みする。
+   charCodeAt はコードユニット単位なのでサロゲートペア(IVS選択子)も正しく出力される。 */
+function encodeUtf16LeWithBom(text) {
+  const units = [0xfeff];
+  for (let i = 0; i < text.length; i++) units.push(text.charCodeAt(i));
+  const buf = new ArrayBuffer(units.length * 2);
+  const view = new DataView(buf);
+  units.forEach((u, i) => view.setUint16(i * 2, u, true));
+  return new Blob([buf], { type: "text/plain" });
+}
+
+/* =========================================================
+   searchUi.js
+   ========================================================= */
+function cpLabel(ch) {
+  return Array.from(ch)
+    .map((c) => "U+" + c.codePointAt(0).toString(16).toUpperCase().padStart(4, "0"))
+    .join(" ");
+}
+
+/* チップは「コピー」と「登録対象」の2操作を持つ。ボタンの入れ子は不正なHTMLに
+   なるため、外枠は div にして中にボタンを2つ置く。 */
+function makeCharChip(ch, onSelect) {
+  const wrap = document.createElement("div");
+  wrap.className = "char-chip";
+
+  const big = document.createElement("span");
+  big.className = "big";
+  big.textContent = ch;
+
+  const cp = document.createElement("span");
+  cp.className = "cp";
+  cp.textContent = cpLabel(ch);
+
+  const actions = document.createElement("div");
+  actions.className = "chip-actions";
+
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.className = "chip-btn";
+  copyBtn.textContent = "コピー";
+  copyBtn.addEventListener("click", async () => {
+    const ok = await copyTextWithFallback(ch);
+    const isSequence = Array.from(ch).length > 1;
+    if (ok) {
+      manualCopyRowEl.hidden = true;
+      showToast(
+        "「" + ch + "」をコピーしました。" +
+        (isSequence ? "(異体字シーケンス " + cpLabel(ch) + " の2文字分)" : "")
+      );
+    } else {
+      showToast("自動コピーできませんでした。下の欄から手動でコピーしてください。", true);
+      showManualCopyFallback(ch);
+    }
+  });
+
+  const useBtn = document.createElement("button");
+  useBtn.type = "button";
+  useBtn.className = "chip-btn";
+  useBtn.textContent = "登録対象";
+  useBtn.addEventListener("click", () => onSelect(ch, wrap));
+
+  actions.appendChild(copyBtn);
+  actions.appendChild(useBtn);
+  wrap.appendChild(big);
+  wrap.appendChild(cp);
+  wrap.appendChild(actions);
+  return wrap;
+}
+
+function renderFontCompare(char) {
+  fontCompareGridEl.innerHTML = "";
+  for (const f of COMPARE_FONTS) {
+    const available = isFontAvailable(f.family);
+    const cell = document.createElement("div");
+    cell.className = "font-compare-cell" + (available ? "" : " unavailable");
+
+    const glyph = document.createElement("div");
+    glyph.className = "glyph";
+    glyph.style.fontFamily = f.family;
+    glyph.textContent = char;
+
+    const name = document.createElement("div");
+    name.className = "fontname";
+    name.textContent = f.label;
+
+    cell.appendChild(glyph);
+    cell.appendChild(name);
+    if (!available) {
+      const missing = document.createElement("div");
+      missing.className = "missing";
+      missing.textContent = "未インストール";
+      cell.appendChild(missing);
+    }
+    fontCompareGridEl.appendChild(cell);
+  }
+}
+
+function selectExistingChar(ch) {
+  appState.selectedExisting = ch;
+  const radio = document.querySelector('input[name="dict-target"][value="existing"]');
+  if (radio) radio.checked = true;
+  appState.dictTarget = "existing";
+  updateTargetPreview();
+  document.querySelectorAll(".char-chip").forEach((el) => el.classList.remove("selected"));
+  showToast("「" + ch + "」を登録対象にしました。");
+}
+
+function renderVariants(char) {
+  variantListEl.innerHTML = "";
+  const variants = lookupVariants(char);
+  if (variants.length === 0) {
+    variantEmptyEl.hidden = false;
+    return;
+  }
+  variantEmptyEl.hidden = true;
+  for (const v of variants) {
+    variantListEl.appendChild(
+      makeCharChip(v, (ch, btn) => {
+        selectExistingChar(ch);
+        btn.classList.add("selected");
+      })
+    );
+  }
+}
+
+function runSearch() {
+  const char = Array.from(searchCharInputEl.value)[0] || "";
+  appState.searchChar = char;
+  ivsScanBtnEl.disabled = !char;
+  if (!char) {
+    searchResultsEl.hidden = true;
+    return;
+  }
+  searchResultsEl.hidden = false;
+  renderFontCompare(char);
+  renderVariants(char);
+  ivsListEl.innerHTML = "";
+  ivsNoteEl.hidden = false;
+  ivsNoteEl.textContent = "「IVS異体字を検出」を押すと、お使いのPCのフォントで実際に表示できる異体字シーケンスを探します。";
+}
+
+function runIvsScan() {
+  const char = appState.searchChar;
+  if (!char) return;
+  ivsNoteEl.hidden = false;
+  ivsNoteEl.textContent = "検出中…";
+  ivsListEl.innerHTML = "";
+  setTimeout(() => {
+    let results = [];
+    try {
+      results = detectIvsVariants(char);
+    } catch (err) {
+      ivsNoteEl.textContent = "検出中にエラーが発生しました。";
+      return;
+    }
+    if (results.length === 0) {
+      ivsNoteEl.textContent =
+        "このPCのフォントで表示できるIVS異体字は見つかりませんでした。" +
+        "この文字にIVS異体字が登録されていないか、お使いのフォントが対応していない可能性があります。";
+      return;
+    }
+    ivsNoteEl.hidden = true;
+    for (const r of results) {
+      const chip = makeCharChip(r.seq, (seq, btn) => {
+        selectExistingChar(seq);
+        btn.classList.add("selected");
+      });
+      chip.querySelector(".big").style.fontFamily = r.font.family;
+      const note = document.createElement("span");
+      note.className = "cp";
+      note.textContent = r.font.label;
+      chip.insertBefore(note, chip.querySelector(".chip-actions"));
+      ivsListEl.appendChild(chip);
+    }
+  }, 20);
+}
+
+/* =========================================================
+   codepointUi.js
+   ========================================================= */
+const blankCanvas = document.createElement("canvas");
+blankCanvas.width = 24;
+blankCanvas.height = 24;
+const blankCtx = blankCanvas.getContext("2d", { willReadFrequently: true });
+/* 外字が未登録のコードポイントは豆腐(.notdef)が描かれ「インクあり」になってしまうため、
+   確実に未使用のコードポイントの描画結果を基準として、それと同じ字形なら空きとみなす */
+const TOFU_SAMPLE_CPS = [0xe7f8, 0xe7f9, 0xe7fa];
+let tofuHashes = null;
+
+function glyphSignature(cp) {
+  blankCtx.clearRect(0, 0, 24, 24);
+  blankCtx.fillStyle = "#000";
+  blankCtx.textBaseline = "middle";
+  blankCtx.textAlign = "center";
+  blankCtx.font = '18px "MS Gothic","Yu Gothic",sans-serif';
+  blankCtx.fillText(String.fromCodePoint(cp), 12, 12);
+  const data = blankCtx.getImageData(0, 0, 24, 24).data;
+  let h = 2166136261;
+  let ink = 0;
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] > 8) ink++;
+    h ^= data[i];
+    h = Math.imul(h, 16777619);
+  }
+  return { hash: h >>> 0, ink: ink };
+}
+
+function isCodepointUsed(cp) {
+  if (tofuHashes === null) {
+    tofuHashes = new Set(TOFU_SAMPLE_CPS.map((c) => glyphSignature(c).hash));
+  }
+  const sig = glyphSignature(cp);
+  if (sig.ink === 0) return false;
+  return !tofuHashes.has(sig.hash);
+}
+
+function populateCpPages() {
+  const pageCount = Math.ceil((PUA_MAX - PUA_MIN + 1) / CP_PAGE_SIZE);
+  for (let p = 0; p < pageCount; p++) {
+    const start = PUA_MIN + p * CP_PAGE_SIZE;
+    const end = Math.min(start + CP_PAGE_SIZE - 1, PUA_MAX);
+    const opt = document.createElement("option");
+    opt.value = String(p);
+    opt.textContent =
+      "U+" + start.toString(16).toUpperCase() + " 〜 U+" + end.toString(16).toUpperCase();
+    cpPageSelectEl.appendChild(opt);
+  }
+}
+
+function renderCpGrid() {
+  const start = PUA_MIN + appState.cpPage * CP_PAGE_SIZE;
+  const end = Math.min(start + CP_PAGE_SIZE - 1, PUA_MAX);
+  cpGridEl.innerHTML = "";
+  for (let cp = start; cp <= end; cp++) {
+    const hex = cp.toString(16).toUpperCase();
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cp-cell";
+    if (cp === appState.codepoint) btn.classList.add("selected");
+    if (isCodepointUsed(cp)) btn.classList.add("used");
+    btn.title = "U+" + hex + (btn.classList.contains("used") ? " (使用中の可能性)" : " (空き)");
+
+    const glyph = document.createElement("span");
+    glyph.className = "cell-glyph";
+    glyph.textContent = String.fromCodePoint(cp);
+    const label = document.createElement("span");
+    label.className = "cell-hex";
+    label.textContent = hex.slice(-2);
+    btn.appendChild(glyph);
+    btn.appendChild(label);
+    btn.addEventListener("click", () => setCodepoint(cp));
+    cpGridEl.appendChild(btn);
+  }
+  cpPageSelectEl.value = String(appState.cpPage);
+  cpPrevBtnEl.disabled = appState.cpPage === 0;
+  cpNextBtnEl.disabled = start + CP_PAGE_SIZE > PUA_MAX;
+}
+
+function setCodepoint(cp, skipGrid) {
+  appState.codepoint = cp;
+  const hex = cp.toString(16).toUpperCase().padStart(4, "0");
+  codepointInputEl.value = hex;
+  codepointLabelEl.textContent = hex;
+  codepointErrorEl.hidden = true;
+  const page = Math.floor((cp - PUA_MIN) / CP_PAGE_SIZE);
+  if (page !== appState.cpPage) {
+    appState.cpPage = page;
+    renderCpGrid();
+  } else if (!skipGrid) {
+    renderCpGrid();
+  }
+  updateTargetPreview();
+}
+
+/* =========================================================
+   ui.js
+   ========================================================= */
+function showToast(message, isError = false) {
+  toastEl.textContent = message;
+  toastEl.hidden = false;
+  toastEl.style.background = isError ? "var(--danger)" : "var(--text)";
+  toastEl.style.color = isError ? "#fff" : "var(--bg)";
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => {
+    toastEl.hidden = true;
+  }, 3200);
+}
+
+function currentHex() {
+  return appState.codepoint.toString(16).toUpperCase().padStart(4, "0");
+}
+
+function currentTargetWord() {
+  if (appState.dictTarget === "existing") return appState.selectedExisting;
+  return String.fromCodePoint(appState.codepoint);
+}
+
+function updateTargetPreview() {
+  const word = currentTargetWord();
+  if (appState.dictTarget === "existing") {
+    targetCharEl.textContent = word || "—";
+    targetDescEl.textContent = word
+      ? "(既存文字 " + cpLabel(word) + ")"
+      : "(Step 0 の検索結果から文字を選んでください)";
+  } else {
+    targetCharEl.textContent = word;
+    targetDescEl.textContent = "(外字 U+" + currentHex() + ")";
+  }
+}
+
+function setImageLoadedState(loaded) {
+  rotateBtnEl.disabled = !loaded;
+  invertToggleEl.disabled = !loaded;
+  fitModeSelectEl.disabled = !loaded;
+  thresholdSliderEl.disabled = !loaded;
+  downloadImageBtnEl.disabled = !loaded;
+  downloadBmpBtnEl.disabled = !loaded;
+  buildFontBtnEl.disabled = !loaded;
+  copyImageBtnEl.disabled = !loaded || !clipboardWriteSupported;
+}
+
+async function handleImageFile(file) {
+  const check = validateImageFile(file);
+  if (!check.valid) {
+    imageErrorEl.textContent = check.message;
+    imageErrorEl.hidden = false;
+    return;
+  }
+  imageErrorEl.hidden = true;
+  try {
+    const img = await loadImageFile(file);
+    appState.originalImage = img;
+    appState.rotation = 0;
+    renderPreview();
+    setImageLoadedState(true);
+  } catch (err) {
+    imageErrorEl.textContent = err.message || "画像の読み込みに失敗しました。";
+    imageErrorEl.hidden = false;
+  }
+}
+
+dropZoneEl.addEventListener("click", () => imageInputEl.click());
+dropZoneEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    imageInputEl.click();
+  }
+});
+imageInputEl.addEventListener("change", () => {
+  if (imageInputEl.files[0]) handleImageFile(imageInputEl.files[0]);
+});
+["dragover", "dragenter"].forEach((evt) =>
+  dropZoneEl.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropZoneEl.classList.add("dragover");
+  })
+);
+["dragleave", "drop"].forEach((evt) =>
+  dropZoneEl.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropZoneEl.classList.remove("dragover");
+  })
+);
+dropZoneEl.addEventListener("drop", (e) => {
+  const file = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (file) handleImageFile(file);
+});
+
+/* スニッピングツール等からの Ctrl+V 貼り付け */
+document.addEventListener("paste", (e) => {
+  const target = e.target;
+  if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+    const items0 = e.clipboardData ? e.clipboardData.items : null;
+    let hasImage = false;
+    if (items0) {
+      for (const it of items0) if (it.type && it.type.startsWith("image/")) hasImage = true;
+    }
+    if (!hasImage) return;
+  }
+  const items = e.clipboardData ? e.clipboardData.items : null;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type && item.type.startsWith("image/")) {
+      const file = item.getAsFile();
+      if (file) {
+        e.preventDefault();
+        handleImageFile(file);
+        showToast("クリップボードの画像を読み込みました。");
+      }
+      return;
+    }
+  }
+});
+
+pasteClipboardBtnEl.addEventListener("click", async () => {
+  try {
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+      const type = item.types.find((t) => t.startsWith("image/"));
+      if (type) {
+        const blob = await item.getType(type);
+        await handleImageFile(new File([blob], "clipboard.png", { type: type }));
+        showToast("クリップボードの画像を読み込みました。");
+        return;
+      }
+    }
+    showToast("クリップボードに画像がありません。", true);
+  } catch (err) {
+    showToast("クリップボードを読み取れませんでした。Ctrl+V をお試しください。", true);
+  }
+});
+
+rotateBtnEl.addEventListener("click", () => {
+  appState.rotation = (appState.rotation + 90) % 360;
+  renderPreview();
+});
+invertToggleEl.addEventListener("change", () => {
+  appState.inverted = invertToggleEl.checked;
+  renderPreview();
+});
+fitModeSelectEl.addEventListener("change", () => {
+  appState.fitMode = fitModeSelectEl.value;
+  renderPreview();
+});
+thresholdSliderEl.addEventListener("input", () => {
+  appState.threshold = Number(thresholdSliderEl.value);
+  thresholdValueEl.textContent = String(appState.threshold);
+  renderPreview();
+});
+outputSizeSelectEl.addEventListener("change", () => {
+  appState.outputSize = Number(outputSizeSelectEl.value);
+  renderPreview();
+});
+outputModeSelectEl.addEventListener("change", () => {
+  appState.outputMode = outputModeSelectEl.value;
+});
+glyphScaleSliderEl.addEventListener("input", () => {
+  appState.glyphScale = Number(glyphScaleSliderEl.value) / 100;
+  glyphScaleValueEl.textContent = glyphScaleSliderEl.value;
+});
+
+/* ---- 外字フォント生成 ---- */
+function getBinaryGrid() {
+  const size = previewCanvasEl.width;
+  const ctx = previewCanvasEl.getContext("2d", { willReadFrequently: true });
+  const d = ctx.getImageData(0, 0, size, size).data;
+  const grid = new Uint8Array(size * size);
+  for (let i = 0, p = 0; i < d.length; i += 4, p++) grid[p] = d[i + 3] > 127 ? 1 : 0;
+  return { grid: grid, size: size };
+}
+
+existingFontInputEl.addEventListener("change", async () => {
+  const file = existingFontInputEl.files[0];
+  existingFontErrorEl.hidden = true;
+  if (!file) {
+    appState.existingFont = null;
+    existingFontStatusEl.textContent = "未選択(新規フォントとして生成します)";
+    return;
+  }
+  try {
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const info = parseExistingFont(buf);
+    appState.existingFont = buf;
+    existingFontStatusEl.textContent =
+      "読み込み済み: " + file.name + " — 既存グリフ " + info.numGlyphs + "個 / 登録済みコードポイント " +
+      info.cmapMappings.size + "個。これらを保持したまま追加します。";
+  } catch (err) {
+    appState.existingFont = null;
+    existingFontStatusEl.textContent = "未選択(新規フォントとして生成します)";
+    existingFontErrorEl.textContent = err.message || "フォントを読み込めませんでした。";
+    existingFontErrorEl.hidden = false;
+  }
+});
+
+async function verifyGeneratedFont(fontBytes, codepoint) {
+  const family = "EudcVerify" + Date.now();
+  const face = new FontFace(family, fontBytes.buffer.slice(fontBytes.byteOffset, fontBytes.byteOffset + fontBytes.byteLength));
+  await face.load();
+  document.fonts.add(face);
+
+  // 生成フォントで描画し、字形が保たれているかを比較する。
+  // 字面サイズ調整によって位置と大きさは意図的に変わるため、
+  // 両者をインクの外接矩形で正規化してから形の一致率を測る。
+  const src = getBinaryGrid();
+  const N = 3; // 描画のずれを吸収するため元より大きめに描く
+  const canvasSize = src.size * N;
+  const c = document.createElement("canvas");
+  c.width = canvasSize;
+  c.height = canvasSize;
+  const g = c.getContext("2d", { willReadFrequently: true });
+  g.clearRect(0, 0, canvasSize, canvasSize);
+  g.fillStyle = "#000";
+  g.font = canvasSize + "px " + family;
+  g.textBaseline = "alphabetic";
+  g.fillText(String.fromCodePoint(codepoint), 0, Math.round((FONT_ASCENT / UNITS_PER_EM) * canvasSize));
+  const d = g.getImageData(0, 0, canvasSize, canvasSize).data;
+  const rendered = new Uint8Array(canvasSize * canvasSize);
+  for (let i = 3, p = 0; i < d.length; i += 4, p++) rendered[p] = d[i] > 127 ? 1 : 0;
+
+  const srcB = inkBounds(src.grid, src.size);
+  const renB = inkBounds(rendered, canvasSize);
+  if (!srcB || !renB) {
+    return { family: family, match: 0, aspectSrc: 0, aspectRen: 0, empty: true };
+  }
+  // 外接矩形を共通の 48×48 に正規化して形を比較する
+  const M = 48;
+  function normalize(grid, size, b) {
+    const out = new Uint8Array(M * M);
+    const w = b.x1 - b.x0, h = b.y1 - b.y0;
+    for (let y = 0; y < M; y++) {
+      for (let x = 0; x < M; x++) {
+        const sx = b.x0 + Math.floor((x * w) / M);
+        const sy = b.y0 + Math.floor((y * h) / M);
+        out[y * M + x] = grid[sy * size + sx];
+      }
+    }
+    return out;
+  }
+  const a = normalize(src.grid, src.size, srcB);
+  const b2 = normalize(rendered, canvasSize, renB);
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b2[i]) diff++;
+  return {
+    family: family,
+    match: 100 * (1 - diff / a.length),
+    diff: diff,
+    total: a.length,
+    aspectSrc: (srcB.x1 - srcB.x0) / (srcB.y1 - srcB.y0),
+    aspectRen: (renB.x1 - renB.x0) / (renB.y1 - renB.y0),
+    fillRatio: (renB.x1 - renB.x0) >= (renB.y1 - renB.y0)
+      ? (renB.x1 - renB.x0) / canvasSize
+      : (renB.y1 - renB.y0) / canvasSize,
+  };
+}
+
+buildFontBtnEl.addEventListener("click", async () => {
+  if (!appState.originalImage) return;
+  buildFontBtnEl.disabled = true;
+  buildFontBtnEl.textContent = "生成中…";
+  try {
+    const src = getBinaryGrid();
+    let inked = 0;
+    for (let i = 0; i < src.grid.length; i++) inked += src.grid[i];
+    if (inked === 0) {
+      showToast("画像が空です。しきい値を調整してください。", true);
+      return;
+    }
+    const font = buildEudcFont(
+      [{ codepoint: appState.codepoint, grid: src.grid, size: src.size, glyphScale: appState.glyphScale }],
+      appState.existingFont,
+      "EUDC"
+    );
+    appState.generatedFont = font;
+
+    const v = await verifyGeneratedFont(font, appState.codepoint);
+    fontVerifyEl.hidden = false;
+    verifyGlyphEl.style.fontFamily = v.family;
+    verifyGlyphEl.textContent = String.fromCodePoint(appState.codepoint);
+    verifySummaryEl.innerHTML =
+      "フォントの読み込みに成功しました。<br>字形の一致率: <strong>" + v.match.toFixed(1) +
+      "%</strong>(外接矩形で正規化して比較)<br>字面率: <strong>" +
+      (v.fillRatio * 100).toFixed(0) + "%</strong>(em枠に対する大きさ)<br>サイズ: " +
+      (font.length / 1024).toFixed(1) + " KB";
+    downloadFontBtnEl.hidden = false;
+    showToast("外字フォントを生成しました。");
+  } catch (err) {
+    fontVerifyEl.hidden = true;
+    downloadFontBtnEl.hidden = true;
+    showToast("フォントの生成に失敗しました: " + (err.message || err), true);
+  } finally {
+    buildFontBtnEl.disabled = false;
+    buildFontBtnEl.textContent = "外字フォントを生成";
+  }
+});
+
+downloadFontBtnEl.addEventListener("click", () => {
+  if (!appState.generatedFont) return;
+  downloadBlob(new Blob([appState.generatedFont], { type: "font/ttf" }), "EUDC.TTE");
+});
+
+downloadRegBtnEl.addEventListener("click", () => {
+  const path = fontPathInputEl.value.trim();
+  if (!path) {
+    showToast("フォントの配置先パスを入力してください。", true);
+    return;
+  }
+  const escaped = path.replace(/\\/g, "\\\\");
+  const text =
+    "Windows Registry Editor Version 5.00\r\n\r\n" +
+    "[HKEY_CURRENT_USER\\EUDC\\932]\r\n" +
+    '"SystemDefaultEUDCFont"="' + escaped + '"\r\n';
+  downloadBlob(encodeUtf16LeWithBom(text), "eudc-register.reg");
+  showToast(".reg ファイルをダウンロードしました。");
+});
+
+downloadBmpBtnEl.addEventListener("click", () => {
+  const src = getBinaryGrid();
+  const bmp = buildMonochromeBmp(src.grid, src.size);
+  downloadBlob(new Blob([bmp], { type: "image/bmp" }), "gaiji-" + currentHex() + ".bmp");
+});
+
+copyImageBtnEl.addEventListener("click", async () => {
+  try {
+    await copyImageToClipboard(buildExportCanvas());
+    showToast("画像をコピーしました。外字エディターに貼り付けてください。");
+  } catch (err) {
+    showToast("コピーに失敗しました。ダウンロードをご利用ください。", true);
+  }
+});
+downloadImageBtnEl.addEventListener("click", () => {
+  downloadCanvasAsPng(buildExportCanvas(), "gaiji-" + currentHex() + ".png");
+});
+
+codepointInputEl.addEventListener("input", () => {
+  const raw = codepointInputEl.value.trim().toUpperCase();
+  const check = validateCodePoint(raw);
+  if (!check.valid) {
+    codepointErrorEl.textContent = check.message;
+    codepointErrorEl.hidden = false;
+    return;
+  }
+  codepointErrorEl.hidden = true;
+  setCodepoint(parseInt(raw, 16), true);
+  renderCpGrid();
+});
+
+cpPageSelectEl.addEventListener("change", () => {
+  appState.cpPage = Number(cpPageSelectEl.value);
+  renderCpGrid();
+});
+cpPrevBtnEl.addEventListener("click", () => {
+  if (appState.cpPage > 0) {
+    appState.cpPage--;
+    renderCpGrid();
+  }
+});
+cpNextBtnEl.addEventListener("click", () => {
+  const pageCount = Math.ceil((PUA_MAX - PUA_MIN + 1) / CP_PAGE_SIZE);
+  if (appState.cpPage < pageCount - 1) {
+    appState.cpPage++;
+    renderCpGrid();
+  }
+});
+
+searchCharInputEl.addEventListener("input", runSearch);
+ivsScanBtnEl.addEventListener("click", runIvsScan);
+
+document.querySelectorAll('input[name="dict-target"]').forEach((radio) => {
+  radio.addEventListener("change", () => {
+    appState.dictTarget = radio.value;
+    updateTargetPreview();
+  });
+});
+
+dictFormEl.addEventListener("submit", (e) => {
+  e.preventDefault();
+  let hasError = false;
+
+  const readingCheck = validateReading(readingInputEl.value.trim());
+  if (!readingCheck.valid) {
+    readingErrorEl.textContent = readingCheck.message;
+    readingErrorEl.hidden = false;
+    hasError = true;
+  } else {
+    readingErrorEl.hidden = true;
+  }
+
+  const word = currentTargetWord();
+  if (!word) {
+    targetErrorEl.textContent = "登録する文字が選択されていません。Step 0 の検索結果から文字を選ぶか、外字を登録する設定に切り替えてください。";
+    targetErrorEl.hidden = false;
+    hasError = true;
+  } else {
+    targetErrorEl.hidden = true;
+  }
+
+  if (appState.dictTarget === "gaiji") {
+    const cpCheck = validateCodePoint(codepointInputEl.value.trim());
+    if (!cpCheck.valid) {
+      codepointErrorEl.textContent = cpCheck.message;
+      codepointErrorEl.hidden = false;
+      hasError = true;
+    }
+  }
+
+  if (hasError) return;
+
+  const line = buildDictLine(readingInputEl.value.trim(), word, posSelectEl.value);
+  const blob = encodeUtf16LeWithBom(line);
+  const name =
+    appState.dictTarget === "existing" ? "gaiji-dict-existing.txt" : "gaiji-dict-" + currentHex() + ".txt";
+  downloadBlob(blob, name);
+  showToast("辞書ファイルをダウンロードしました。");
+});
+
+/* =========================================================
+   main.js
+   ========================================================= */
+function populatePosOptions() {
+  POS_OPTIONS.forEach((label) => {
+    const opt = document.createElement("option");
+    opt.value = label;
+    opt.textContent = label;
+    posSelectEl.appendChild(opt);
+  });
+  posSelectEl.value = "名詞";
+}
+
+function init() {
+  populatePosOptions();
+  buildCompatIndex();
+  buildKyujiIndex();
+  buildGroupIndex();
+  populateCpPages();
+  renderCpGrid();
+  setCodepoint(0xe000);
+  if (!clipboardWriteSupported) {
+    copyImageBtnEl.hidden = true;
+    clipboardUnsupportedNoteEl.hidden = false;
+  }
+  if (clipboardReadSupported) {
+    pasteClipboardBtnEl.hidden = false;
+  }
+  updateTargetPreview();
+}
+
+init();
+</script>
+</body>
+</html>
