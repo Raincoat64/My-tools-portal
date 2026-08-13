@@ -7,9 +7,39 @@
   <!--
     埋め込みデータの出典:
       旧字体対応表 (773組) は kyujitai.js (https://github.com/hakatashi/kyujitai.js) の
-      data/kyujitai.json より抽出。MIT License, Copyright (c) hakatashi.
+      data/kyujitai.json より抽出。
       互換漢字の対応は実行時に String.prototype.normalize("NFD") から導出しており、
       データの埋め込みや通信は行っていません。
+      人名・戸籍で頻出する異体字グループ(崎/﨑/嵜 等)は本ツール独自の手動作成データです。
+
+    ---------------------------------------------------------------------------
+    kyujitai.js — MIT License
+
+    Copyright (c) 2014 hakatashi
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+    THE SOFTWARE.
+    ---------------------------------------------------------------------------
+
+    注意: 本ツールは読み込んだフォントを改変して新しいフォントファイルを生成します。
+    第三者が権利を持つフォントを改変・再配布する場合は、そのフォントのライセンスを
+    必ず確認してください。Windows の外字ファイル(EUDC.TTE)は利用者自身が作成した
+    データであるため通常は問題になりませんが、市販フォントを元にした場合は別途確認が必要です。
   -->
   <style>
 :root {
@@ -587,9 +617,8 @@ code {
 </head>
 <body>
   <header class="app-header">
-    <a href="../index.html" style="display:inline-block;margin-bottom:6px;font-size:0.85rem;color:var(--accent,#2f6b3a);text-decoration:none;">‹ ツール一覧</a>
     <h1>異体字(外字)作成ツール</h1>
-    <p class="app-sub">画像から Windows 11 の外字(EUDC)を作成し、IME の変換候補として登録するための下ごしらえを行います。すべてブラウザ内で処理し、通信は一切行いません。</p>
+    <p class="app-sub">画像から Windows 11 の外字(EUDC)を作成し、IME の変換候補として登録するための下ごしらえを行います。</p>
   </header>
 
   <main class="tool-main">
@@ -597,7 +626,7 @@ code {
     <section class="panel" id="existing-check-section">
       <h2>Step 0. まず既存の文字で足りないか検索</h2>
       <p class="hint-text">
-        独自の外字はこのパソコンにフォントを入れないと他の環境では表示されません。まずは既存のUnicode文字やIVS(異体字シーケンス)で目的の字形が無いか検索し、見つからない場合だけカスタム外字の作成に進んでください。
+        独自の外字は他の環境では表示されません。まずは既存のUnicode文字やIVS(異体字シーケンス)で目的の字形が無いか検索し、見つからない場合だけカスタム外字の作成に進んでください。
       </p>
       <div class="field" style="margin-top:12px;">
         <label for="search-char-input">基準となる漢字を1文字入力/貼り付け</label>
@@ -642,7 +671,7 @@ code {
       <div class="output-actions" style="margin-top:10px;">
         <button type="button" id="paste-clipboard-btn" class="btn-secondary" hidden>クリップボードから貼り付け</button>
       </div>
-      <p id="image-error" class="field-error" hidden></p>
+      <p id="image-error" class="field-error" role="alert" aria-live="assertive" hidden></p>
     </section>
 
     <section class="panel" id="adjust-section">
@@ -693,26 +722,32 @@ code {
       </div>
       <div id="cp-grid" class="cp-grid"></div>
       <p class="hint-text">網掛けのセットは既に外字が登録されている可能性があります(お使いのPCの外字フォントで判定)。空いているコードを選んでください。</p>
-      <p class="field-error" id="codepoint-error" hidden></p>
+      <p class="field-error" id="codepoint-error" role="alert" aria-live="assertive" hidden></p>
     </section>
 
     <section class="panel" id="font-section">
       <h2>4. 外字フォントを生成(推奨)</h2>
       <p class="hint-text" style="margin-top:0;">
-        画像から輪郭を起こして外字フォント(EUDC.TTE)を直接作ります。クリップボードも外字エディターも使わないため、黒潰れは起きません。
-      </p>
+        画像から輪郭を起こして外字フォント(EUDC.TTE)を直接作ります。</p>
 
       <div class="warn-box">
         <strong>既に外字を登録している場合は必ず読み込んでください。</strong>
         読み込まずに生成すると、これまでの外字が入っていないフォントになります。既存ファイルは通常
-        <code>C:\Windows\Fonts\EUDC.TTE</code> にあります(差し替える前にコピーを取っておいてください)。
+        <code>C:\Windows\Fonts\EUDC.TTE</code> にあります。
+        <strong>差し替える前に必ずコピーを取ってください。</strong>
+        <br />
+        なお、既存の字形(グリフ)とコードポイントの対応はそのまま引き継ぎますが、
+        本ツールで書き出すと次の情報は失われます:
+        デジタル署名(DSIG)、表示最適化用のテーブル(hdmx / LTSH / VDMX)、元のグリフ名(post)。
+        また左サイドベアリングは字形の外接位置から再計算します。
+        通常の外字利用では影響ありませんが、元ファイルは必ず保管しておいてください。
       </div>
 
       <div class="field">
         <label for="existing-font-input">既存の EUDC.TTE を読み込む(任意)</label>
         <input type="file" id="existing-font-input" accept=".tte,.ttf,.TTE,.TTF" />
         <p class="hint-text" id="existing-font-status">未選択(新規フォントとして生成します)</p>
-        <p class="field-error" id="existing-font-error" hidden></p>
+        <p class="field-error" id="existing-font-error" role="alert" aria-live="assertive" hidden></p>
       </div>
 
       <div class="output-actions">
@@ -720,7 +755,7 @@ code {
         <button type="button" id="download-font-btn" class="btn-secondary" hidden>EUDC.TTE をダウンロード</button>
       </div>
 
-      <div id="font-verify" hidden>
+      <div id="font-verify" role="status" aria-live="polite" hidden>
         <h3>生成結果の確認(このブラウザで実際にフォントを読み込んで描画しています)</h3>
         <div class="verify-row">
           <div class="verify-cell">
@@ -738,7 +773,6 @@ code {
     <section class="panel" id="output-section">
       <h2>5. 補助: 画像として出力(外字エディターを使う場合)</h2>
       <p class="hint-text" style="margin-top:0;">
-        外字エディターに<strong>クリップボード経由で貼り付けると黒く潰れます</strong>(ブラウザは32bit画像しかクリップボードに置けないため)。
         外字エディターを使う場合は、モノクロBMPを保存 → ペイントで開く → <code>Ctrl+A</code> → <code>Ctrl+C</code> → 外字エディターで貼り付け、の順でお試しください。
       </p>
       <div class="output-actions">
@@ -752,7 +786,7 @@ code {
     </section>
 
     <section class="panel" id="dict-section">
-      <h2>5. IME辞書登録情報</h2>
+      <h2>6. IME辞書登録情報</h2>
       <div class="radio-row">
         <label><input type="radio" name="dict-target" value="gaiji" checked /> 外字(上で選んだコードポイント)を登録する</label>
         <label><input type="radio" name="dict-target" value="existing" /> Step 0 の検索で見つけた既存文字を登録する(外字の作成は不要)</label>
@@ -762,7 +796,7 @@ code {
         <div class="field">
           <label for="reading-input">読み(ひらがな)<span class="required">必須</span></label>
           <input type="text" id="reading-input" autocomplete="off" />
-          <p class="field-error" id="reading-error" hidden></p>
+          <p class="field-error" id="reading-error" role="alert" aria-live="assertive" hidden></p>
         </div>
         <div class="field">
           <label for="pos-select">品詞</label>
@@ -772,7 +806,7 @@ code {
           <label for="memo-input">メモ/表示名(任意・自分の管理用。ファイルには含まれません)</label>
           <input type="text" id="memo-input" autocomplete="off" />
         </div>
-        <p class="field-error" id="target-error" hidden></p>
+        <p class="field-error" id="target-error" role="alert" aria-live="assertive" hidden></p>
         <button type="submit" id="generate-dict-btn" class="btn-primary">辞書ファイルをダウンロード</button>
       </form>
       <p class="hint-text">IVS(異体字シーケンス)を含む語句は、MS-IMEのユーザー辞書が受け付けない場合があります。その際は基底文字のみで登録し、変換後にIVSを適用してください。</p>
@@ -797,7 +831,7 @@ code {
 
   </main>
 
-  <div id="toast" class="toast" hidden></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
 <script>
 /* =========================================================
@@ -806,6 +840,19 @@ code {
 const PUA_MIN = 0xe000;
 const PUA_MAX = 0xe757;
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
+/* 画像は容量だけでなく解像度も制限する。高圧縮の巨大画像(展開爆弾)で
+   原寸Canvasを作るとメモリを使い切るため */
+const MAX_IMAGE_DIMENSION = 8000;
+const MAX_IMAGE_PIXELS = 40 * 1000 * 1000;
+/* フォント解析の上限。細工されたファイルでの長時間ループ・大量確保を防ぐ */
+const MAX_FONT_SIZE = 30 * 1024 * 1024;
+const MIN_FONT_SIZE = 12;
+const MAX_NUM_TABLES = 512;
+const MAX_CMAP_GROUPS = 200000;
+const MAX_CMAP_MAPPINGS = 300000;
+/* glyf の numberOfContours は int16、点番号は uint16。壊れたフォントを作らないための実用上限 */
+const MAX_CONTOURS = 3000;
+const MAX_POINTS = 20000;
 const POS_OPTIONS = ["名詞", "固有名詞", "人名", "姓", "名", "地名", "組織", "短縮よみ"];
 const CP_PAGE_SIZE = 256;
 
@@ -859,7 +906,11 @@ const appState = {
   dictTarget: "gaiji",
   existingFont: null,
   generatedFont: null,
+  generatedCodepoint: null,
 };
+
+/* 検証用に登録中の FontFace(生成のたびに差し替え、蓄積させない) */
+let verifyFontFace = null;
 
 /* =========================================================
    domRefs.js
@@ -1046,7 +1097,30 @@ function loadImageFile(file) {
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
-      img.onload = () => resolve(img);
+      img.onload = () => {
+        /* 容量が小さくても解像度が巨大な画像(展開爆弾)があるため、
+           原寸のcanvasを作る前に画素数で弾く */
+        const w = img.naturalWidth, h = img.naturalHeight;
+        if (w === 0 || h === 0) {
+          reject(new Error("画像のサイズを取得できませんでした。"));
+          return;
+        }
+        if (w > MAX_IMAGE_DIMENSION || h > MAX_IMAGE_DIMENSION) {
+          reject(new Error(
+            "画像の解像度が大きすぎます(" + w + "×" + h + " / 上限 " +
+            MAX_IMAGE_DIMENSION + "px)。縮小してからお試しください。"
+          ));
+          return;
+        }
+        if (w * h > MAX_IMAGE_PIXELS) {
+          reject(new Error(
+            "画像の総画素数が多すぎます(" + (w * h).toLocaleString() + " / 上限 " +
+            MAX_IMAGE_PIXELS.toLocaleString() + ")。縮小してからお試しください。"
+          ));
+          return;
+        }
+        resolve(img);
+      };
       img.onerror = () => reject(new Error("画像の読み込みに失敗しました。"));
       img.src = reader.result;
     };
@@ -1265,6 +1339,18 @@ function u32(n) { return [(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff
 function tag4(s) { return [s.charCodeAt(0), s.charCodeAt(1), s.charCodeAt(2), s.charCodeAt(3)]; }
 function pad4(arr) { while (arr.length % 4 !== 0) arr.push(0); return arr; }
 
+/* 大きな配列の連結に push(...src) を使うとスタックを使い切って
+   「Maximum call stack size exceeded」で落ちる(要素数10万強が上限で、
+   しかも上限は実行環境のスタックサイズ依存)。glyfテーブルは外字が増えると
+   容易にこの規模を超えるため、連結は必ずこの関数を通す。 */
+function appendBytes(dst, src) {
+  const CHUNK = 4096;
+  for (let i = 0; i < src.length; i += CHUNK) {
+    Array.prototype.push.apply(dst, src.slice(i, i + CHUNK));
+  }
+  return dst;
+}
+
 function sfntChecksum(bytes) {
   let sum = 0;
   for (let i = 0; i < bytes.length; i += 4) {
@@ -1345,6 +1431,23 @@ function rectsToContours(rects, size, em, glyphScale, bounds) {
 
 function buildGlyfBytes(contours) {
   if (contours.length === 0) return { bytes: [], nPoints: 0, nContours: 0 };
+  /* numberOfContours は int16、endPtsOfContours の点番号は uint16。
+     超えると負値や巻き戻りになり、複合グリフと誤解釈される壊れたフォントができる。
+     余裕をみた実用上限で明示的に弾く。 */
+  if (contours.length > MAX_CONTOURS) {
+    throw new Error(
+      "画像が複雑すぎます(輪郭 " + contours.length + " 個 / 上限 " + MAX_CONTOURS +
+      " 個)。2値化しきい値を調整するか、出力サイズを小さくしてください。"
+    );
+  }
+  let totalPoints = 0;
+  for (const c of contours) totalPoints += c.length;
+  if (totalPoints > MAX_POINTS) {
+    throw new Error(
+      "画像が複雑すぎます(点 " + totalPoints + " 個 / 上限 " + MAX_POINTS +
+      " 個)。2値化しきい値を調整するか、出力サイズを小さくしてください。"
+    );
+  }
   let xMin = Infinity, yMin = Infinity, xMax = -Infinity, yMax = -Infinity;
   for (const c of contours) for (const p of c) {
     if (p.x < xMin) xMin = p.x;
@@ -1370,6 +1473,20 @@ function buildGlyfBytes(contours) {
 }
 
 function buildCmapTable(mappings) {
+  /* format 4 は基本多言語面(U+0000〜U+FFFF)しか表現できない。
+     元フォントが format 12 で補助平面の文字を持っていた場合、ここで黙って
+     切り捨てると既存の外字が失われるため、検出して明示的に止める。 */
+  const astral = [];
+  mappings.forEach((gid, cp) => { if (cp > 0xffff) astral.push(cp); });
+  if (astral.length > 0) {
+    const sample = astral.slice(0, 3)
+      .map((c) => "U+" + c.toString(16).toUpperCase()).join(", ");
+    throw new Error(
+      "このフォントは基本多言語面外の文字(" + sample + " など " + astral.length +
+      "字)を含んでいます。本ツールはこれらを保持したまま書き出せないため、" +
+      "既存の外字を失わないよう生成を中止しました。"
+    );
+  }
   const cps = Array.from(mappings.keys()).sort((a, b) => a - b);
   const segments = [];
   let i = 0;
@@ -1399,7 +1516,7 @@ function buildCmapTable(mappings) {
 
   const out = [];
   out.push(...u16(0), ...u16(1), ...u16(3), ...u16(1), ...u32(12));
-  out.push(...sub);
+  appendBytes(out, sub);
   return out;
 }
 
@@ -1426,7 +1543,7 @@ function buildNameTable(familyName) {
   const out = [];
   out.push(...u16(0), ...u16(records.length), ...u16(6 + records.length * 12));
   for (const r of recs) out.push(...u16(3), ...u16(1), ...u16(r.lang), ...u16(r.id), ...u16(r.len), ...u16(r.off));
-  out.push(...strings);
+  appendBytes(out, strings);
   return out;
 }
 
@@ -1499,7 +1616,7 @@ function assembleSfnt(tables) {
     offset += data.length;
   }
   for (const r of records) out.push(...tag4(r.tag), ...u32(r.checkSum), ...u32(r.offset), ...u32(r.length));
-  for (const b of bodies) out.push(...b);
+  for (const b of bodies) appendBytes(out, b);
 
   const headRec = records.find((r) => r.tag === "head");
   if (headRec) {
@@ -1514,30 +1631,81 @@ function assembleSfnt(tables) {
 }
 
 function parseExistingFont(u) {
+  /* 細工された、あるいは壊れたフォントを読まされてもブラウザが停止したり
+     メモリを使い切ったりしないよう、読む前にすべて範囲を検証する */
+  if (u.byteLength < MIN_FONT_SIZE) {
+    throw new Error("ファイルが小さすぎてフォントとして読めません。");
+  }
+  if (u.byteLength > MAX_FONT_SIZE) {
+    throw new Error("フォントファイルが大きすぎます(上限 " + Math.round(MAX_FONT_SIZE / 1024 / 1024) + "MB)。");
+  }
   const dv = new DataView(u.buffer, u.byteOffset, u.byteLength);
+  const size = u.byteLength;
+  /* 指定範囲がファイル内に収まっているかを必ず通す検証 */
+  const inRange = (off, len) =>
+    Number.isFinite(off) && Number.isFinite(len) && off >= 0 && len >= 0 && off + len <= size;
+  const need = (off, len, what) => {
+    if (!inRange(off, len)) throw new Error("フォントが壊れています(" + what + "がファイル範囲外を指しています)。");
+  };
+
   if (dv.getUint32(0) !== 0x00010000 && dv.getUint32(0) !== 0x74727565) {
     throw new Error("TrueType形式のフォントではありません。EUDC.TTE を指定してください。");
   }
   const numTables = dv.getUint16(4);
+  if (numTables === 0 || numTables > MAX_NUM_TABLES) {
+    throw new Error("フォントが壊れています(テーブル数 " + numTables + " が異常です)。");
+  }
+  need(12, numTables * 16, "テーブルディレクトリ");
   const tables = {};
   for (let i = 0; i < numTables; i++) {
     const p = 12 + i * 16;
     let t = "";
     for (let k = 0; k < 4; k++) t += String.fromCharCode(dv.getUint8(p + k));
-    tables[t] = { offset: dv.getUint32(p + 8), length: dv.getUint32(p + 12) };
+    const offset = dv.getUint32(p + 8);
+    const length = dv.getUint32(p + 12);
+    need(offset, length, "テーブル " + t.trim());
+    tables[t] = { offset: offset, length: length };
   }
-  if (!tables["glyf"] || !tables["loca"]) {
-    throw new Error("このフォントはTrueTypeアウトライン(glyf)を持っていません。");
+  for (const req of ["head", "hhea", "maxp", "hmtx", "cmap", "loca", "glyf"]) {
+    if (!tables[req]) {
+      throw new Error(
+        req === "glyf" || req === "loca"
+          ? "このフォントはTrueTypeアウトライン(glyf)を持っていません。"
+          : "フォントが壊れています(必須テーブル " + req + " がありません)。"
+      );
+    }
   }
+  need(tables["head"].offset, 54, "head");
+  need(tables["hhea"].offset, 36, "hhea");
+  need(tables["maxp"].offset, 6, "maxp");
+
   const headOff = tables["head"].offset;
   const indexToLocFormat = dv.getInt16(headOff + 50);
+  if (indexToLocFormat !== 0 && indexToLocFormat !== 1) {
+    throw new Error("フォントが壊れています(indexToLocFormat が不正です)。");
+  }
   const unitsPerEm = dv.getUint16(headOff + 18);
+  if (unitsPerEm < 16 || unitsPerEm > 16384) {
+    throw new Error("フォントが壊れています(unitsPerEm " + unitsPerEm + " が不正です)。");
+  }
   const numGlyphs = dv.getUint16(tables["maxp"].offset + 4);
+  if (numGlyphs === 0) throw new Error("フォントが壊れています(グリフがありません)。");
 
+  const locaEntry = indexToLocFormat === 0 ? 2 : 4;
+  need(tables["loca"].offset, (numGlyphs + 1) * locaEntry, "loca");
   const loca = [];
   const locaOff = tables["loca"].offset;
+  const glyfLen = tables["glyf"].length;
   for (let i = 0; i <= numGlyphs; i++) {
-    loca.push(indexToLocFormat === 0 ? dv.getUint16(locaOff + i * 2) * 2 : dv.getUint32(locaOff + i * 4));
+    const v = indexToLocFormat === 0 ? dv.getUint16(locaOff + i * 2) * 2 : dv.getUint32(locaOff + i * 4);
+    /* loca は単調増加で、かつ glyf の範囲に収まっていなければならない */
+    if (i > 0 && v < loca[i - 1]) {
+      throw new Error("フォントが壊れています(loca が単調増加していません)。");
+    }
+    if (v > glyfLen) {
+      throw new Error("フォントが壊れています(loca が glyf の範囲外を指しています)。");
+    }
+    loca.push(v);
   }
   const glyfOff = tables["glyf"].offset;
   const glyphBytes = [];
@@ -1545,47 +1713,81 @@ function parseExistingFont(u) {
     glyphBytes.push(Array.from(u.subarray(glyfOff + loca[i], glyfOff + loca[i + 1])));
   }
   const numberOfHMetrics = dv.getUint16(tables["hhea"].offset + 34);
+  if (numberOfHMetrics === 0 || numberOfHMetrics > numGlyphs) {
+    throw new Error("フォントが壊れています(numberOfHMetrics " + numberOfHMetrics + " が不正です)。");
+  }
   const hmtxOff = tables["hmtx"].offset;
+  need(hmtxOff, numberOfHMetrics * 4, "hmtx");
   const advances = [];
   for (let i = 0; i < numberOfHMetrics; i++) advances.push(dv.getUint16(hmtxOff + i * 4));
 
   const cmapMappings = new Map();
   const cmapOff = tables["cmap"].offset;
+  need(cmapOff, 4, "cmap");
   const nSub = dv.getUint16(cmapOff + 2);
+  if (nSub > MAX_NUM_TABLES) {
+    throw new Error("フォントが壊れています(cmap のサブテーブル数が異常です)。");
+  }
+  need(cmapOff + 4, nSub * 8, "cmap サブテーブル一覧");
+  /* 展開数に全体上限を設ける。これが無いと format 12 の巨大グループ1個で
+     数十億回のループになり、ブラウザが操作不能になる */
+  const tooMany = () => {
+    if (cmapMappings.size > MAX_CMAP_MAPPINGS) {
+      throw new Error("フォントが壊れているか複雑すぎます(cmap のマッピング数が上限を超えました)。");
+    }
+  };
   for (let i = 0; i < nSub; i++) {
     const subOff = cmapOff + dv.getUint32(cmapOff + 4 + i * 8 + 4);
+    need(subOff, 4, "cmap サブテーブル");
     const format = dv.getUint16(subOff);
     if (format === 4) {
+      need(subOff, 14, "cmap format 4 ヘッダ");
       const segCountX2 = dv.getUint16(subOff + 6);
-      const segCount = segCountX2 / 2;
+      const segCount = Math.floor(segCountX2 / 2);
+      if (segCount === 0) continue;
       const endBase = subOff + 14;
       const startBase = endBase + segCountX2 + 2;
       const deltaBase = startBase + segCountX2;
       const rangeBase = deltaBase + segCountX2;
+      need(endBase, segCountX2 * 4 + 2, "cmap format 4 本体");
       for (let s = 0; s < segCount; s++) {
         const end = dv.getUint16(endBase + s * 2);
         const start = dv.getUint16(startBase + s * 2);
         const delta = dv.getInt16(deltaBase + s * 2);
         const rangeOff = dv.getUint16(rangeBase + s * 2);
         if (start === 0xffff) continue;
+        if (end < start) continue;
         for (let c = start; c <= end && c !== 0x10000; c++) {
           let g;
           if (rangeOff === 0) g = (c + delta) & 0xffff;
           else {
             const gi = rangeBase + s * 2 + rangeOff + (c - start) * 2;
-            if (gi + 1 >= u.byteLength) continue;
+            if (!inRange(gi, 2)) continue;
             g = dv.getUint16(gi);
             if (g !== 0) g = (g + delta) & 0xffff;
           }
           if (g !== 0 && g < numGlyphs) cmapMappings.set(c, g);
         }
+        tooMany();
       }
     } else if (format === 12) {
+      need(subOff, 16, "cmap format 12 ヘッダ");
       const nGroups = dv.getUint32(subOff + 12);
+      if (nGroups > MAX_CMAP_GROUPS) {
+        throw new Error("フォントが壊れています(cmap format 12 のグループ数 " + nGroups + " が異常です)。");
+      }
+      need(subOff + 16, nGroups * 12, "cmap format 12 本体");
       for (let g = 0; g < nGroups; g++) {
         const gOff = subOff + 16 + g * 12;
         const sc = dv.getUint32(gOff), ec = dv.getUint32(gOff + 4), sg = dv.getUint32(gOff + 8);
-        for (let c = sc; c <= ec; c++) if (sg + (c - sc) < numGlyphs) cmapMappings.set(c, sg + (c - sc));
+        /* 1グループが巨大な範囲を指していても展開し切らないよう上限で打ち切る */
+        if (ec < sc || sc > 0x10ffff) continue;
+        const last = Math.min(ec, 0x10ffff, sc + MAX_CMAP_MAPPINGS);
+        for (let c = sc; c <= last; c++) {
+          const gid = sg + (c - sc);
+          if (gid < numGlyphs) cmapMappings.set(c, gid);
+        }
+        tooMany();
       }
     }
   }
@@ -1640,7 +1842,7 @@ function buildEudcFont(glyphSpecs, existing, familyName) {
 
   const glyf = [];
   const loca = [];
-  for (const gb of glyphBytesList) { loca.push(glyf.length); glyf.push(...gb); }
+  for (const gb of glyphBytesList) { loca.push(glyf.length); appendBytes(glyf, gb); }
   loca.push(glyf.length);
   const locaBytes = [];
   for (const o of loca) locaBytes.push(...u32(o));
@@ -2017,7 +2219,10 @@ function renderCpGrid() {
     btn.className = "cp-cell";
     if (cp === appState.codepoint) btn.classList.add("selected");
     if (isCodepointUsed(cp)) btn.classList.add("used");
-    btn.title = "U+" + hex + (btn.classList.contains("used") ? " (使用中の可能性)" : " (空き)");
+    /* 豆腐字形との比較による推定であり断定はできないため、表現を「可能性」に留める */
+    const stateLabel = btn.classList.contains("used") ? "使用中の可能性" : "空きの可能性";
+    btn.title = "U+" + hex + " (" + stateLabel + ")";
+    btn.setAttribute("aria-label", "U+" + hex + " " + stateLabel);
 
     const glyph = document.createElement("span");
     glyph.className = "cell-glyph";
@@ -2041,6 +2246,7 @@ function setCodepoint(cp, skipGrid) {
   codepointInputEl.value = hex;
   codepointLabelEl.textContent = hex;
   codepointErrorEl.hidden = true;
+  invalidateGeneratedFont();
   const page = Math.floor((cp - PUA_MIN) / CP_PAGE_SIZE);
   if (page !== appState.cpPage) {
     appState.cpPage = page;
@@ -2054,6 +2260,20 @@ function setCodepoint(cp, skipGrid) {
 /* =========================================================
    ui.js
    ========================================================= */
+/* 生成後に画像・コードポイント・出力設定を変えると、画面の内容と
+   生成済みフォントが食い違う。古い成果物をダウンロードできないよう破棄する。 */
+function invalidateGeneratedFont() {
+  if (!appState.generatedFont) return;
+  appState.generatedFont = null;
+  appState.generatedCodepoint = null;
+  downloadFontBtnEl.hidden = true;
+  fontVerifyEl.hidden = true;
+  if (verifyFontFace) {
+    try { document.fonts.delete(verifyFontFace); } catch (err) { /* 既に削除済み */ }
+    verifyFontFace = null;
+  }
+}
+
 function showToast(message, isError = false) {
   toastEl.textContent = message;
   toastEl.hidden = false;
@@ -2112,6 +2332,7 @@ async function handleImageFile(file) {
     appState.rotation = 0;
     renderPreview();
     setImageLoadedState(true);
+    invalidateGeneratedFont();
   } catch (err) {
     imageErrorEl.textContent = err.message || "画像の読み込みに失敗しました。";
     imageErrorEl.hidden = false;
@@ -2192,23 +2413,28 @@ pasteClipboardBtnEl.addEventListener("click", async () => {
 rotateBtnEl.addEventListener("click", () => {
   appState.rotation = (appState.rotation + 90) % 360;
   renderPreview();
+  invalidateGeneratedFont();
 });
 invertToggleEl.addEventListener("change", () => {
   appState.inverted = invertToggleEl.checked;
   renderPreview();
+  invalidateGeneratedFont();
 });
 fitModeSelectEl.addEventListener("change", () => {
   appState.fitMode = fitModeSelectEl.value;
   renderPreview();
+  invalidateGeneratedFont();
 });
 thresholdSliderEl.addEventListener("input", () => {
   appState.threshold = Number(thresholdSliderEl.value);
   thresholdValueEl.textContent = String(appState.threshold);
   renderPreview();
+  invalidateGeneratedFont();
 });
 outputSizeSelectEl.addEventListener("change", () => {
   appState.outputSize = Number(outputSizeSelectEl.value);
   renderPreview();
+  invalidateGeneratedFont();
 });
 outputModeSelectEl.addEventListener("change", () => {
   appState.outputMode = outputModeSelectEl.value;
@@ -2216,6 +2442,7 @@ outputModeSelectEl.addEventListener("change", () => {
 glyphScaleSliderEl.addEventListener("input", () => {
   appState.glyphScale = Number(glyphScaleSliderEl.value) / 100;
   glyphScaleValueEl.textContent = glyphScaleSliderEl.value;
+  invalidateGeneratedFont();
 });
 
 /* ---- 外字フォント生成 ---- */
@@ -2237,12 +2464,16 @@ existingFontInputEl.addEventListener("change", async () => {
     return;
   }
   try {
+    if (file.size > MAX_FONT_SIZE) {
+      throw new Error("フォントファイルが大きすぎます(上限 " + Math.round(MAX_FONT_SIZE / 1024 / 1024) + "MB)。");
+    }
     const buf = new Uint8Array(await file.arrayBuffer());
     const info = parseExistingFont(buf);
     appState.existingFont = buf;
+    invalidateGeneratedFont();
     existingFontStatusEl.textContent =
       "読み込み済み: " + file.name + " — 既存グリフ " + info.numGlyphs + "個 / 登録済みコードポイント " +
-      info.cmapMappings.size + "個。これらを保持したまま追加します。";
+      info.cmapMappings.size + "個。これらの字形とコードポイントの対応を引き継いで追加します。";
   } catch (err) {
     appState.existingFont = null;
     existingFontStatusEl.textContent = "未選択(新規フォントとして生成します)";
@@ -2252,10 +2483,16 @@ existingFontInputEl.addEventListener("change", async () => {
 });
 
 async function verifyGeneratedFont(fontBytes, codepoint) {
+  /* 前回検証用に登録した FontFace を必ず外す(残すと生成のたびに蓄積する) */
+  if (verifyFontFace) {
+    try { document.fonts.delete(verifyFontFace); } catch (err) { /* 既に削除済み */ }
+    verifyFontFace = null;
+  }
   const family = "EudcVerify" + Date.now();
   const face = new FontFace(family, fontBytes.buffer.slice(fontBytes.byteOffset, fontBytes.byteOffset + fontBytes.byteLength));
   await face.load();
   document.fonts.add(face);
+  verifyFontFace = face;
 
   // 生成フォントで描画し、字形が保たれているかを比較する。
   // 字面サイズ調整によって位置と大きさは意図的に変わるため、
@@ -2330,16 +2567,30 @@ buildFontBtnEl.addEventListener("click", async () => {
       "EUDC"
     );
     appState.generatedFont = font;
+    appState.generatedCodepoint = appState.codepoint;
 
     const v = await verifyGeneratedFont(font, appState.codepoint);
     fontVerifyEl.hidden = false;
     verifyGlyphEl.style.fontFamily = v.family;
     verifyGlyphEl.textContent = String.fromCodePoint(appState.codepoint);
-    verifySummaryEl.innerHTML =
-      "フォントの読み込みに成功しました。<br>字形の一致率: <strong>" + v.match.toFixed(1) +
-      "%</strong>(外接矩形で正規化して比較)<br>字面率: <strong>" +
-      (v.fillRatio * 100).toFixed(0) + "%</strong>(em枠に対する大きさ)<br>サイズ: " +
-      (font.length / 1024).toFixed(1) + " KB";
+    /* innerHTML を使わず DOM を組み立てる(将来の改修でXSSの入口にしないため) */
+    verifySummaryEl.textContent = "";
+    const lines = [
+      ["フォントの読み込みに成功しました。", ""],
+      ["字形の一致率: ", v.match.toFixed(1) + "%(外接矩形で正規化して比較)"],
+      ["字面率: ", (v.fillRatio * 100).toFixed(0) + "%(em枠に対する大きさ)"],
+      ["サイズ: ", (font.length / 1024).toFixed(1) + " KB"],
+    ];
+    for (const [label, value] of lines) {
+      const div = document.createElement("div");
+      div.appendChild(document.createTextNode(label));
+      if (value) {
+        const strong = document.createElement("strong");
+        strong.textContent = value;
+        div.appendChild(strong);
+      }
+      verifySummaryEl.appendChild(div);
+    }
     downloadFontBtnEl.hidden = false;
     showToast("外字フォントを生成しました。");
   } catch (err) {
@@ -2354,6 +2605,11 @@ buildFontBtnEl.addEventListener("click", async () => {
 
 downloadFontBtnEl.addEventListener("click", () => {
   if (!appState.generatedFont) return;
+  if (appState.generatedCodepoint !== appState.codepoint) {
+    invalidateGeneratedFont();
+    showToast("設定が変更されています。もう一度「外字フォントを生成」を押してください。", true);
+    return;
+  }
   downloadBlob(new Blob([appState.generatedFont], { type: "font/ttf" }), "EUDC.TTE");
 });
 
