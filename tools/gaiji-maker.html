@@ -182,19 +182,38 @@ a {
 
 .char-chip {
   font: inherit;
-  min-width: 62px;
+  min-width: 76px;
   padding: 8px 6px 6px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--chip-bg);
   color: var(--text);
-  cursor: pointer;
   text-align: center;
   line-height: 1.25;
 }
 
-.char-chip:hover {
+.chip-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  justify-content: center;
+}
+
+.chip-btn {
+  font: inherit;
+  font-size: 0.68rem;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-bg);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chip-btn:hover {
   border-color: var(--accent);
+  color: var(--accent);
 }
 
 .char-chip.selected {
@@ -600,6 +619,11 @@ code {
           <p id="variant-empty" class="empty-note" hidden>この文字に対応する異体字は見つかりませんでした。</p>
         </div>
 
+        <div class="field" id="manual-copy-row" hidden>
+          <label for="manual-copy-input">自動コピーができない環境のため、こちらから手動でコピーしてください(Ctrl+C)</label>
+          <input type="text" id="manual-copy-input" readonly style="font-size:1.4rem;" />
+        </div>
+
         <div class="result-group">
           <h3>IVS異体字(このPCのフォントで表示できるもの)</h3>
           <div id="ivs-list" class="char-list"></div>
@@ -898,6 +922,8 @@ const variantEmptyEl = document.getElementById("variant-empty");
 const ivsListEl = document.getElementById("ivs-list");
 const ivsNoteEl = document.getElementById("ivs-note");
 const ivsScanBtnEl = document.getElementById("ivs-scan-btn");
+const manualCopyRowEl = document.getElementById("manual-copy-row");
+const manualCopyInputEl = document.getElementById("manual-copy-input");
 const toastEl = document.getElementById("toast");
 
 /* =========================================================
@@ -1178,12 +1204,43 @@ async function copyImageToClipboard(canvas) {
   await navigator.clipboard.write([item]);
 }
 
-async function copyTextToClipboard(text) {
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    await navigator.clipboard.writeText(text);
-    return true;
+/* このHTMLは file:// で直接開かれることがある。その場合 navigator.clipboard は
+   セキュアコンテキストでないため使えないので、execCommand へ落とす。
+   どちらも駄目なときは手動コピー用の入力欄を出し、黙って失敗させない。 */
+async function copyTextWithFallback(text) {
+  try {
+    if (window.isSecureContext && navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (err) {
+    /* execCommand 経路へ続行 */
   }
-  return false;
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.position = "fixed";
+  ta.style.top = "-1000px";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  ta.setSelectionRange(0, text.length);
+  let ok = false;
+  try {
+    ok = document.execCommand("copy");
+  } catch (err) {
+    ok = false;
+  }
+  ta.remove();
+  return ok;
+}
+
+/* 自動コピーが両方とも失敗したときの受け皿。文字を選択済みの状態で表示する */
+function showManualCopyFallback(text) {
+  manualCopyRowEl.hidden = false;
+  manualCopyInputEl.value = text;
+  manualCopyInputEl.focus();
+  manualCopyInputEl.select();
 }
 
 function downloadBlob(blob, filename) {
@@ -1749,20 +1806,54 @@ function cpLabel(ch) {
     .join(" ");
 }
 
-function makeCharChip(ch, onClick) {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "char-chip";
+/* チップは「コピー」と「登録対象」の2操作を持つ。ボタンの入れ子は不正なHTMLに
+   なるため、外枠は div にして中にボタンを2つ置く。 */
+function makeCharChip(ch, onSelect) {
+  const wrap = document.createElement("div");
+  wrap.className = "char-chip";
+
   const big = document.createElement("span");
   big.className = "big";
   big.textContent = ch;
+
   const cp = document.createElement("span");
   cp.className = "cp";
   cp.textContent = cpLabel(ch);
-  btn.appendChild(big);
-  btn.appendChild(cp);
-  btn.addEventListener("click", () => onClick(ch, btn));
-  return btn;
+
+  const actions = document.createElement("div");
+  actions.className = "chip-actions";
+
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.className = "chip-btn";
+  copyBtn.textContent = "コピー";
+  copyBtn.addEventListener("click", async () => {
+    const ok = await copyTextWithFallback(ch);
+    const isSequence = Array.from(ch).length > 1;
+    if (ok) {
+      manualCopyRowEl.hidden = true;
+      showToast(
+        "「" + ch + "」をコピーしました。" +
+        (isSequence ? "(異体字シーケンス " + cpLabel(ch) + " の2文字分)" : "")
+      );
+    } else {
+      showToast("自動コピーできませんでした。下の欄から手動でコピーしてください。", true);
+      showManualCopyFallback(ch);
+    }
+  });
+
+  const useBtn = document.createElement("button");
+  useBtn.type = "button";
+  useBtn.className = "chip-btn";
+  useBtn.textContent = "登録対象";
+  useBtn.addEventListener("click", () => onSelect(ch, wrap));
+
+  actions.appendChild(copyBtn);
+  actions.appendChild(useBtn);
+  wrap.appendChild(big);
+  wrap.appendChild(cp);
+  wrap.appendChild(actions);
+  return wrap;
 }
 
 function renderFontCompare(char) {
@@ -1867,7 +1958,7 @@ function runIvsScan() {
       const note = document.createElement("span");
       note.className = "cp";
       note.textContent = r.font.label;
-      chip.appendChild(note);
+      chip.insertBefore(note, chip.querySelector(".chip-actions"));
       ivsListEl.appendChild(chip);
     }
   }, 20);
