@@ -1,0 +1,84 @@
+name: Build gaiji web edition
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/gaiji-maker-source/**'
+      - '.github/workflows/build-gaiji-web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gaiji-web-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev pkg-config
+          python -m pip install --upgrade pip
+          pip install "fonttools[woff]" pycairo brotli
+
+      - name: Restore official-source cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/gaiji
+          key: gaiji-official-sources-v20260818
+
+      - name: Reconstruct web template
+        run: |
+          cat tools/gaiji-maker-source/template.b64.part* | base64 -d | gzip -d > /tmp/gaiji-template.html
+          test -s /tmp/gaiji-template.html
+
+      - name: Build web edition
+        run: |
+          rm -rf /tmp/gaiji-out
+          mkdir -p /tmp/gaiji-out
+          python tools/gaiji-maker-source/build.py \
+            --template /tmp/gaiji-template.html \
+            --output-dir /tmp/gaiji-out \
+            --inputs .cache/gaiji
+          rm -rf tools/gaiji-maker-assets
+          cp /tmp/gaiji-out/gaiji-maker.html tools/gaiji-maker.html
+          cp /tmp/gaiji-out/gaiji-maker-build-report.json tools/gaiji-maker-build-report.json
+          cp -R /tmp/gaiji-out/gaiji-maker-assets tools/gaiji-maker-assets
+
+      - name: Verify generated files
+        run: |
+          test -s tools/gaiji-maker.html
+          test -s tools/gaiji-maker-assets/records.pack
+          test -s tools/gaiji-maker-assets/features.pack
+          test -s tools/gaiji-maker-assets/relations.pack
+          test -s tools/gaiji-maker-assets/ipamjm.pack
+          test -s tools/gaiji-maker-assets/acgjm.pack
+          python -m json.tool tools/gaiji-maker-build-report.json >/dev/null
+
+      - name: Commit generated Pages assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/gaiji-maker.html tools/gaiji-maker-build-report.json tools/gaiji-maker-assets
+          if git diff --cached --quiet; then
+            echo "Generated assets are unchanged."
+            exit 0
+          fi
+          git commit -m "Build gaiji web edition v4.3.1 [skip ci]"
+          git push
