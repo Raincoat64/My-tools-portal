@@ -1,0 +1,32 @@
+{
+  "version": "4.3.1-web",
+  "records": 68282,
+  "featureDim": 168,
+  "regressionRank": 1,
+  "files": {
+    "gaiji-maker.html": {
+      "size": 130053,
+      "sha256": "27f1628bc8959bf25e35e30209a4ff4d96822fe53a052bf8fdec9a858474956a"
+    },
+    "records.pack": {
+      "size": 777051,
+      "sha256": "33aa6188574510bc4fbeb848e68850aadb15ebb12e2f6b4ccc377b8f3535c4e8"
+    },
+    "features.pack": {
+      "size": 8381508,
+      "sha256": "c39a099204c2532bee1d8b4d4703b7c9feae628350820255ad7213af81015573"
+    },
+    "relations.pack": {
+      "size": 201,
+      "sha256": "196708a7626b78ee70ea2b8a2f605bb63ea4806226dd1533dfa7ccf8d69300c7"
+    },
+    "ipamjm.pack": {
+      "size": 31218395,
+      "sha256": "4fa09a416beedfc873683bfd1f280ac46c755c1a11a61e865f5ceb060317d4d5"
+    },
+    "acgjm.pack": {
+      "size": 2716663,
+      "sha256": "e3b2a9b5cd6f8a8ddab3bd6cb5e0044f473a1109973a0d858190e5179a8ee06a"
+    }
+  }
+}

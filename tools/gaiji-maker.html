@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>異体字(外字)作成ツール</title>
-  <!--
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src blob: data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; font-src 'self' blob: data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src blob:" />
+  <title>住民票字形確認・外字作成支援ツール</title>
+<!--
     埋め込みデータの出典:
       旧字体対応表 (773組) は kyujitai.js (https://github.com/hakatashi/kyujitai.js) の
       data/kyujitai.json より抽出。
@@ -36,777 +38,826 @@
     THE SOFTWARE.
     ---------------------------------------------------------------------------
 
-    注意: 本ツールは読み込んだフォントを改変して新しいフォントファイルを生成します。
-    第三者が権利を持つフォントを改変・再配布する場合は、そのフォントのライセンスを
-    必ず確認してください。Windows の外字ファイル(EUDC.TTE)は利用者自身が作成した
-    データであるため通常は問題になりませんが、市販フォントを元にした場合は別途確認が必要です。
+    注意: 配布HTMLはフォントファイルを職員PCへインストールしません。
+    IPAmj明朝および追加文字行政事務標準明朝の公式フォント原本を改変せず可逆圧縮して内蔵し、
+    実行時にメモリ上へ復元して本HTML内の候補表示にのみ使用します。
+    類似検索にはフォント輪郭そのものではなく、ビルド時に生成した非可逆の形状特徴量を使用します。
+    入力画像をブラウザ内でモノクロBMPへ変換し、Windows 外字エディターへの受け渡しを補助します。
+    入力画像・氏名等の情報をネットワーク送信する処理や永続保存する処理は実装していません。
+  -->
+  <!--
+    v4.3 配布版設計方針:
+    - 利用者の判断軸を「住民票の字形と一致するか」に限定する。
+    - 行政事務標準文字を検索母集団とし、MJ/GJ文字図形名を安定IDとして扱う。
+    - 候補字形は配布HTML内蔵の公式フォント原本をメモリ上で使用して表示し、端末へのフォント配布を要求しない。
+    - 24インチFHDに加え、13.3インチ・Windows表示倍率125～150%相当でも横スクロールなしで操作できるレスポンシブ構成とする。
+    - 外部通信・永続保存を行わず、単一HTMLで配布可能とする。
+    - 主要設定値・データ・画像処理・UI制御の責務をコード内で分離する。
   -->
   <style>
 :root {
-  color-scheme: light dark;
-  --bg: #f5f6f4;
-  --panel-bg: #ffffff;
-  --border: #d8dcd4;
-  --text: #1f2a20;
-  --text-muted: #5c6b5e;
-  --accent: #2f6b3a;
-  --accent-contrast: #ffffff;
-  --chip-bg: #eef3ec;
-  --danger: #a5342a;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  color-scheme: light;
+  --page: #f3f5f7;
+  --surface: #ffffff;
+  --surface-subtle: #f7f9fa;
+  --line: #d9dfe5;
+  --line-strong: #c2cbd4;
+  --text: #17212b;
+  --muted: #5d6b78;
+  --muted-2: #7c8995;
+  --brand: #1f5f4a;
+  --brand-hover: #184c3b;
+  --brand-soft: #eaf4f0;
+  --brand-line: #b8d7cb;
+  --blue-soft: #edf5fc;
+  --blue-line: #c5ddef;
+  --amber-soft: #fff7e8;
+  --amber-line: #edd7a8;
+  --danger: #a33c34;
+  --danger-soft: #fff1ef;
+  --ok: #17613e;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 8px 24px rgba(16, 24, 40, .05);
+  --radius: 12px;
+  --content-max: 1480px;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #141814;
-    --panel-bg: #1b201b;
-    --border: #333c33;
-    --text: #e7ece6;
-    --text-muted: #a3ada2;
-    --accent: #6bb37a;
-    --accent-contrast: #0d140e;
-    --chip-bg: #232b23;
-    --danger: #e08579;
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  }
-}
-
-* {
-  box-sizing: border-box;
-}
-
+* { box-sizing: border-box; }
+html { font-size: 16px; }
 body {
   margin: 0;
-  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif;
-  background: var(--bg);
+  min-width: 960px;
+  background: var(--page);
   color: var(--text);
-  line-height: 1.7;
+  font-family: "Yu Gothic UI", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+  line-height: 1.55;
 }
-
-a {
-  color: var(--accent);
-}
-
-.app-header {
-  padding: 20px 24px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel-bg);
-}
-
-.app-header h1 {
-  margin: 0 0 6px;
-  font-size: 1.4rem;
-}
-
-.app-sub {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.tool-main {
-  max-width: 760px;
-  margin: 16px auto;
-  padding: 0 16px 40px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.panel {
-  background: var(--panel-bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: var(--shadow);
-  padding: 16px 18px;
-}
-
-.panel h2 {
-  margin: 0 0 10px;
-  font-size: 1.05rem;
-}
-
-.panel h3 {
-  margin: 16px 0 8px;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-}
-
-.disclaimer {
-  border-left: 3px solid var(--accent);
-  background: var(--chip-bg);
-}
-
-.hint-text {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin: 8px 0 0;
-}
-
-.field {
-  margin-bottom: 14px;
-}
-
-.field:last-child {
-  margin-bottom: 0;
-}
-
-.field label {
-  display: block;
-  font-size: 0.85rem;
-  margin-bottom: 4px;
-}
-
-.field .required {
-  color: var(--danger);
-  font-size: 0.7rem;
-  margin-left: 6px;
-  border: 1px solid var(--danger);
-  border-radius: 4px;
-  padding: 0 4px;
-}
-
-.field input[type="text"],
-.field select {
-  font: inherit;
-  font-size: 1rem;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--panel-bg);
-  color: var(--text);
-  width: 100%;
-  max-width: 320px;
-}
-
-.field-error {
-  color: var(--danger);
-  font-size: 0.8rem;
-  margin: 4px 0 0;
-}
-
-/* ---- 検索(Step 0) ---- */
-.search-row {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  flex-wrap: wrap;
-}
-
-#search-char-input {
-  font-size: 1.4rem;
-  width: 6em;
-  text-align: center;
-}
-
-.result-group {
-  margin-top: 14px;
-}
-
-.char-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.char-chip {
-  font: inherit;
-  min-width: 76px;
-  padding: 8px 6px 6px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--chip-bg);
-  color: var(--text);
-  text-align: center;
-  line-height: 1.25;
-}
-
-.chip-actions {
-  display: flex;
-  gap: 4px;
-  margin-top: 6px;
-  justify-content: center;
-}
-
-.chip-btn {
-  font: inherit;
-  font-size: 0.68rem;
-  padding: 3px 7px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--panel-bg);
-  color: var(--text);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.chip-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.char-chip.selected {
-  border-color: var(--accent);
-  outline: 2px solid var(--accent);
-}
-
-.char-chip .big {
-  font-size: 1.9rem;
-  display: block;
-}
-
-.char-chip .cp {
-  font-size: 0.62rem;
-  color: var(--text-muted);
-  display: block;
-  margin-top: 2px;
-}
-
-.empty-note {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  margin: 6px 0 0;
-}
-
-.font-compare-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 10px;
-  margin-top: 8px;
-}
-
-.font-compare-cell {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 6px;
-  text-align: center;
-  background: var(--chip-bg);
-}
-
-.font-compare-cell.unavailable {
-  opacity: 0.45;
-}
-
-.font-compare-cell .glyph {
-  font-size: 2.3rem;
-  line-height: 1.3;
-}
-
-.font-compare-cell .fontname {
-  font-size: 0.68rem;
-  color: var(--text-muted);
-  margin-top: 4px;
-}
-
-.font-compare-cell .missing {
-  font-size: 0.6rem;
-  color: var(--danger);
-}
-
-/* ---- 画像アップロード ---- */
-.drop-zone {
-  border: 2px dashed var(--border);
-  border-radius: 10px;
-  padding: 24px 16px;
-  text-align: center;
-  cursor: pointer;
-  color: var(--text-muted);
-  transition: border-color 0.1s ease, background 0.1s ease;
-}
-
-.drop-zone p {
-  margin: 0;
-  font-size: 0.9rem;
-}
-
-.drop-zone.dragover {
-  border-color: var(--accent);
-  background: var(--chip-bg);
-}
-
-.drop-zone:focus-visible {
-  outline: 2px solid var(--accent);
+button, input, select { font: inherit; }
+button { color: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible {
+  outline: 3px solid rgba(31,95,74,.22);
   outline-offset: 2px;
 }
+[hidden] { display: none !important; }
+.sr-only { position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important; }
 
-.canvas-wrap {
-  width: 256px;
-  height: 256px;
-  max-width: 100%;
-  margin: 0 auto;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-  background-image:
-    linear-gradient(45deg, #c8c8c8 25%, transparent 25%),
-    linear-gradient(-45deg, #c8c8c8 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #c8c8c8 75%),
-    linear-gradient(-45deg, transparent 75%, #c8c8c8 75%);
-  background-color: #fff;
-  background-size: 16px 16px;
-  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+/* Header */
+.app-header { height: 76px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.header-inner { max-width: var(--content-max); height:100%; margin:0 auto; padding:0 22px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
+.brand-block { min-width:0; }
+.brand-row { display:flex; align-items:center; gap:10px; }
+.brand-mark { width:34px; height:34px; border-radius:9px; display:grid; place-items:center; background:var(--brand); color:#fff; font-weight:800; }
+h1 { margin:0; font-size:1.22rem; letter-spacing:.01em; }
+.subtitle { margin:2px 0 0 44px; color:var(--muted); font-size:.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.header-meta { display:flex; align-items:center; gap:10px; flex:0 0 auto; }
+.badge { display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:4px 9px; border-radius:7px; border:1px solid var(--line); background:var(--surface-subtle); color:var(--muted); font-size:.72rem; font-weight:700; }
+.badge.safe { border-color:var(--brand-line); background:var(--brand-soft); color:var(--brand); }
+
+/* FHD-first shell */
+.app-shell { max-width:var(--content-max); margin:16px auto 22px; padding:0 22px; display:grid; grid-template-columns:300px minmax(0,1fr); gap:18px; align-items:start; }
+.sidebar { height:calc(100vh - 114px); min-height:690px; max-height:910px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); display:flex; flex-direction:column; overflow:hidden; }
+.sidebar-head { padding:17px 18px 14px; border-bottom:1px solid var(--line); }
+.sidebar-kicker { color:var(--brand); font-size:.7rem; font-weight:800; letter-spacing:.08em; }
+.sidebar-head h2 { margin:3px 0 4px; font-size:1rem; }
+.step-nav { padding:8px; display:grid; gap:3px; }
+.step-nav-button { width:100%; border:0; background:transparent; border-radius:9px; padding:9px 10px; display:grid; grid-template-columns:30px minmax(0,1fr) auto; gap:9px; align-items:center; text-align:left; cursor:pointer; }
+.step-nav-button:hover { background:var(--surface-subtle); }
+.step-index { width:28px; height:28px; border-radius:8px; display:grid; place-items:center; border:1px solid var(--line-strong); background:#fff; color:var(--muted); font-size:.73rem; font-weight:800; }
+.step-copy b { display:block; font-size:.8rem; }
+.step-copy span { display:block; color:var(--muted-2); font-size:.68rem; margin-top:1px; }
+.nav-status { font-size:.65rem; color:var(--muted); font-weight:800; }
+.step-nav-button.is-current, .step-nav-button.active { background:var(--brand-soft); }
+.step-nav-button.is-current .step-index, .step-nav-button.active .step-index { border-color:var(--brand); color:var(--brand); }
+.step-nav-button.done .step-index { background:var(--brand); border-color:var(--brand); color:#fff; }
+.step-nav-button.skip { opacity:.58; }
+.case-summary { margin:auto 10px 10px; padding:12px; border:1px solid var(--line); border-radius:10px; background:var(--surface-subtle); }
+.case-summary h3 { margin:0 0 8px; font-size:.76rem; }
+.case-row { display:grid; grid-template-columns:78px minmax(0,1fr); gap:8px; padding:5px 0; border-top:1px solid #e7ebee; font-size:.7rem; }
+.case-row:first-of-type { border-top:0; }
+.case-row dt { color:var(--muted); }
+.case-row dd { margin:0; font-weight:700; overflow-wrap:anywhere; }
+.sidebar-foot { padding:0 12px 12px; color:var(--muted); font-size:.64rem; }
+
+.workspace-card { height:calc(100vh - 114px); min-height:690px; max-height:910px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+.step-view { height:100%; display:flex; flex-direction:column; }
+.step-header { min-height:90px; padding:17px 22px 14px; border-bottom:1px solid var(--line); display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
+.step-title-wrap { display:flex; gap:12px; min-width:0; }
+.step-number { flex:0 0 auto; width:38px; height:38px; border-radius:10px; display:grid; place-items:center; background:var(--brand); color:#fff; font-weight:800; }
+.step-header h2 { margin:0 0 3px; font-size:1.18rem; }
+.step-header p { margin:0; color:var(--muted); font-size:.8rem; line-height:1.55; max-width:820px; }
+.current-step { flex:0 0 auto; padding:4px 8px; border-radius:7px; background:var(--surface-subtle); color:var(--muted); font-size:.7rem; font-weight:800; }
+.step-scroll { flex:1; overflow:auto; padding:18px 22px 20px; scrollbar-gutter:stable; }
+.step-footer { min-height:62px; padding:10px 22px; border-top:1px solid var(--line); background:#fbfcfd; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.footer-hint { color:var(--muted); font-size:.72rem; }
+.footer-actions { display:flex; gap:8px; margin-left:auto; }
+
+/* Components */
+.primary-button, .secondary-button, .ghost-button, .chip-btn, .btn-chip, .btn-primary, .btn-secondary, .source-action {
+  border-radius:8px; cursor:pointer; min-height:38px; padding:7px 13px; font-weight:700; font-size:.8rem;
+}
+.primary-button, .btn-primary, .source-action.primary { border:1px solid var(--brand); background:var(--brand); color:#fff; }
+.primary-button:hover, .btn-primary:hover, .source-action.primary:hover { background:var(--brand-hover); }
+.secondary-button, .btn-secondary, .source-action { border:1px solid var(--line-strong); background:#fff; }
+.secondary-button:hover, .btn-secondary:hover, .source-action:hover { background:var(--surface-subtle); }
+.ghost-button, .btn-chip { border:1px solid var(--line); background:var(--surface-subtle); }
+button:disabled, input:disabled, select:disabled { opacity:.45; cursor:not-allowed; }
+.action-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.field { margin-bottom:13px; }
+.field label, .field-label { display:block; margin-bottom:5px; font-size:.76rem; font-weight:700; }
+.field input[type="text"], .field select, .field-inline select, .cp-input { width:100%; min-height:38px; border:1px solid var(--line-strong); border-radius:8px; background:#fff; padding:7px 9px; color:var(--text); }
+.field input[type="text"]:focus, .field select:focus, .field-inline select:focus, .cp-input:focus { border-color:var(--brand); }
+.hint-text, .small-note { color:var(--muted); font-size:.72rem; margin:6px 0 0; }
+.field-error { color:var(--danger); font-size:.72rem; margin:5px 0 0; }
+.info-box { border:1px solid var(--line); border-radius:10px; background:var(--surface-subtle); padding:12px 14px; }
+.info-box h3 { margin:0 0 5px; font-size:.8rem; }
+.info-box p { margin:0; color:var(--muted); font-size:.74rem; line-height:1.55; }
+details { border:1px solid var(--line); border-radius:10px; background:#fff; }
+details + details { margin-top:10px; }
+summary { padding:10px 12px; cursor:pointer; font-size:.76rem; font-weight:800; }
+.details-body { border-top:1px solid var(--line); padding:12px; }
+code, .shortcut { font-family:Consolas,"Yu Gothic UI",monospace; background:#eef1f4; border:1px solid #dbe1e6; border-radius:5px; padding:1px 5px; font-size:.76em; }
+
+/* Step 1 */
+.search-layout { display:grid; grid-template-columns:minmax(300px, .82fr) minmax(420px, 1.18fr); gap:18px; }
+.search-control { padding:16px; border:1px solid var(--line); border-radius:10px; background:var(--surface-subtle); }
+.search-row { display:flex; gap:8px; align-items:end; }
+#search-char-input { width:120px; min-height:52px; border:1px solid var(--line-strong); border-radius:9px; text-align:center; font-size:1.8rem; background:#fff; }
+.search-guidance { margin-top:12px; display:grid; gap:8px; }
+.guidance-line { display:grid; grid-template-columns:24px 1fr; gap:8px; align-items:start; color:var(--muted); font-size:.73rem; }
+.guidance-line b { color:var(--text); }
+.guide-num { width:22px; height:22px; border-radius:6px; display:grid; place-items:center; background:#e8ecef; color:var(--muted); font-weight:800; font-size:.66rem; }
+.result-panel { min-height:340px; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+.result-panel-head { padding:10px 12px; border-bottom:1px solid var(--line); background:#fbfcfd; font-size:.76rem; font-weight:800; }
+.result-panel-body { max-height:480px; overflow:auto; padding:12px; }
+#search-results:not([hidden]) + #search-empty-state { display:none; }
+.result-group { margin-top:14px; }
+.result-group:first-child { margin-top:0; }
+.result-group h3 { margin:0 0 7px; font-size:.76rem; }
+.char-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(112px, 1fr)); gap:8px; }
+.char-chip { border:1px solid var(--line); border-radius:9px; background:#fff; padding:9px; text-align:center; }
+.char-chip .big { display:block; font-family:"Yu Mincho","MS Mincho",serif; font-size:2.15rem; line-height:1.15; }
+.char-chip .cp { display:none; }
+.chip-actions { display:flex; gap:5px; justify-content:center; margin-top:7px; }
+.chip-btn { min-height:28px; padding:3px 7px; border:1px solid var(--line); background:#fff; font-size:.66rem; }
+.chip-btn.copy-action { border-color:var(--brand-line); background:var(--brand-soft); color:var(--brand); font-weight:800; }
+.empty-note { margin:4px 0; color:var(--muted); font-size:.74rem; }
+.font-compare-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); gap:7px; }
+.font-compare-cell { border:1px solid var(--line); border-radius:7px; padding:7px; text-align:center; background:#fff; }
+.font-compare-cell.unavailable { opacity:.45; }
+.font-compare-cell .glyph { font-size:1.9rem; line-height:1.2; }
+.font-compare-cell .fontname, .font-compare-cell .missing { color:var(--muted); font-size:.62rem; }
+.priority-search-card { margin-top:14px; border:2px solid var(--brand-line); border-radius:12px; background:linear-gradient(180deg,#f0f8f5 0%,#f8fbfa 100%); padding:14px; }
+.priority-search-card h3 { margin:0 0 5px; font-size:.88rem; }
+.priority-search-card p { margin:0 0 10px; color:var(--muted); font-size:.72rem; }
+.priority-search-card .primary-button { width:100%; justify-content:center; }
+.priority-search-card.needs-attention { box-shadow:0 0 0 3px rgba(31,95,74,.08); }
+.fallback-card { margin-top:10px; border:1px solid var(--line); border-radius:10px; padding:12px; background:#fff; }
+.fallback-card strong { display:block; margin-bottom:3px; font-size:.78rem; }
+.fallback-card p { margin:0 0 9px; color:var(--muted); font-size:.7rem; }
+.precision-results { margin-top:16px; padding-top:14px; border-top:1px solid var(--line); }
+.precision-results h3 { display:flex; align-items:center; gap:6px; }
+.precision-results h3::before { content:"重要"; padding:2px 5px; border-radius:999px; background:var(--brand-soft); color:var(--brand); font-size:.56rem; letter-spacing:.03em; }
+
+/* Step 2 */
+.source-layout { display:grid; grid-template-columns:minmax(380px,.95fr) minmax(460px,1.05fr); gap:18px; }
+.capture-card { border:1px solid var(--brand-line); border-radius:10px; background:var(--brand-soft); padding:15px; }
+.capture-card h3 { margin:0 0 10px; font-size:.85rem; }
+.capture-steps { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.capture-step { border:1px solid #d2e4dd; border-radius:8px; background:#fff; padding:10px; min-height:118px; }
+.capture-step b { display:block; font-size:.75rem; margin-bottom:4px; }
+.capture-step span { display:block; color:var(--muted); font-size:.68rem; line-height:1.55; }
+.capture-key { display:block; width:max-content; margin:6px 0 7px; padding:3px 6px; border:1px solid var(--line-strong); border-bottom-width:2px; border-radius:5px; background:#f6f8f9; color:var(--text) !important; font:700 .68rem Consolas,monospace; }
+.capture-instruction strong { color:var(--text); font-weight:800; }
+.drop-zone { min-height:190px; border:2px dashed var(--line-strong); border-radius:10px; background:#fbfcfd; display:grid; place-items:center; text-align:center; padding:18px; cursor:pointer; }
+.drop-zone:hover, .drop-zone.dragover { border-color:var(--brand); background:var(--brand-soft); }
+.drop-main { font-size:.86rem; font-weight:800; }
+.drop-sub { margin-top:5px; color:var(--muted); font-size:.72rem; }
+.upload-status { margin-top:8px; color:var(--muted); font-size:.72rem; }
+.upload-status.is-ok { color:var(--ok); font-weight:700; }
+.privacy-note { margin-top:12px; border-left:3px solid var(--brand); padding:8px 10px; background:var(--surface-subtle); color:var(--muted); font-size:.7rem; }
+.privacy-note strong { color:var(--text); }
+
+/* Step 3 */
+.adjust-layout { display:grid; grid-template-columns:330px minmax(0,1fr); gap:24px; align-items:start; }
+.preview-panel { border:1px solid var(--line); border-radius:10px; padding:14px; background:var(--surface-subtle); }
+.canvas-wrap { width:288px; height:288px; max-width:100%; margin:0 auto; overflow:hidden; border:1px solid var(--line-strong); border-radius:8px; background-color:#fff; background-image:linear-gradient(45deg,#d9d9d9 25%,transparent 25%),linear-gradient(-45deg,#d9d9d9 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d9d9d9 75%),linear-gradient(-45deg,transparent 75%,#d9d9d9 75%); background-size:16px 16px; background-position:0 0,0 8px,8px -8px,-8px 0; }
+#preview-canvas { width:100%; height:100%; display:block; image-rendering:pixelated; }
+.preview-caption { margin:8px 0 0; color:var(--muted); text-align:center; font-size:.7rem; }
+.control-stack { display:grid; gap:12px; }
+.control-block { border:1px solid var(--line); border-radius:10px; padding:13px; }
+.control-block h3 { margin:0 0 8px; font-size:.8rem; }
+.slider-row { display:grid; grid-template-columns:1fr 60px; gap:10px; align-items:center; }
+input[type="range"] { width:100%; accent-color:var(--brand); }
+.threshold-number { text-align:center; border:1px solid var(--line); border-radius:7px; padding:4px; font-size:.75rem; }
+.switch-row { display:flex; align-items:center; gap:7px; font-size:.76rem; }
+.advanced-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.field-inline { display:flex; flex-direction:column; gap:4px; color:var(--muted); font-size:.7rem; }
+
+/* Step 4 */
+.register-layout { display:grid; grid-template-columns:minmax(360px,.8fr) minmax(500px,1.2fr); gap:18px; }
+.register-number { border:1px solid var(--brand-line); border-radius:10px; background:var(--brand-soft); padding:15px; }
+.register-number-label { color:var(--muted); font-size:.7rem; }
+.codepoint-display { margin:3px 0 10px; color:var(--brand); font-size:1.55rem; font-weight:800; letter-spacing:.03em; }
+.auto-cp-note { color:var(--muted); font-size:.69rem; }
+.cp-toolbar { display:flex; gap:7px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+.cp-toolbar select { min-height:34px; border:1px solid var(--line); border-radius:7px; background:#fff; }
+.cp-input { width:78px; min-height:34px; }
+.cp-grid { display:grid; grid-template-columns:repeat(16,1fr); gap:2px; max-height:300px; overflow:auto; }
+.cp-cell { aspect-ratio:1; border:1px solid var(--line); border-radius:3px; background:#fff; padding:0; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; overflow:hidden; }
+.cp-cell.selected { background:var(--brand); border-color:var(--brand); color:#fff; }
+.cp-cell.used { background:#eef1f3; }
+.cp-cell .cell-glyph { font-size:.85rem; }
+.cp-cell .cell-hex { font-size:.43rem; color:var(--muted); }
+.cp-cell.selected .cell-hex { color:#fff; }
+.windows-flow { border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+.windows-flow-head { padding:11px 13px; border-bottom:1px solid var(--line); background:#fbfcfd; font-size:.8rem; font-weight:800; }
+.windows-steps { margin:0; padding:12px 14px 12px 34px; font-size:.74rem; }
+.windows-steps li { margin-bottom:10px; line-height:1.6; }
+.windows-steps li:last-child { margin-bottom:0; }
+.confirm-box { margin-top:12px; padding:11px 12px; border:1px solid var(--amber-line); border-radius:9px; background:var(--amber-soft); }
+.confirm-box label { display:flex; gap:8px; align-items:flex-start; font-size:.76rem; font-weight:700; }
+
+
+/* Footer / toast */
+.maintenance { margin-top:14px; }
+.toast { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:100; max-width:680px; padding:9px 14px; border-radius:8px; background:#17212b; color:#fff; box-shadow:var(--shadow); font-size:.76rem; text-align:center; }
+.toast.error { background:#7d2d28; }
+
+@media (max-width: 1180px) {
+  body { min-width: 0; }
+  .app-shell { grid-template-columns:250px minmax(0,1fr); padding:0 12px; }
+  .search-layout, .source-layout, .register-layout { grid-template-columns:1fr; }
+  .capture-steps { grid-template-columns:1fr 1fr 1fr; }
+}
+@media (max-width: 900px) {
+  body { min-width: 720px; }
+  .sidebar { display:none; }
+  .app-shell { grid-template-columns:1fr; }
+  .workspace-card { height:auto; min-height:calc(100vh - 110px); max-height:none; }
+  .step-scroll { max-height:none; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto!important; transition:none!important; } }
+
+/* ---- v4: 行政事務標準文字統合検索 ---- */
+.v4-search-layout { grid-template-columns: 355px minmax(0, 1fr); gap: 18px; }
+.dataset-card { margin-top:14px; padding:12px 13px; border:1px solid var(--blue-line); border-radius:10px; background:var(--blue-soft); }
+.dataset-card-top { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.dataset-card-top strong { font-size:.78rem; }
+.dataset-card-top span { font-size:.68rem; color:var(--muted); font-weight:700; }
+.dataset-card p { margin:5px 0 0; font-size:.7rem; color:var(--muted); line-height:1.5; }
+.dataset-card.dev { border-color:var(--amber-line); background:var(--amber-soft); }
+.result-panel-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.result-summary { font-size:.68rem; font-weight:500; color:var(--muted); }
+.result-heading-row { display:flex; align-items:baseline; gap:10px; margin-bottom:8px; }
+.result-heading-row h3 { margin:0; }
+.result-heading-row span { font-size:.68rem; color:var(--muted); }
+.similar-group { padding-top:13px; border-top:1px solid var(--line); }
+.candidate-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); gap:9px; }
+.candidate-card { min-width:0; padding:8px; border:1px solid var(--line); border-radius:9px; background:var(--surface); }
+.candidate-card:hover { border-color:var(--brand-line); box-shadow:0 3px 12px rgba(16,24,40,.06); }
+.candidate-glyph-wrap { height:78px; display:flex; align-items:center; justify-content:center; border-radius:7px; background:#fff; border:1px solid #edf0f2; overflow:hidden; }
+.candidate-glyph { width:72px; height:72px; display:block; }
+.candidate-card .candidate-id { min-height:17px; margin-top:5px; font-size:.6rem; color:var(--muted-2); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.candidate-actions { display:flex; gap:5px; margin-top:6px; }
+.candidate-actions button { flex:1; min-width:0; padding:5px 4px; font-size:.67rem; border-radius:7px; }
+.candidate-actions .copy-candidate { border:1px solid var(--brand-line); background:var(--brand-soft); color:var(--brand); font-weight:700; }
+.candidate-actions .gaiji-candidate { border:1px solid var(--amber-line); background:var(--amber-soft); color:#6e4d15; font-weight:700; }
+.candidate-actions .detail-candidate { flex:0 0 36px; border:1px solid var(--line); background:var(--surface-subtle); color:var(--muted); }
+.candidate-card.is-gj .candidate-id::before { content:"GJ  "; color:#8a5d18; font-weight:700; }
+.candidate-card.is-dev .candidate-glyph-wrap { background:repeating-linear-gradient(135deg,#fff,#fff 8px,#fbfbfb 8px,#fbfbfb 16px); }
+.search-loading { padding:20px; text-align:center; color:var(--muted); font-size:.76rem; }
+.candidate-detail-dialog { border:0; border-radius:12px; box-shadow:0 16px 60px rgba(0,0,0,.22); width:min(520px,calc(100vw - 32px)); padding:0; }
+.candidate-detail-dialog::backdrop { background:rgba(16,24,40,.3); }
+.candidate-detail-body { padding:18px 20px; }
+.candidate-detail-body h3 { margin:0 0 12px; font-size:1rem; }
+.candidate-detail-list { display:grid; grid-template-columns:120px 1fr; gap:7px 12px; margin:0; font-size:.76rem; }
+.candidate-detail-list dt { color:var(--muted); }
+.candidate-detail-list dd { margin:0; overflow-wrap:anywhere; }
+.candidate-detail-footer { display:flex; justify-content:flex-end; margin-top:16px; }
+@media (min-width: 1500px) {
+  .candidate-grid { grid-template-columns:repeat(auto-fill,minmax(126px,1fr)); gap:10px; }
+  .candidate-glyph-wrap { height:84px; }
+  .candidate-glyph { width:78px; height:78px; }
+}
+@media (max-width: 1180px) {
+  .v4-search-layout { grid-template-columns:1fr; }
 }
 
-canvas#preview-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  image-rendering: pixelated;
+/* ---- v4.3: 13.3インチ・高DPIを含む最終レスポンシブ調整 ---- */
+body { min-width:0; overflow-x:hidden; }
+.app-shell, .workspace-card, .step-view, .step-scroll,
+.search-layout, .v4-search-layout, .source-layout, .adjust-layout, .register-layout,
+.result-panel, .result-panel-body { min-width:0; }
+.sidebar, .workspace-card {
+  height:calc(100vh - 114px);
+  height:calc(100dvh - 114px);
+  min-height:0;
 }
+.sidebar { overflow:auto; }
+.step-scroll { min-height:0; }
+.license-uri { overflow-wrap:anywhere; word-break:break-word; }
 
-.controls-grid {
-  display: grid;
-  gap: 14px;
-  margin-top: 14px;
-}
-
-@media (min-width: 480px) {
-  .controls-grid {
-    grid-template-columns: 1fr 1fr;
-    align-items: end;
+/* 1366×768、FHD 125%相当など、縦方向が狭い端末では情報密度を上げる。 */
+@media (max-height:800px) and (min-width:981px) {
+  .app-header { height:62px; }
+  .header-inner { padding:0 16px; }
+  .subtitle { display:none; }
+  .app-shell { margin:10px auto 12px; padding:0 14px; gap:14px; }
+  .sidebar, .workspace-card {
+    height:calc(100vh - 84px);
+    height:calc(100dvh - 84px);
+    min-height:0;
   }
+  .sidebar-head { padding:10px 14px 8px; }
+  .sidebar-head h2 { margin:2px 0 0; font-size:.88rem; }
+  .step-nav { padding:6px; }
+  .step-nav-button { padding:6px 8px; }
+  .step-copy span { display:none; }
+  .case-summary { display:none; }
+  .sidebar-foot { margin-top:auto; padding:8px 10px; }
+  .step-header { min-height:72px; padding:11px 16px 9px; }
+  .step-number { width:34px; height:34px; }
+  .step-header h2 { font-size:1.05rem; }
+  .step-header p { font-size:.74rem; }
+  .step-scroll { padding:12px 16px; }
+  .step-footer { min-height:52px; padding:7px 16px; }
+  .result-panel-body { max-height:none; }
 }
 
-.btn-chip {
-  font: inherit;
-  padding: 6px 14px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--chip-bg);
-  color: var(--text);
-  cursor: pointer;
+/* 13.3インチの高DPI環境を想定。サイドバーを細くし、工程内レイアウトを1列化する。 */
+@media (max-width:1180px) {
+  body { min-width:0; }
+  .app-shell { grid-template-columns:230px minmax(0,1fr); gap:12px; padding-left:12px; padding-right:12px; }
+  .search-layout, .v4-search-layout, .source-layout, .register-layout { grid-template-columns:1fr; gap:12px; }
+  .adjust-layout { grid-template-columns:280px minmax(0,1fr); gap:16px; }
+  .result-panel-body { max-height:none; }
 }
 
-.switch-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
-}
+/* FHD 150%相当（約1280×720以下の論理領域をさらに狭くした場合）は工程ナビを上部へ移す。 */
+@media (max-width:980px) {
+  .app-header { height:60px; }
+  .header-inner { padding:0 10px; gap:10px; }
+  .brand-row { gap:8px; }
+  .brand-mark { width:30px; height:30px; border-radius:8px; }
+  h1 { font-size:1rem; }
+  .subtitle { display:none; }
+  .header-meta { gap:6px; }
+  .header-meta .badge.safe { display:none; }
+  .header-meta .secondary-button { min-height:34px; padding:5px 9px; font-size:.72rem; }
+  .header-meta .badge { min-height:26px; padding:3px 7px; }
 
-.field-inline {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.field-inline select,
-.field-inline input[type="range"] {
-  font: inherit;
-}
-
-button:disabled,
-select:disabled,
-input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* ---- コードポイント選択 ---- */
-.cp-toolbar {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-
-.cp-grid {
-  display: grid;
-  grid-template-columns: repeat(16, 1fr);
-  gap: 2px;
-  max-height: 420px;
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-@media (max-width: 560px) {
-  .cp-grid {
-    grid-template-columns: repeat(8, 1fr);
+  .app-shell { margin:8px auto 10px; padding:0 10px; grid-template-columns:1fr; gap:8px; }
+  .sidebar {
+    display:block;
+    height:auto;
+    min-height:0;
+    max-height:none;
+    overflow:visible;
+    border-radius:10px;
   }
+  .sidebar-head, .case-summary, .sidebar-foot { display:none; }
+  .step-nav { grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; padding:5px; }
+  .step-nav-button { grid-template-columns:26px minmax(0,1fr); gap:5px; padding:6px; min-width:0; }
+  .step-index { width:26px; height:26px; }
+  .step-copy { min-width:0; }
+  .step-copy b { font-size:.7rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .step-copy span, .nav-status { display:none; }
+
+  .workspace-card {
+    height:calc(100vh - 136px);
+    height:calc(100dvh - 136px);
+    min-height:0;
+    max-height:none;
+    border-radius:10px;
+  }
+  .step-header { min-height:68px; padding:10px 12px; gap:8px; }
+  .step-title-wrap { gap:9px; }
+  .step-number { width:32px; height:32px; border-radius:8px; }
+  .step-header h2 { font-size:1rem; margin-bottom:2px; }
+  .step-header p { font-size:.72rem; line-height:1.45; }
+  .current-step { padding:3px 6px; font-size:.64rem; }
+  .step-scroll { padding:10px 12px; }
+  .step-footer { min-height:50px; padding:7px 12px; }
+
+  .search-layout, .v4-search-layout, .source-layout, .adjust-layout, .register-layout { grid-template-columns:1fr; gap:12px; }
+  .capture-steps { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .candidate-grid { grid-template-columns:repeat(auto-fill,minmax(108px,1fr)); gap:8px; }
+  .candidate-glyph-wrap { height:74px; }
+  .candidate-glyph { width:68px; height:68px; }
+  .result-panel { min-height:0; }
+  .result-panel-body { max-height:none; }
+  .cp-grid { grid-template-columns:repeat(12,1fr); }
 }
 
-.cp-cell {
-  font: inherit;
-  aspect-ratio: 1 / 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--panel-bg);
-  color: var(--text);
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  overflow: hidden;
+/* 720px以下でも横スクロールを発生させず、文字の比較サイズは極端に縮小しない。 */
+@media (max-width:720px) {
+  .app-header { height:56px; }
+  .header-inner { padding:0 8px; }
+  .brand-mark { display:none; }
+  h1 { font-size:.92rem; }
+  .header-meta .badge { display:none; }
+  .header-meta .secondary-button { padding:4px 7px; font-size:.68rem; }
+  .app-shell { margin-top:6px; padding:0 8px; }
+  .workspace-card {
+    height:calc(100vh - 128px);
+    height:calc(100dvh - 128px);
+  }
+  .step-nav-button { grid-template-columns:24px minmax(0,1fr); padding:5px 4px; }
+  .step-index { width:24px; height:24px; font-size:.66rem; }
+  .step-copy b { font-size:.64rem; }
+  .step-header p { display:none; }
+  .current-step { display:none; }
+  .step-scroll { padding:9px; }
+  .capture-steps { grid-template-columns:1fr; }
+  .candidate-grid { grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); }
+  .candidate-detail-list { grid-template-columns:1fr; gap:3px; }
+  .candidate-detail-list dt { margin-top:7px; font-weight:700; }
+  .step-footer { align-items:stretch; flex-wrap:wrap; }
+  .footer-hint { width:100%; }
+  .footer-actions { width:100%; margin-left:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); }
+  .footer-actions button { width:100%; }
+  .search-row { flex-wrap:wrap; }
+  .cp-grid { grid-template-columns:repeat(8,1fr); }
+  .toast { width:calc(100vw - 20px); bottom:10px; }
 }
 
-.cp-cell:hover {
-  border-color: var(--accent);
+@media (max-width:480px) {
+  .app-shell { padding-left:4px; padding-right:4px; }
+  .step-nav { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .step-nav-button { display:flex; justify-content:center; padding:5px 2px; }
+  .step-copy { display:none; }
+  .workspace-card { height:calc(100dvh - 120px); border-radius:8px; }
+  .step-header { min-height:56px; padding:8px 9px; }
+  .step-header h2 { font-size:.94rem; }
+  .candidate-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+  .candidate-glyph-wrap { height:86px; }
+  .candidate-glyph { width:80px; height:80px; }
+  .card, .panel { padding-left:10px; padding-right:10px; }
+  .cp-grid { grid-template-columns:repeat(6,1fr); }
 }
 
-.cp-cell.selected {
-  background: var(--accent);
-  color: var(--accent-contrast);
-  border-color: var(--accent);
-}
-
-.cp-cell.used {
-  background: var(--chip-bg);
-}
-
-.cp-cell.selected.used {
-  background: var(--accent);
-}
-
-.cp-cell .cell-glyph {
-  font-size: 1.05rem;
-}
-
-.cp-cell .cell-hex {
-  font-size: 0.5rem;
-  color: var(--text-muted);
-}
-
-.cp-cell.selected .cell-hex {
-  color: var(--accent-contrast);
-}
-
-.codepoint-display {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--accent);
-  margin: 0 0 10px;
-}
-
-.warn-box {
-  margin: 12px 0;
-  padding: 10px 14px;
-  border: 1px solid var(--danger);
-  border-left: 3px solid var(--danger);
-  border-radius: 0 8px 8px 0;
-  background: var(--chip-bg);
-  font-size: 0.82rem;
-  line-height: 1.6;
-}
-
-input[type="file"] {
-  font: inherit;
-  font-size: 0.85rem;
-  max-width: 100%;
-}
-
-.output-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.btn-primary {
-  font: inherit;
-  padding: 8px 18px;
-  border: none;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--accent-contrast);
-  cursor: pointer;
-}
-
-.btn-secondary {
-  font: inherit;
-  padding: 8px 18px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--panel-bg);
-  color: var(--text);
-  cursor: pointer;
-}
-
-.radio-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
-  font-size: 0.9rem;
-}
-
-.target-preview {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin: 0 0 12px;
-  padding: 8px 10px;
-  background: var(--chip-bg);
-  border-radius: 6px;
-}
-
-.target-preview .big {
-  font-size: 1.6rem;
-  vertical-align: middle;
-  color: var(--text);
-}
-
-ol.steps {
-  margin: 0;
-  padding-left: 1.3em;
-}
-
-ol.steps li {
-  margin-bottom: 8px;
-}
-
-ol.steps li:last-child {
-  margin-bottom: 0;
-}
-
-code {
-  background: var(--chip-bg);
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-size: 0.85em;
-}
-
-.toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--text);
-  color: var(--bg);
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-size: 0.85rem;
-  box-shadow: var(--shadow);
-  max-width: 90vw;
-  text-align: center;
-}
-  </style>
+</style>
 </head>
 <body>
   <header class="app-header">
-    <h1>異体字(外字)作成ツール</h1>
-    <p class="app-sub">画像から Windows 11 の外字(EUDC)を作成し、IME の変換候補として登録するための下ごしらえを行います。</p>
+    <div class="header-inner">
+      <div class="brand-block">
+        <div class="brand-row"><div class="brand-mark" aria-hidden="true">字</div><h1>住民票字形確認・外字作成支援ツール</h1></div>
+        <p class="subtitle">行政事務標準文字から住民票の字形候補を検索し、必要な場合のWindows外字作成を支援します。</p>
+      </div>
+      <div class="header-meta">
+        <button type="button" id="reset-work-btn" class="secondary-button">新しい作業</button>
+        <span class="badge safe">● 入力内容・画像は外部送信なし</span>
+        <span class="badge">v<span data-app-version>4.3.1-web</span></span>
+      </div>
+    </div>
   </header>
 
-  <main class="tool-main">
+  <main class="app-shell">
+    <aside class="sidebar" aria-label="作業ナビゲーション">
+      <div class="sidebar-head">
+        <div class="sidebar-kicker">WORKFLOW</div>
+        <h2>住民票の字形を基準に進めます</h2>
+      </div>
+      <nav class="step-nav">
+        <button type="button" class="step-nav-button is-current" id="nav-step-search" data-step-nav="1"><span class="step-index">1</span><span class="step-copy"><b>字形候補を探す</b><span>標準文字全体から検索</span></span><span class="nav-status">作業中</span></button>
+        <button type="button" class="step-nav-button" id="nav-step-source" data-step-nav="2"><span class="step-index">2</span><span class="step-copy"><b>画像を取り込む</b><span>候補がない場合だけ</span></span><span class="nav-status"></span></button>
+        <button type="button" class="step-nav-button" id="nav-step-adjust" data-step-nav="3"><span class="step-index">3</span><span class="step-copy"><b>字形を整える</b><span>外字用に見やすく調整</span></span><span class="nav-status"></span></button>
+        <button type="button" class="step-nav-button" id="nav-step-register" data-step-nav="4"><span class="step-index">4</span><span class="step-copy"><b>Windowsへ登録</b><span>外字エディターで保存</span></span><span class="nav-status"></span></button>
+      </nav>
+      <dl class="case-summary">
+        <h3>今回の作業状況</h3>
+        <div class="case-row"><dt>基準の文字</dt><dd id="case-source">未入力</dd></div>
+        <div class="case-row"><dt>標準文字検索</dt><dd id="case-search">未検索</dd></div>
+        <div class="case-row"><dt>コピーした候補</dt><dd id="case-copied">—</dd></div>
+        <div class="case-row"><dt>画像</dt><dd id="case-image">未読み込み</dd></div>
+        <div class="case-row"><dt>外字登録</dt><dd id="case-register">未完了</dd></div>
+      </dl>
+      <div class="sidebar-foot">v<span data-app-version>4.3.1-web</span> ／ 入力画像や氏名等をネットワーク送信・永続保存する処理はありません。</div>
+    </aside>
 
-    <section class="panel" id="existing-check-section">
-      <h2>Step 0. まず既存の文字で足りないか検索</h2>
-      <p class="hint-text">
-        独自の外字は他の環境では表示されません。まずは既存のUnicode文字やIVS(異体字シーケンス)で目的の字形が無いか検索し、見つからない場合だけカスタム外字の作成に進んでください。
-      </p>
-      <div class="field" style="margin-top:12px;">
-        <label for="search-char-input">基準となる漢字を1文字入力/貼り付け</label>
-        <div class="search-row">
-          <input type="text" id="search-char-input" maxlength="4" placeholder="例: 崎" autocomplete="off" />
-          <button type="button" id="ivs-scan-btn" class="btn-chip" disabled>IVS異体字を検出</button>
+    <div class="workspace-card" id="workspace-card">
+      <!-- Step 1 -->
+      <section class="step-view" id="existing-check-section" data-step-view="1">
+        <header class="step-header"><div class="step-title-wrap"><span class="step-number">1</span><div><h2>住民票と一致する字形候補を探す</h2><p>近い漢字を1文字入力すると、行政事務標準文字の中から候補をまとめて表示します。</p></div></div><span class="current-step" id="current-step-label">Step 1 / 4</span></header>
+        <div class="step-scroll">
+          <div class="search-layout v4-search-layout">
+            <div>
+              <div class="search-control">
+                <label class="field-label" for="search-char-input">住民票の文字に近い、入力できる漢字を1文字</label>
+                <div class="search-row"><input type="text" id="search-char-input" placeholder="崎" autocomplete="off" aria-describedby="search-help" /></div>
+                <p class="hint-text" id="search-help">例：住民票の文字が入力できない場合、見た目が近い漢字を入力します。</p>
+                <div class="dataset-card" id="dataset-card">
+                  <div class="dataset-card-top"><strong id="dataset-title">行政事務標準文字データ</strong><span id="dataset-count">読込中</span></div>
+                  <p id="dataset-status">検索データを準備しています。</p>
+                </div><details class="maintenance" id="license-details" style="margin-top:10px"><summary>データ・フォントの出典とライセンス</summary><div class="details-body" style="padding:12px"><p class="small-note"><strong>MJ文字情報一覧表 Ver.006.02：</strong>独立行政法人情報処理推進機構（IPA）の著作物を基にした文字対応メタデータを収録しています。当該派生データ部分は Creative Commons 表示－継承 2.1 日本（CC BY-SA 2.1 JP）に従います。原著作物の案内：<span class="license-uri">https://moji.or.jp/mojikiban/mjlist/</span> ／ ライセンス：<span class="license-uri">https://creativecommons.org/licenses/by-sa/2.1/jp/</span></p><p class="small-note"><strong>IPAmj明朝 Ver.006.01：</strong>公式ファイル <code>ipamjm.ttf</code> の原本バイト列を改変せず可逆圧縮して本HTMLへ内蔵し、実行時にメモリ上へ復元して本HTML内の字形表示にのみ使用します。IPAフォントライセンスv1.0全文を以下に添付しています。</p><p class="small-note"><strong>追加文字行政事務標準明朝：</strong>公式ファイル <code>acgjm.woff2</code> の原本バイト列を改変せず内蔵し、同梱されていた選択可能ライセンスのうち SIL Open Font License 1.1 を採用します。著作権表示およびOFL全文を以下に添付しています。</p><details><summary>IPAフォントライセンスv1.0 全文</summary><pre style="white-space:pre-wrap;font-size:.68rem;max-height:320px;overflow:auto">--------------------------------------------------
+IPA Font License Agreement v1.0 &lt;Japanese/English&gt;
+--------------------------------------------------
+
+IPAフォントライセンスv1.0
+
+許諾者は、この使用許諾（以下「本契約」といいます。）に定める条件の下で、許諾プログラム（1条に定義するところによります。）を提供します。受領者（1条に定義するところによります。）が、許諾プログラムを使用し、複製し、または頒布する行為、その他、本契約に定める権利の利用を行った場合、受領者は本契約に同意したものと見なします。
+
+
+第1条　用語の定義
+
+本契約において、次の各号に掲げる用語は、当該各号に定めるところによります。
+
+1.「デジタル･フォント･プログラム」とは、フォントを含み、レンダリングしまたは表示するために用いられるコンピュータ・プログラムをいいます。
+2.「許諾プログラム」とは、許諾者が本契約の下で許諾するデジタル･フォント･プログラムをいいます。
+3.「派生プログラム」とは、許諾プログラムの一部または全部を、改変し、加除修正等し、入れ替え、その他翻案したデジタル･フォント･プログラムをいい、許諾プログラムの一部もしくは全部から文字情報を取り出し、またはデジタル･ドキュメント･ファイルからエンベッドされたフォントを取り出し、取り出された文字情報をそのまま、または改変をなして新たなデジタル・フォント・プログラムとして製作されたものを含みます。
+4.「デジタル・コンテンツ」とは、デジタル・データ形式によってエンド・ユーザに提供される制作物のことをいい、動画・静止画等の映像コンテンツおよびテレビ番組等の放送コンテンツ、ならびに文字テキスト、画像、図形等を含んで構成された制作物を含みます。
+5.「デジタル・ドキュメント・ファイル」とは、PDFファイルその他、各種ソフトウェア･プログラムによって製作されたデジタル・コンテンツであって、その中にフォントを表示するために許諾プログラムの全部または一部が埋め込まれた（エンベッドされた）ものをいいます。フォントが「エンベッドされた」とは、当該フォントが埋め込まれた特定の「デジタル・ドキュメント・ファイル」においてのみ表示されるために使用されている状態を指し、その特定の「デジタル・ドキュメント・ファイル」以外でフォントを表示するために使用できるデジタル・フォント・プログラムに含まれている場合と区別されます。
+6.「コンピュータ｣とは、本契約においては、サーバを含みます。
+7.「複製その他の利用」とは、複製、譲渡、頒布、貸与、公衆送信、上映、展示、翻案その他の利用をいいます。
+8.「受領者」とは、許諾プログラムを本契約の下で受領した人をいい、受領者から許諾プログラムを受領した人を含みます。
+
+第２条 使用許諾の付与
+
+許諾者は受領者に対し、本契約の条項に従い、すべての国で、許諾プログラムを使用することを許諾します。ただし、許諾プログラムに存在する一切の権利はすべて許諾者が保有しています。本契約は、本契約で明示的に定められている場合を除き、いかなる意味においても、許諾者が保有する許諾プログラムに関する一切の権利および、いかなる商標、商号、もしくはサービス・マークに関する権利をも受領者に移転するものではありません。
+
+1.受領者は本契約に定める条件に従い、許諾プログラムを任意の数のコンピュータにインストールし、当該コンピュータで使用することができます。
+2.受領者はコンピュータにインストールされた許諾プログラムをそのまま、または改変を行ったうえで、印刷物およびデジタル・コンテンツにおいて、文字テキスト表現等として使用することができます。
+3.受領者は前項の定めに従い作成した印刷物およびデジタル・コンテンツにつき、その商用・非商用の別、および放送、通信、各種記録メディアなどの媒体の形式を問わず、複製その他の利用をすることができます。
+4.受領者がデジタル・ドキュメント・ファイルからエンベッドされたフォントを取り出して派生プログラムを作成した場合には、かかる派生プログラムは本契約に定める条件に従う必要があります。
+5.許諾プログラムのエンベッドされたフォントがデジタル・ドキュメント・ファイル内のデジタル・コンテンツをレンダリングするためにのみ使用される場合において、受領者が当該デジタル・ドキュメント・ファイルを複製その他の利用をする場合には、受領者はかかる行為に関しては本契約の下ではいかなる義務をも負いません。
+6.受領者は、3条2項の定めに従い、商用・非商用を問わず、許諾プログラムをそのままの状態で改変することなく複製して第三者への譲渡し、公衆送信し、その他の方法で再配布することができます(以下、「再配布」といいます。)。
+7.受領者は、上記の許諾プログラムについて定められた条件と同様の条件に従って、派生プログラムを作成し、使用し、複製し、再配布することができます。ただし、受領者が派生プログラムを再配布する場合には、3条1項の定めに従うものとします。
+
+第３条　制限
+
+前条により付与された使用許諾は、以下の制限に服します。
+
+1.派生プログラムが前条4項及び7項に基づき再配布される場合には、以下の全ての条件を満たさなければなりません。
+　(1)派生プログラムを再配布する際には、下記もまた、当該派生プログラムと一緒に再配布され、オンラインで提供され、または、郵送費・媒体及び取扱手数料の合計を超えない実費と引き換えに媒体を郵送する方法により提供されなければなりません。
+　　(a)派生プログラムの写し; および
+　　(b)派生プログラムを作成する過程でフォント開発プログラムによって作成された追加のファイルであって派生プログラムをさらに加工するにあたって利用できるファイルが存在すれば、当該ファイル
+　(2)派生プログラムの受領者が、派生プログラムを、このライセンスの下で最初にリリースされた許諾プログラム（以下、「オリジナル・プログラム」といいます。）に置き換えることができる方法を再配布するものとします。かかる方法は、オリジナル・ファイルからの差分ファイルの提供、または、派生プログラムをオリジナル・プログラムに置き換える方法を示す指示の提供などが考えられます。
+　(3)派生プログラムを、本契約書に定められた条件の下でライセンスしなければなりません。
+　(4)派生プログラムのプログラム名、フォント名またはファイル名として、許諾プログラムが用いているのと同一の名称、またはこれを含む名称を使用してはなりません。
+　(5)本項の要件を満たすためにオンラインで提供し、または媒体を郵送する方法で提供されるものは、その提供を希望するいかなる者によっても提供が可能です。
+2.受領者が前条6項に基づき許諾プログラムを再配布する場合には、以下の全ての条件を満たさなければなりません。
+　(1)許諾プログラムの名称を変更してはなりません。
+　(2)許諾プログラムに加工その他の改変を加えてはなりません。
+　(3)本契約の写しを許諾プログラムに添付しなければなりません。
+3.許諾プログラムは、現状有姿で提供されており、許諾プログラムまたは派生プログラムについて、許諾者は一切の明示または黙示の保証（権利の所在、非侵害、商品性、特定目的への適合性を含むがこれに限られません）を行いません。いかなる場合にも、その原因を問わず、契約上の責任か厳格責任か過失その他の不法行為責任かにかかわらず、また事前に通知されたか否かにかかわらず、許諾者は、許諾プログラムまたは派生プログラムのインストール、使用、複製その他の利用または本契約上の権利の行使によって生じた一切の損害（直接・間接・付随的・特別・拡大・懲罰的または結果的損害）（商品またはサービスの代替品の調達、システム障害から生じた損害、現存するデータまたはプログラムの紛失または破損、逸失利益を含むがこれに限られません）について責任を負いません。
+4.許諾プログラムまたは派生プログラムのインストール、使用、複製その他の利用に関して、許諾者は技術的な質問や問い合わせ等に対する対応その他、いかなるユーザ・サポートをも行う義務を負いません。
+
+第４条　契約の終了
+
+1.本契約の有効期間は、受領者が許諾プログラムを受領した時に開始し、受領者が許諾プログラムを何らかの方法で保持する限り続くものとします。
+2.前項の定めにかかわらず、受領者が本契約に定める各条項に違反したときは、本契約は、何らの催告を要することなく、自動的に終了し、当該受領者はそれ以後、許諾プログラムおよび派生プログラムを一切使用しまたは複製その他の利用をすることができないものとします。ただし、かかる契約の終了は、当該違反した受領者から許諾プログラムまたは派生プログラムの配布を受けた受領者の権利に影響を及ぼすものではありません。
+
+第５条　準拠法
+
+1.IPAは、本契約の変更バージョンまたは新しいバージョンを公表することができます。その場合には、受領者は、許諾プログラムまたは派生プログラムの使用、複製その他の利用または再配布にあたり、本契約または変更後の契約のいずれかを選択することができます。その他、上記に記載されていない条項に関しては日本の著作権法および関連法規に従うものとします。
+2.本契約は、日本法に基づき解釈されます。
+
+
+----------
+
+IPA Font License Agreement v1.0
+
+The Licensor provides the Licensed Program (as defined in Article 1 below) under the terms of this license agreement (“Agreement”).  Any use, reproduction or distribution of the Licensed Program, or any exercise of rights under this Agreement by a Recipient (as defined in Article 1 below) constitutes the Recipient&#x27;s acceptance of this Agreement. 
+
+Article 1 (Definitions)
+1.“Digital Font Program” shall mean a computer program containing, or used to render or display fonts.
+2.“Licensed Program” shall mean a Digital Font Program licensed by the Licensor under this Agreement.
+3.“Derived Program” shall mean a Digital Font Program created as a result of a modification, addition, deletion, replacement or any other adaptation to or of a part or all of the Licensed Program, and includes a case where a Digital Font Program newly created by retrieving font information from a part or all of the Licensed Program or Embedded Fonts from a Digital Document File with or without modification of the retrieved font information. 
+4.“Digital Content” shall mean products provided to end users in the form of digital data, including video content, motion and/or still pictures, TV programs or other broadcasting content and products consisting of character text, pictures, photographic images, graphic symbols and/or the like.
+5.“Digital Document File” shall mean a PDF file or other Digital Content created by various software programs in which a part or all of the Licensed Program becomes embedded or contained in the file for the display of the font (“Embedded Fonts”).  Embedded Fonts are used only in the display of characters in the particular Digital Document File within which they are embedded, and shall be distinguished from those in any Digital Font Program, which may be used for display of characters outside that particular Digital Document File.
+6.“Computer” shall include a server in this Agreement.
+7.“Reproduction and Other Exploitation” shall mean reproduction, transfer, distribution, lease, public transmission, presentation, exhibition, adaptation and any other exploitation.
+8.“Recipient” shall mean anyone who receives the Licensed Program under this Agreement, including one that receives the Licensed Program from a Recipient.
+
+Article 2 (Grant of License)
+The Licensor grants to the Recipient a license to use the Licensed Program in any and all countries in accordance with each of the provisions set forth in this Agreement. However, any and all rights underlying in the Licensed Program shall be held by the Licensor. In no sense is this Agreement intended to transfer any right relating to the Licensed Program held by the Licensor except as specifically set forth herein or any right relating to any trademark, trade name, or service mark to the Recipient.
+
+1.The Recipient may install the Licensed Program on any number of Computers and use the same in accordance with the provisions set forth in this Agreement.
+2.The Recipient may use the Licensed Program, with or without modification in printed materials or in Digital Content as an expression of character texts or the like.
+3.The Recipient may conduct Reproduction and Other Exploitation of the printed materials and Digital Content created in accordance with the preceding Paragraph, for commercial or non-commercial purposes and in any form of media including but not limited to broadcasting, communication and various recording media.
+4.If any Recipient extracts Embedded Fonts from a Digital Document File to create a Derived Program, such Derived Program shall be subject to the terms of this agreement.
+5.If any Recipient performs Reproduction or Other Exploitation of a Digital Document File in which Embedded Fonts of the Licensed Program are used only for rendering the Digital Content within such Digital Document File then such Recipient shall have no further obligations under this Agreement in relation to such actions.
+6.The Recipient may reproduce the Licensed Program as is without modification and transfer such copies, publicly transmit or otherwise redistribute the Licensed Program to a third party for commercial or non-commercial purposes (“Redistribute”), in accordance with the provisions set forth in Article 3 Paragraph 2.
+7.The Recipient may create, use, reproduce and/or Redistribute a Derived Program under the terms stated above for the Licensed Program: provided, that the Recipient shall follow the provisions set forth in Article 3 Paragraph 1 when Redistributing the Derived Program. 
+
+Article 3 (Restriction)
+The license granted in the preceding Article shall be subject to the following restrictions:
+
+1.If a Derived Program is Redistributed pursuant to Paragraph 4 and 7 of the preceding Article, the following conditions must be met :
+　(1)The following must be also Redistributed together with the Derived Program, or be made available online or by means of mailing mechanisms in exchange for a cost which does not exceed the total costs of postage, storage medium and handling fees:
+　　(a)a copy of the Derived Program; and
+　　(b)any additional file created by the font developing program in the course of creating the Derived Program that can be used for further modification of the Derived Program, if any. 
+　(2)It is required to also Redistribute means to enable recipients of the Derived Program to replace the Derived Program with the Licensed Program first released under this License (the “Original Program”).  Such means may be to provide a difference file from the Original Program, or instructions setting out a method to replace the Derived Program with the Original Program. 
+　(3)The Recipient must license the Derived Program under the terms and conditions of this Agreement.
+　(4)No one may use or include the name of the Licensed Program as a program name, font name or file name of the Derived Program. 
+　(5)Any material to be made available online or by means of mailing a medium to satisfy the requirements of this paragraph may be provided, verbatim, by any party wishing to do so.
+2.If the Recipient Redistributes the Licensed Program pursuant to Paragraph 6 of the preceding Article, the Recipient shall meet all of the following conditions:
+　(1)The Recipient may not change the name of the Licensed Program.
+　(2)The Recipient may not alter or otherwise modify the Licensed Program.
+　(3)The Recipient must attach a copy of this Agreement to the Licensed Program.
+3.THIS LICENSED PROGRAM IS PROVIDED BY THE LICENSOR “AS IS” AND ANY EXPRESSED OR IMPLIED WARRANTY AS TO THE LICENSED PROGRAM OR ANY DERIVED PROGRAM, INCLUDING, BUT NOT LIMITED TO, WARRANTIES OF TITLE, NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXTENDED, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO; PROCUREMENT OF SUBSTITUTED GOODS OR SERVICE; DAMAGES ARISING FROM SYSTEM FAILURE; LOSS OR CORRUPTION OF EXISTING DATA OR PROGRAM; LOST PROFITS), HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE INSTALLATION, USE, THE REPRODUCTION OR OTHER EXPLOITATION OF THE LICENSED PROGRAM OR ANY DERIVED PROGRAM OR THE EXERCISE OF ANY RIGHTS GRANTED HEREUNDER, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+4.The Licensor is under no obligation to respond to any technical questions or inquiries, or provide any other user support in connection with the installation, use or the Reproduction and Other Exploitation of the Licensed Program or Derived Programs thereof.
+
+Article 4 (Termination of Agreement)
+1.The term of this Agreement shall begin from the time of receipt of the Licensed Program by the Recipient and shall continue as long as the Recipient retains any such Licensed Program in any way.
+2.Notwithstanding the provision set forth in the preceding Paragraph, in the event of the breach of any of the provisions set forth in this Agreement by the Recipient, this Agreement shall automatically terminate without any notice. In the case of such termination, the Recipient may not use or conduct Reproduction and Other Exploitation of the Licensed Program or a Derived Program: provided that such termination shall not affect any rights of any other Recipient receiving the Licensed Program or the Derived Program from such Recipient who breached this Agreement.
+
+Article 5 (Governing Law)
+1.IPA may publish revised and/or new versions of this License.  In such an event, the Recipient may select either this Agreement or any subsequent version of the Agreement in using, conducting the Reproduction and Other Exploitation of, or Redistributing the Licensed Program or a Derived Program. Other matters not specified above shall be subject to the Copyright Law of Japan and other related laws and regulations of Japan.
+2.This Agreement shall be construed under the laws of Japan.
+
+</pre></details><details><summary>SIL Open Font License 1.1 全文・著作権表示</summary><pre style="white-space:pre-wrap;font-size:.68rem;max-height:320px;overflow:auto">Copyright (c) 2026, Digital Agency Government of Japan (https://www.digital.go.jp/),
+with Reserved Font Name &quot;GJMincho&quot;, &quot;GJ明朝&quot;, and &quot;追加文字行政事務標準明朝&quot;.
+ 
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+This license is copied below, and is also available with a FAQ at:
+https://openfontlicense.org
+
+
+-----------------------------------------------------------
+SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+-----------------------------------------------------------
+
+PREAMBLE
+The goals of the Open Font License (OFL) are to stimulate worldwide
+development of collaborative font projects, to support the font creation
+efforts of academic and linguistic communities, and to provide a free and
+open framework in which fonts may be shared and improved in partnership
+with others.
+
+The OFL allows the licensed fonts to be used, studied, modified and
+redistributed freely as long as they are not sold by themselves. The
+fonts, including any derivative works, can be bundled, embedded,
+redistributed and/or sold with any software provided that any reserved
+names are not used by derivative works. The fonts and derivatives,
+however, cannot be released under any other type of license. The
+requirement for fonts to remain under this license does not apply
+to any document created using the fonts or their derivatives.
+
+DEFINITIONS
+&quot;Font Software&quot; refers to the set of files released by the Copyright
+Holder(s) under this license and clearly marked as such. This may
+include source files, build scripts and documentation.
+
+&quot;Reserved Font Name&quot; refers to any names specified as such after the
+copyright statement(s).
+
+&quot;Original Version&quot; refers to the collection of Font Software components as
+distributed by the Copyright Holder(s).
+
+&quot;Modified Version&quot; refers to any derivative made by adding to, deleting,
+or substituting -- in part or in whole -- any of the components of the
+Original Version, by changing formats or by porting the Font Software to a
+new environment.
+
+&quot;Author&quot; refers to any designer, engineer, programmer, technical
+writer or other person who contributed to the Font Software.
+
+PERMISSION &amp; CONDITIONS
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of the Font Software, to use, study, copy, merge, embed, modify,
+redistribute, and sell modified and unmodified copies of the Font
+Software, subject to the following conditions:
+
+1) Neither the Font Software nor any of its individual components,
+in Original or Modified Versions, may be sold by itself.
+
+2) Original or Modified Versions of the Font Software may be bundled,
+redistributed and/or sold with any software, provided that each copy
+contains the above copyright notice and this license. These can be
+included either as stand-alone text files, human-readable headers or
+in the appropriate machine-readable metadata fields within text or
+binary files as long as those fields can be easily viewed by the user.
+
+3) No Modified Version of the Font Software may use the Reserved Font
+Name(s) unless explicit written permission is granted by the corresponding
+Copyright Holder. This restriction only applies to the primary font name as
+presented to the users.
+
+4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+Software shall not be used to promote, endorse or advertise any
+Modified Version, except to acknowledge the contribution(s) of the
+Copyright Holder(s) and the Author(s) or with their explicit written
+permission.
+
+5) The Font Software, modified or unmodified, in part or in whole,
+must be distributed entirely under this license, and must not be
+distributed under any other license. The requirement for fonts to
+remain under this license does not apply to any document created
+using the Font Software.
+
+TERMINATION
+This license becomes null and void if any of the above conditions are
+not met.
+
+DISCLAIMER
+THE FONT SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+OTHER DEALINGS IN THE FONT SOFTWARE.
+</pre></details></div></details>
+                <div class="fallback-card"><strong>一致する候補がない場合</strong><p>住民票の字形を画像から外字にします。</p><button type="button" id="start-gaiji-btn" class="secondary-button">画像から外字を作る</button></div>
+              </div>
+            </div>
+            <div class="result-panel">
+              <div class="result-panel-head"><span>住民票と見比べる字形候補</span><span class="result-summary" id="result-summary"></span></div>
+              <div class="result-panel-body">
+                <div id="search-results" hidden>
+                  <div class="result-group" id="related-group"><div class="result-heading-row"><h3>候補</h3><span>同じ基底文字の字形・既知の関係字</span></div><div id="related-list" class="candidate-grid"></div><p id="related-empty" class="empty-note" hidden>直接の候補はありません。</p></div>
+                  <div class="result-group similar-group"><div class="result-heading-row"><h3>形が近い候補</h3><span>別の漢字を含め、字形の近い順に表示</span></div><div id="similar-list" class="candidate-grid"></div><p id="similar-empty" class="empty-note" hidden>形が近い候補を表示できませんでした。</p></div>
+                  <div class="field" id="manual-copy-row" hidden><label for="manual-copy-input">自動コピーできない場合</label><input type="text" id="manual-copy-input" readonly /></div>
+                </div>
+                <div class="info-box" id="search-empty-state"><h3>左側に漢字を1文字入力してください</h3><p>候補はここに表示します。</p></div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+        <footer class="step-footer"><span class="footer-hint">通常の文字・IVS候補は「コピー」で利用できます。<br>ツール内表示専用の字形は、その字形から外字を作成できます。</span></footer>
+      </section>
 
-      <div id="search-results" hidden>
-        <div class="result-group">
-          <h3>書体ごとの字形</h3>
-          <div id="font-compare-grid" class="font-compare-grid"></div>
+      <!-- Step 2 -->
+      <section class="step-view" id="upload-section" data-step-view="2" hidden>
+        <header class="step-header"><div class="step-title-wrap"><span class="step-number">2</span><div><h2>住民票から対象の1文字だけを取り込む</h2><p>最も簡単なのはWindowsの切り取り機能です。<br>氏名全体ではなく、必要な1文字だけを切り取ってください。</p></div></div><span class="current-step">Step 2 / 4</span></header>
+        <div class="step-scroll">
+          <div class="source-layout">
+            <div>
+              <div class="capture-card"><h3>推奨：画面から1文字を切り取る</h3><div class="capture-steps"><div class="capture-step"><b>① 原資料を拡大</b><span>PDFや業務画面を<br><strong>200～400%程度</strong>に拡大します。</span></div><div class="capture-step"><b>② 切り取り</b><span class="capture-key">Win + Shift + S</span><span class="capture-instruction"><strong>文字の周囲に少し余白を残して</strong><br>1文字だけ選択します。</span></div><div class="capture-step"><b>③ この画面へ貼付</b><span class="capture-key">Ctrl + V</span><span class="capture-instruction">このツールへ戻り、<br>そのまま貼り付けます。</span></div></div></div>
+              <div class="info-box maintenance"><h3>紙の住民票しかない場合</h3><p>庁内の適切なスキャン手段で画像化し、対象文字だけを切り出してください。<br>不要な氏名・住所等を画像に含めない運用を推奨します。</p></div>
+              <div class="privacy-note"><strong>個人情報の最小化</strong><br>このHTMLは外部送信しませんが、取り込む画像自体も必要な1文字に限定してください。</div>
+            </div>
+            <div>
+              <input type="file" id="image-input" accept="image/png,image/jpeg,image/webp,image/bmp" hidden />
+              <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="文字画像を選択または貼り付け"><div><div class="drop-main">ここをクリックして画像を選択<br>または Ctrl+V で貼り付け</div><div class="drop-sub">PNG / JPEG / WebP / BMP　最大10MB</div></div></div>
+              <div class="action-row maintenance"><button type="button" id="choose-image-btn" class="secondary-button">画像ファイルを選ぶ</button><button type="button" id="paste-clipboard-btn" class="secondary-button" hidden>クリップボードから貼り付け</button><button type="button" id="clear-image-btn" class="ghost-button" disabled>画像を破棄</button></div>
+              <p id="upload-status" class="upload-status">まだ画像は読み込まれていません。</p><p id="image-error" class="field-error" role="alert" aria-live="assertive" hidden></p>
+            </div>
+          </div>
         </div>
+        <footer class="step-footer"><button type="button" class="secondary-button" data-go-step="1">← 文字確認へ戻る</button><div class="footer-actions"><button type="button" id="to-adjust-btn" class="primary-button" disabled>字形を確認する →</button></div></footer>
+      </section>
 
-        <div class="result-group">
-          <h3>異体字・旧字体・互換漢字</h3>
-          <div id="variant-list" class="char-list"></div>
-          <p id="variant-empty" class="empty-note" hidden>この文字に対応する異体字は見つかりませんでした。</p>
+      <!-- Step 3 -->
+      <section class="step-view" id="adjust-section" data-step-view="3" hidden>
+        <header class="step-header"><div class="step-title-wrap"><span class="step-number">3</span><div><h2>住民票の字形として読める形に整える</h2><p>黒い線が欠けず、隣の文字や罫線が入っていないことを確認します。<br>通常は初期設定のままで構いません。</p></div></div><span class="current-step">Step 3 / 4</span></header>
+        <div class="step-scroll">
+          <div class="adjust-layout">
+            <div class="preview-panel"><div class="canvas-wrap"><canvas id="preview-canvas" width="64" height="64"></canvas></div><p class="preview-caption">最終的にWindows外字として登録する字形</p><div class="info-box maintenance"><h3>確認するポイント</h3><p>文字が中央に収まり、線が切れていないこと。<br>背景や隣の文字が残っていないことを確認します。</p></div></div>
+            <div class="control-stack">
+              <div class="control-block"><h3>線の拾い方</h3><div class="slider-row"><input type="range" id="threshold-slider" min="0" max="255" value="128" disabled aria-label="線の拾い方" /><span class="threshold-number" id="threshold-value">128</span></div><p class="small-note">線が欠ける場合は右へ。<br>余計な汚れを拾う場合は左へ動かします。</p><label class="switch-row maintenance"><input type="checkbox" id="invert-toggle" disabled /> 白黒が逆の場合に反転する</label></div>
+              <details><summary>画像の向き・収め方など（詳細設定）</summary><div class="details-body"><div class="advanced-grid"><button type="button" id="rotate-btn" class="ghost-button" disabled>↻ 90°回転</button><label class="field-inline">画像の収め方<select id="fit-mode-select" disabled><option value="contain">全体を収める（推奨）</option><option value="cover">枠いっぱいに拡大</option></select></label><label class="field-inline">出力サイズ<select id="output-size-select"><option value="64">64×64（標準）</option><option value="128">128×128</option><option value="256">256×256</option></select></label></div></div></details>
+              <div class="info-box"><h3>迷った場合</h3><p>「線の拾い方 128」「全体を収める」「64×64」のまま次へ進んでください。<br>見た目に問題があるときだけ調整します。</p></div>
+            </div>
+          </div>
         </div>
+        <footer class="step-footer"><button type="button" class="secondary-button" data-go-step="2">← 画像取込へ戻る</button><div class="footer-actions"><button type="button" id="to-register-btn" class="primary-button" disabled>Windowsへ登録する →</button></div></footer>
+      </section>
 
-        <div class="field" id="manual-copy-row" hidden>
-          <label for="manual-copy-input">自動コピーができない環境のため、こちらから手動でコピーしてください(Ctrl+C)</label>
-          <input type="text" id="manual-copy-input" readonly style="font-size:1.4rem;" />
+      <!-- Step 4 -->
+      <section class="step-view" id="codepoint-section" data-step-view="4" hidden>
+        <header class="step-header"><div class="step-title-wrap"><span class="step-number">4</span><div><h2>Windowsの外字として登録する</h2><p>保存番号を決めます。<br>BMPをペイント経由で外字エディターへ貼り付けます。</p></div></div><span class="current-step">Step 4 / 4</span></header>
+        <div class="step-scroll">
+          <div class="register-layout">
+            <div>
+              <div class="register-number"><div class="register-number-label">今回使う外字の保存番号</div><p class="codepoint-display">U+<span id="codepoint-label">E000</span></p><button type="button" id="auto-codepoint-btn" class="primary-button">空いている番号を探す</button><p class="auto-cp-note" id="auto-codepoint-note">Microsoft Edgeでは空き候補を参考判定できます。<br>最終確認は外字エディターで行います。</p></div>
+              <details class="maintenance" id="cp-manual-details"><summary>保存番号を手動で指定する（管理・詳細）</summary><div class="details-body"><div class="cp-toolbar"><button type="button" id="cp-prev-btn" class="ghost-button">‹ 前</button><select id="cp-page-select" aria-label="保存番号の範囲"></select><button type="button" id="cp-next-btn" class="ghost-button">次 ›</button><input type="text" id="codepoint-input" class="cp-input" value="E000" maxlength="4" autocomplete="off" aria-label="保存番号" /></div><div id="cp-grid" class="cp-grid"></div><p class="small-note">網掛けは「使用中の可能性」がある領域です。<br>ブラウザ判定だけで既存外字の上書きを決定しないでください。</p></div></details><p class="field-error" id="codepoint-error" role="alert" aria-live="assertive" hidden></p>
+            </div>
+            <div id="output-section" class="windows-flow"><div class="windows-flow-head">Windowsでの登録手順</div><ol class="windows-steps"><li><button type="button" id="download-bmp-btn" class="primary-button" disabled>BMPを保存</button><br><code>gaiji-XXXX.bmp</code> を保存します。</li><li>保存したBMPを <strong>ペイント</strong> で開きます。<br><code>Ctrl+A</code> → <code>Ctrl+C</code> でコピーします。</li><li><code>Win+R</code> → <code>eudcedit</code> → Enter<br><strong>外字エディター</strong> を開きます。</li><li>保存番号 <strong>U+<span id="paste-codepoint-label">E000</span></strong> を選択します。<br><code>Ctrl+V</code> で貼り付けます。</li><li>「編集」→「同じコードで保存」を実行します。</li></ol><div class="confirm-box"><label><input type="checkbox" id="gaiji-saved-check" /> 外字エディターで字形を確認し、「同じコードで保存」まで完了しました</label></div></div>
+          </div>
         </div>
+        <footer class="step-footer"><button type="button" class="secondary-button" data-go-step="3">← 字形調整へ戻る</button><span class="footer-hint">「同じコードで保存」まで完了したら、<br>住民票の字形と最終照合して作業完了です。</span></footer>
+      </section>
 
-        <div class="result-group">
-          <h3>IVS異体字(このPCのフォントで表示できるもの)</h3>
-          <div id="ivs-list" class="char-list"></div>
-          <p id="ivs-note" class="empty-note">「IVS異体字を検出」を押すと、お使いのPCのフォントで実際に表示できる異体字シーケンスを探します。</p>
-        </div>
-      </div>
-    </section>
+    </div>
 
-    <section class="panel" id="upload-section">
-      <h2>1. 画像を選択</h2>
-      <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="画像を選択">
-        <input type="file" id="image-input" accept="image/*" hidden />
-        <p>クリック / ドラッグ&amp;ドロップ / <code>Ctrl+V</code> で貼り付け</p>
-        <p class="hint-text" style="margin-top:6px;">スニッピングツールで切り取ってそのまま Ctrl+V できます。</p>
-      </div>
-      <div class="output-actions" style="margin-top:10px;">
-        <button type="button" id="paste-clipboard-btn" class="btn-secondary" hidden>クリップボードから貼り付け</button>
-      </div>
-      <p id="image-error" class="field-error" role="alert" aria-live="assertive" hidden></p>
-    </section>
-
-    <section class="panel" id="adjust-section">
-      <h2>2. 調整</h2>
-      <div class="canvas-wrap">
-        <canvas id="preview-canvas" width="64" height="64"></canvas>
-      </div>
-      <div class="controls-grid">
-        <button type="button" id="rotate-btn" class="btn-chip" disabled>↻ 90°回転</button>
-        <label class="switch-row"><input type="checkbox" id="invert-toggle" disabled /> 白黒反転</label>
-        <label class="field-inline">切り抜き
-          <select id="fit-mode-select" disabled>
-            <option value="contain">全体を収める(余白あり)</option>
-            <option value="cover">正方形に敷き詰める(切り取り)</option>
-          </select>
-        </label>
-        <label class="field-inline">2値化しきい値: <span id="threshold-value">128</span>
-          <input type="range" id="threshold-slider" min="0" max="255" value="128" disabled />
-        </label>
-        <label class="field-inline">出力サイズ
-          <select id="output-size-select">
-            <option value="64">64×64 (外字エディター標準)</option>
-            <option value="128">128×128</option>
-            <option value="256">256×256</option>
-          </select>
-        </label>
-      </div>
-    </section>
-
-    <section class="panel" id="codepoint-section">
-      <h2>3. 登録先コードポイントを選択</h2>
-      <p class="codepoint-display">登録先: U+<span id="codepoint-label">E000</span></p>
-      <div class="cp-toolbar">
-        <button type="button" id="cp-prev-btn" class="btn-chip">‹ 前</button>
-        <select id="cp-page-select"></select>
-        <button type="button" id="cp-next-btn" class="btn-chip">次 ›</button>
-        <input type="text" id="codepoint-input" value="E000" maxlength="4" autocomplete="off" style="font:inherit;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--panel-bg);color:var(--text);width:6em;" />
-      </div>
-      <div id="cp-grid" class="cp-grid"></div>
-      <p class="hint-text">網掛けのセットは既に外字が登録されている可能性があります(お使いのPCの外字フォントで判定)。空いているコードを選んでください。</p>
-      <p class="field-error" id="codepoint-error" role="alert" aria-live="assertive" hidden></p>
-    </section>
-
-    <section class="panel" id="output-section">
-      <h2>4. BMPを保存して外字エディターに貼り付け</h2>
-      <p class="hint-text" style="margin-top:0;">
-        モノクロBMPとして保存し、<strong>ペイントを経由して</strong>外字エディターに貼り付けます。
-      </p>
-      <div class="output-actions">
-        <button type="button" id="download-bmp-btn" class="btn-primary" disabled>モノクロBMPをダウンロード</button>
-      </div>
-      <div class="warn-box">
-        <strong>ブラウザから直接コピーして貼り付けると黒く潰れます。</strong>
-        ブラウザは32bitの画像しかクリップボードに置けず、外字エディターがそれを正しく解釈できないためです。
-        面倒でも、必ず一度ペイントで開いてからコピーし直してください。
-      </div>
-      <ol class="steps" style="font-size:0.9rem;">
-        <li>上のボタンでBMPを保存する</li>
-        <li>保存したBMPを<strong>ペイント</strong>で開く(右クリック→プログラムから開く→ペイント)</li>
-        <li><code>Ctrl+A</code> で全選択 → <code>Ctrl+C</code> でコピー</li>
-        <li><code>Win+R</code> で <code>eudcedit</code> と入力し<strong>外字エディター</strong>を開く</li>
-        <li>上で選んだコードポイント(<strong>U+<span id="paste-codepoint-label">E000</span></strong>)を選んで「OK」</li>
-        <li><code>Ctrl+V</code> で貼り付け、「編集」→「同じコードで保存」で保存する</li>
-      </ol>
-    </section>
-
-    <section class="panel" id="dict-section">
-      <h2>5. IME辞書登録情報</h2>
-      <div class="radio-row">
-        <label><input type="radio" name="dict-target" value="gaiji" checked /> 外字(上で選んだコードポイント)を登録する</label>
-        <label><input type="radio" name="dict-target" value="existing" /> Step 0 の検索で見つけた既存文字を登録する(外字の作成は不要)</label>
-      </div>
-      <p class="target-preview" id="target-preview">登録される語句: <span class="big" id="target-char">—</span> <span id="target-desc"></span></p>
-      <form id="dict-form">
-        <div class="field">
-          <label for="reading-input">読み(ひらがな)<span class="required">必須</span></label>
-          <input type="text" id="reading-input" autocomplete="off" />
-          <p class="field-error" id="reading-error" role="alert" aria-live="assertive" hidden></p>
-        </div>
-        <div class="field">
-          <label for="pos-select">品詞</label>
-          <select id="pos-select"></select>
-        </div>
-        <div class="field">
-          <label for="memo-input">メモ/表示名(任意・自分の管理用。ファイルには含まれません)</label>
-          <input type="text" id="memo-input" autocomplete="off" />
-        </div>
-        <p class="field-error" id="target-error" role="alert" aria-live="assertive" hidden></p>
-        <button type="submit" id="generate-dict-btn" class="btn-primary">辞書ファイルをダウンロード</button>
-      </form>
-      <p class="hint-text">IVS(異体字シーケンス)を含む語句は、MS-IMEのユーザー辞書が受け付けない場合があります。その際は基底文字のみで登録し、変換後にIVSを適用してください。</p>
-    </section>
-
-    <section class="panel disclaimer" id="instructions-section">
-      <h2>手順</h2>
-      <ol class="steps">
-        <li>Step 0 で既存のUnicode文字・異体字・IVSを検索する。目的の字が見つかればそれを登録すればよく、<strong>外字を作る必要はない</strong>(外字はこのPCでしか表示されないため、使わずに済むならその方がよい)</li>
-        <li>画像を読み込んで調整し、登録先コードポイントを選ぶ</li>
-        <li>モノクロBMPをダウンロードする</li>
-        <li>保存したBMPを<strong>ペイント</strong>で開き、<code>Ctrl+A</code> → <code>Ctrl+C</code> でコピーする</li>
-        <li><code>Win+R</code> で <code>eudcedit</code> と入力して<strong>外字エディター</strong>を開き、選んだコードポイントを指定する</li>
-        <li><code>Ctrl+V</code> で貼り付け、「編集」→「同じコードで保存」で保存する</li>
-        <li>スタートメニューの検索で「ユーザー辞書ツール」を開き、「ツール」→「テキストファイルからの登録」でダウンロードした辞書ファイル(<code>gaiji-dict-XXXX.txt</code>)を読み込む</li>
-        <li>IMEを切り替えて登録した読みを入力し、変換候補に目的の文字が表示されることを確認する</li>
-      </ol>
-      <p class="hint-text">補足1: <strong>必ずペイントを経由してください。</strong>このページから直接コピーして外字エディターに貼り付けると黒く潰れます。ブラウザは32bitの画像しかクリップボードに置けず、外字エディターがそれを正しく解釈できないためで、ツール側では回避できません。</p>
-      <p class="hint-text">補足2: 貼り付けた字が小さい・大きい場合は、出力サイズを外字エディターの編集枠に合わせて調整してください(既定の64×64が標準です)。</p>
-      <p class="hint-text">補足3: 辞書ファイルの読み込みに失敗する場合は、メモ帳で開き直して文字コードをUTF-8またはANSIに変更して保存し直すと解決することがあります。</p>
-    </section>
-
+    <section id="instructions-section" class="sr-only" aria-label="運用上の注意">行政事務標準文字の候補を住民票と照合し、通常利用できる候補はコピーして利用します。ツール内表示専用の字形や候補がない場合は外字作成へ進み、完成後に住民票と最終照合してください。</section>
   </main>
-
+  <dialog id="candidate-detail-dialog" class="candidate-detail-dialog"><div class="candidate-detail-body"><h3>候補の詳細</h3><dl id="candidate-detail-list" class="candidate-detail-list"></dl><div class="candidate-detail-footer"><button type="button" id="candidate-detail-close" class="secondary-button">閉じる</button></div></div></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
-
-<script>
+  <script>
 /* =========================================================
-   constants.js
+   constants.js / embedded data pack
    ========================================================= */
 const PUA_MIN = 0xe000;
 const PUA_MAX = 0xe757;
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
-/* 画像は容量だけでなく解像度も制限する。高圧縮の巨大画像(展開爆弾)で
-   原寸Canvasを作るとメモリを使い切るため */
-const MAX_IMAGE_DIMENSION = 8000;
-const MAX_IMAGE_PIXELS = 40 * 1000 * 1000;
-const POS_OPTIONS = ["名詞", "固有名詞", "人名", "姓", "名", "地名", "組織", "短縮よみ"];
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 4096;
+const MAX_IMAGE_PIXELS = 16 * 1000 * 1000;
+const MAX_WORKING_DIMENSION = 2048;
+const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/bmp", "image/x-ms-bmp"]);
 const CP_PAGE_SIZE = 256;
-
-const COMPARE_FONTS = [
-  { label: "游明朝", family: '"Yu Mincho","游明朝"' },
-  { label: "MS明朝", family: '"MS Mincho","ＭＳ 明朝"' },
-  { label: "BIZ UD明朝", family: '"BIZ UDMincho","BIZ UD明朝"' },
-  { label: "IPAmj明朝", family: '"IPAmjMincho","IPAmj明朝"' },
-  { label: "メイリオ", family: '"Meiryo","メイリオ"' },
-  { label: "游ゴシック", family: '"Yu Gothic","游ゴシック"' },
-  { label: "MSゴシック", family: '"MS Gothic","ＭＳ ゴシック"' },
-  { label: "SimSun(宋体)", family: '"SimSun","宋体"' },
-  { label: "SimHei(黑体)", family: '"SimHei","黑体"' },
-  { label: "MingLiU(繁体)", family: '"MingLiU","細明體"' },
-  { label: "Batang(韓)", family: '"Batang","바탕"' },
-];
-
-/* 旧字体対応表: kyujitai.js (MIT, hakatashi) の data/kyujitai.json より抽出
-   KYUJI_PAIRS は [新字体][旧字体] の2文字ずつ、KYUJI_VS は対応する
-   異体字選択子の U+E0100 からのオフセット(1桁) */
-const KYUJI_PAIRS = "万萬与與両兩並竝乗乘乱亂乳乳争爭亜亞仏佛仮假会會伝傳伴伴余餘体體価價侮侮併倂侵侵倹儉偽僞偉偉偏偏傑傑僧僧充充児兒免免党黨内內全全兼兼円圓冊册写寫冴冱処處判判券券割割剣劍剤劑剰剩励勵労勞効效勅敕勉勉勤勤勝勝勧勸勲勳包包区區医醫半半卑卑即卽巻卷参參及及収收双雙叙敍号號台臺吸吸周周啄啄喝喝啓啓喫喫嘆嘆器器嘱囑噴噴団團囲圍図圖国國圏圈圧壓坪坪城城尭堯塚塚塀塀堕墮塁壘墜墜墳墳塩鹽増增墨墨壊壞壌壤壮壯壱壹売賣声聲変變夢夢契契奥奧奨奬姫姬媛媛婿壻嫌嫌嬢孃学學孤孤実實宝寶害害宵宵寛寬寝寢寿壽対對専專将將尋尋尊尊導導当當尚尙単單巣巢営營厳嚴尽盡届屆属屬層層岳嶽峡峽崩崩巌巖巡巡巨巨巽巽帯帶帰歸帽帽幣幣平平広廣庁廳廊廊廃廢廉廉弊弊弐貳弥彌弾彈彦彥径徑従從徴徵徳德応應忍忍急急恒恆悔悔恵惠悩惱恋戀悪惡悦悅惨慘情情愉愉慎愼慨慨憎憎憤憤懐懷懲懲成成戦戰戯戲戸戶戻戾所所房房扇扇扉扉払拂扱扱抜拔択擇拝拜担擔拠據拡擴拒拒挟挾挿插捜搜挙擧掲揭捨捨掃掃援援揺搖摂攝撃擊敏敏教敎数數断斷既既旧舊昼晝晋晉晩晚暑暑暁曉暦曆晴晴暖暖曙曙朗朗来來条條枢樞栄榮梅梅桟棧桜櫻検檢棚棚楽樂楼樓槙槇様樣概槪構構横橫権權欄欄欠缺欧歐歓歡歩步歴歷残殘殴毆殺殺殻殼毎每気氣没沒沢澤泡泡海海浄淨浅淺涙淚浜濱浮浮渉涉渇渴渚渚渓溪渋澁済濟清淸温溫満滿港港湿濕湾灣滞滯漢漢溝溝滝瀧潜潛瀬瀨灰灰灯燈炉爐為爲点點煮煮焼燒煙煙爵爵犠犧状狀狭狹独獨猪猪猟獵献獻猶猶獣獸獲獲琢琢瑶瑤瓶甁産產画畫異異畳疊痴癡癒癒発發益益盗盜県縣真眞瞬瞬矩矩研硏砕碎硝硝碑碑社社祈祈祉祉祐祐祖祖祝祝神神祥祥禎禎禍禍福福礼禮禄祿禅禪秘祕称稱税稅程程穀穀稲稻穂穗穏穩穫穫穣穰突突窃竊節節粋粹精精糸絲約約経經終終絵繪続續継繼緒緖緑綠練練緯緯編編総總縄繩縁緣繁繁縦縱繊纖繭繭缶罐署署羽羽翁翁習習翼翼翻翻者者聡聰聴聽粛肅肖肖肩肩胞胞胆膽脱脫脳腦臓臟臭臭舎舍舗舖舞舞艶艷芸藝茎莖荘莊著著蔵藏薫薰薬藥蘭蘭虚虛虜虜虫蟲蚕蠶蛍螢蛮蠻衛衞装裝褐褐褒襃要要覆覆覇霸視視覚覺覧覽観觀触觸訳譯証證評評誠誠誕誕請請調調誉譽読讀謁謁諸諸謡謠謹謹謙謙講講謄謄譲讓豊豐賓賓賛贊贈贈赳赳践踐転轉軽輕辞辭込込迅迅迎迎近近返返迫迫迭迭述述迷迷追追退退送送逃逃逆逆透透逐逐途途通通逝逝速速造造連連逮逮週週進進遂遂遇遇遊遊運運遍遍過過道道達達違違遠遠遣遣適適遭遭遮遮遵遵遷遷選選遺遺避避還還辺邊逓遞逸逸遥遙遅遲郎郞都都郷鄕酌酌酔醉醸釀釈釋釣釣鉄鐵鉱鑛銭錢鋭銳鋳鑄錬鍊録錄鎮鎭関關闘鬪降降陥陷隆隆険險随隨隠隱隣鄰隷隸雅雅雑雜難難霊靈青靑静靜響響頼賴頻頻顔顏類類顕顯飢飢飯飯飲飮飼飼飾飾餅餠餓餓館館飽飽駅驛駆驅騒騷騰騰験驗髄髓髪髮竜龍鶏鷄麟麟麦麥黄黃黒黑黙默黛黛斉齊斎齋歯齒齢齡亀龜逢逢芦芦飴飴溢溢茨茨鰯鰯淫淫迂迂厩厩噂噂餌餌襖襖迦迦牙牙廻廻恢恢晦晦蟹蟹葛葛鞄鞄釜釜翰翰翫翫徽徽祇祇汲汲灸灸笈笈卿卿饗饗僅僅喰喰櫛櫛屑屑粂粂祁祁隙隙倦倦捲捲牽牽鍵鍵諺諺巷巷梗梗膏膏鵠鵠甑甑叉叉榊榊薩薩鯖鯖錆錆鮫鮫餐餐杓杓灼灼酋酋楯楯薯薯藷藷哨哨鞘鞘杖杖蝕蝕訊訊逗逗摺摺撰撰煎煎煽煽穿穿箭箭詮詮噌噌遡遡揃揃遜遜腿腿蛸蛸辿辿樽樽歎歎註註瀦瀦捗捗槌槌鎚鎚辻辻挺挺鄭鄭擢擢溺溺兎兎堵堵屠屠賭賭瀞瀞遁遁謎謎灘灘楢楢禰禰牌牌這這秤秤駁駁箸箸叛叛挽挽誹誹樋樋稗稗逼逼謬謬豹豹廟廟瀕瀕斧斧蔽蔽瞥瞥蔑蔑篇篇娩娩鞭鞭庖庖蓬蓬鱒鱒迄迄儲儲餅餅籾籾爺爺鑓鑓愈愈猷猷漣漣煉煉簾簾榔榔屢屢冤冤叟叟咬咬嘲嘲囀囀徘徘扁扁棘棘橙橙狡狡甕甕甦甦疼疼祟祟竈竈筵筵篝篝腱腱艘艘芒芒虔虔蜃蜃蠅蠅訝訝靄靄靱靱騙騙鴉鴉史史交交朕朕告吿寧寧邦邦拳拳機機空空竟竟記記億億次次前前化化紀紀延延屡屢湾灣幾幾虐虐誤誤亘亙凜凛刃刄呉吳回囘妊姙娯娛強强携攜旅旅曽曾歳歲粘黏糾糺絶絕萌萠説說祷禱鎌鐮閲閱麺麵祢禰";
-const KYUJI_VS = "01000010000001000101003121201001100000110000000001120100100001000001011120103000000100110012000000000021000101003002100000012100000000010010113001110010310000000101100000000110103031000011110110000010000011100000003000010001130200000010000010000000000000000100000100000000010001100010000001200000002020000020010100131001010101000101000000100002010100010100000031000100300023211000111000010020100100010000000010110100000011211000000111000013000011111111111121111111101112111111121131111111100100000300010000000000301000002000001000001001101110001000002000010000011111111513111121011111111112111011111101111013111111111111111111111121111111111111111111111111112111111111111111111111111111111112111200210131111100121101111111122021111100511122211142001110000000001010000000001";
-
-/* kyujitai に含まれない人名・戸籍で頻出の異体字グループ(手書き補完) */
-const VARIANT_GROUPS = [
-  "崎﨑嵜㟢", "高髙", "富冨", "島嶋嶌", "柳栁", "桧檜", "吉𠮷", "村邨",
-  "峰峯", "舘館", "沖冲", "晃晄", "凛凜", "鴎鷗", "桑桒", "斎齋", "辺邉",
-  "浜濵", "剣劒劔釼", "亘亙", "涼凉", "芦蘆", "藪薮籔", "竈竃", "籠篭",
-  "曽曾", "瀬瀨",
-];
-
-/* 正規分解を持たない互換漢字(14字)のうち、基底文字が確実なもの */
-const COMPAT_EXTRA = [["﨑", "崎"], ["﨔", "欅"], ["﨟", "臘"]];
+const ADMIN_CHAR_DATA_PACK = {"format":3,"mode":"external-web","source":{"label":"行政事務標準文字 実データ","mjCount":58862,"gjCount":9420,"total":68282,"mjList":"mji.00602.xlsx","mjListLicense":"CC BY-SA 2.1 Japan / 原著作物 IPA","mjFont":"IPAmj明朝 Ver.006.01","mjFontLicense":"IPA Font License Agreement v1.0","gjFont":"追加文字行政事務標準明朝 2026-08-18","gjFontLicense":"SIL Open Font License 1.1","mjListSha256":"f79075bf006b66c5e57a6df60503c5a01679cabbcea2f124eb3758593cf6fd3f","mjFontSha256":"a3e84f495f3c388db7a1473bf1985c1c076d0c814100f10a027ca6853eb1e8cb","gjZipSha256":"b016e08a994158adfe5a89cd7a3e893986fb10e24b1239a0e971ceaf74583ee2","missingMjFontGlyphs":["MJ003719","MJ006065","MJ014004","MJ029825","MJ029893","MJ033216","MJ035887","MJ037229","MJ037904","MJ037910","MJ040282","MJ040579","MJ041326","MJ041470","MJ042077","MJ043219","MJ053026","MJ055353","MJ059043"],"regression":{"query":"詰","target":"MJ024527","rank":1}},"recordCount":68282,"featureDim":168,"recordsUrl":"./gaiji-maker-assets/records.pack","featuresUrl":"./gaiji-maker-assets/features.pack","relationsUrl":"./gaiji-maker-assets/relations.pack","fonts":{"mj":{"format":"truetype","url":"./gaiji-maker-assets/ipamjm.pack"},"gj":{"format":"woff2","url":"./gaiji-maker-assets/acgjm.pack"}}};
 
 /* =========================================================
    state.js
    ========================================================= */
 const appState = {
-  originalImage: null,
+  sourceCanvas: null,
+  sourceOrigin: "",
   rotation: 0,
   fitMode: "contain",
   threshold: 128,
@@ -815,8 +866,10 @@ const appState = {
   codepoint: 0xe000,
   cpPage: 0,
   searchChar: "",
-  selectedExisting: "",
-  dictTarget: "gaiji",
+  searchCompleted: false,
+  lastCopiedChar: "",
+  currentStep: 1,
+  gaijiSaved: false,
 };
 
 /* =========================================================
@@ -826,6 +879,7 @@ const dropZoneEl = document.getElementById("drop-zone");
 const imageInputEl = document.getElementById("image-input");
 const imageErrorEl = document.getElementById("image-error");
 const pasteClipboardBtnEl = document.getElementById("paste-clipboard-btn");
+const clearImageBtnEl = document.getElementById("clear-image-btn");
 const previewCanvasEl = document.getElementById("preview-canvas");
 const rotateBtnEl = document.getElementById("rotate-btn");
 const invertToggleEl = document.getElementById("invert-toggle");
@@ -842,192 +896,351 @@ const cpPageSelectEl = document.getElementById("cp-page-select");
 const cpPrevBtnEl = document.getElementById("cp-prev-btn");
 const cpNextBtnEl = document.getElementById("cp-next-btn");
 const downloadBmpBtnEl = document.getElementById("download-bmp-btn");
-const dictFormEl = document.getElementById("dict-form");
-const readingInputEl = document.getElementById("reading-input");
-const readingErrorEl = document.getElementById("reading-error");
-const posSelectEl = document.getElementById("pos-select");
-const targetErrorEl = document.getElementById("target-error");
-const targetCharEl = document.getElementById("target-char");
-const targetDescEl = document.getElementById("target-desc");
 const searchCharInputEl = document.getElementById("search-char-input");
 const searchResultsEl = document.getElementById("search-results");
-const fontCompareGridEl = document.getElementById("font-compare-grid");
-const variantListEl = document.getElementById("variant-list");
-const variantEmptyEl = document.getElementById("variant-empty");
-const ivsListEl = document.getElementById("ivs-list");
-const ivsNoteEl = document.getElementById("ivs-note");
-const ivsScanBtnEl = document.getElementById("ivs-scan-btn");
+const relatedListEl = document.getElementById("related-list");
+const relatedEmptyEl = document.getElementById("related-empty");
+const similarListEl = document.getElementById("similar-list");
+const similarEmptyEl = document.getElementById("similar-empty");
+const searchEmptyStateEl = document.getElementById("search-empty-state");
+const resultSummaryEl = document.getElementById("result-summary");
 const manualCopyRowEl = document.getElementById("manual-copy-row");
 const manualCopyInputEl = document.getElementById("manual-copy-input");
+const datasetCardEl = document.getElementById("dataset-card");
+const datasetTitleEl = document.getElementById("dataset-title");
+const datasetCountEl = document.getElementById("dataset-count");
+const datasetStatusEl = document.getElementById("dataset-status");
+const datasetBadgeEl = document.getElementById("dataset-badge");
+const candidateDetailDialogEl = document.getElementById("candidate-detail-dialog");
+const candidateDetailListEl = document.getElementById("candidate-detail-list");
+const candidateDetailCloseEl = document.getElementById("candidate-detail-close");
 const toastEl = document.getElementById("toast");
 
 /* =========================================================
-   variantData.js  — 異体字の索引を組み立てる
+   characterRepository.js — 配布HTML内の行政事務標準文字データ
    ========================================================= */
-const variantIndex = new Map();
-
-function linkVariants(a, b) {
-  if (a === b) return;
-  if (!variantIndex.has(a)) variantIndex.set(a, new Set());
-  if (!variantIndex.has(b)) variantIndex.set(b, new Set());
-  variantIndex.get(a).add(b);
-  variantIndex.get(b).add(a);
+function sequenceKey(text) {
+  return Array.from(text || "").map(ch => ch.codePointAt(0).toString(16).toUpperCase()).join("-");
 }
 
-/* 互換漢字は normalize("NFD") から実行時に導出する(データ埋め込み不要) */
-function buildCompatIndex() {
-  const ranges = [[0xf900, 0xfad9], [0x2f800, 0x2fa1d]];
-  for (const [start, end] of ranges) {
-    for (let cp = start; cp <= end; cp++) {
-      const ch = String.fromCodePoint(cp);
-      const nfd = ch.normalize("NFD");
-      if (nfd !== ch && Array.from(nfd).length === 1) linkVariants(nfd, ch);
+function firstGrapheme(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  if (typeof Intl !== "undefined" && Intl.Segmenter) {
+    const it = new Intl.Segmenter("ja", { granularity: "grapheme" }).segment(text)[Symbol.iterator]();
+    const first = it.next();
+    return first.done ? "" : first.value.segment;
+  }
+  const cps = Array.from(text);
+  if (cps.length >= 2) {
+    const cp = cps[1].codePointAt(0);
+    if (cp >= 0xE0100 && cp <= 0xE01EF) return cps[0] + cps[1];
+  }
+  return cps[0] || "";
+}
+
+function b64Bytes(b64) {
+  const raw = atob(b64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+async function gunzipBytes(b64) {
+  if (!b64) return new Uint8Array();
+  if (typeof DecompressionStream === "undefined") throw new Error("このブラウザは内蔵文字データの展開に対応していません。Microsoft Edgeの更新版を使用してください。");
+  const compressed = b64Bytes(b64);
+  const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function gunzipJson(b64) {
+  const bytes = await gunzipBytes(b64);
+  return JSON.parse(new TextDecoder("utf-8").decode(bytes));
+}
+
+async function fetchGzipAsset(url) {
+  if (!url) throw new Error("文字データのURLがありません。");
+  const response = await fetch(url, { cache: "force-cache", credentials: "same-origin" });
+  if (!response.ok) throw new Error(`文字データを取得できませんでした (${response.status})`);
+  if (typeof DecompressionStream === "undefined") throw new Error("このブラウザは文字データの展開に対応していません。OS・ブラウザを更新してください。");
+  const stream = response.body.pipeThrough(new DecompressionStream("gzip"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+const CharacterRepository = {
+  ready: false,
+  mode: "",
+  records: [],
+  features: new Uint8Array(),
+  featureDim: 0,
+  relations: {},
+  seqMap: new Map(),
+  baseMap: new Map(),
+  source: {},
+  async init(pack) {
+    this.mode = pack.mode || "full";
+    this.featureDim = Number(pack.featureDim || 0);
+    this.source = pack.source || {};
+    if (this.mode === "seed") {
+      this.records = pack.records || [];
+      this.features = Uint8Array.from(pack.features || []);
+      this.relations = pack.relations || {};
+    } else if (this.mode === "external-web") {
+      const [recordsBytes, featuresBytes, relationsBytes] = await Promise.all([
+        fetchGzipAsset(pack.recordsUrl),
+        fetchGzipAsset(pack.featuresUrl),
+        fetchGzipAsset(pack.relationsUrl),
+      ]);
+      this.records = JSON.parse(new TextDecoder("utf-8").decode(recordsBytes));
+      this.features = featuresBytes;
+      this.relations = JSON.parse(new TextDecoder("utf-8").decode(relationsBytes)) || {};
+    } else {
+      const [records, features, relations] = await Promise.all([
+        gunzipJson(pack.recordsGz),
+        gunzipBytes(pack.featuresGz),
+        gunzipJson(pack.relationsGz),
+      ]);
+      this.records = records;
+      this.features = features;
+      this.relations = relations || {};
     }
-  }
-  for (const [compat, base] of COMPAT_EXTRA) linkVariants(base, compat);
-}
-
-function buildKyujiIndex() {
-  for (let i = 0; i * 2 + 1 < KYUJI_PAIRS.length; i++) {
-    const shin = KYUJI_PAIRS[i * 2];
-    const kyu = KYUJI_PAIRS[i * 2 + 1];
-    linkVariants(shin, kyu);
-  }
-}
-
-function buildGroupIndex() {
-  for (const group of VARIANT_GROUPS) {
-    const chars = Array.from(group);
-    for (let i = 0; i < chars.length; i++) {
-      for (let j = i + 1; j < chars.length; j++) linkVariants(chars[i], chars[j]);
-    }
-  }
-}
-
-function lookupVariants(ch) {
-  const set = variantIndex.get(ch);
-  return set ? Array.from(set) : [];
-}
+    this.records.forEach((r, i) => {
+      r.i = Number.isInteger(r.i) ? r.i : i;
+      if (r.seq) {
+        const key = sequenceKey(r.seq);
+        if (!this.seqMap.has(key)) this.seqMap.set(key, []);
+        this.seqMap.get(key).push(r.i);
+      }
+      if (r.base) {
+        const key = sequenceKey(r.base);
+        if (!this.baseMap.has(key)) this.baseMap.set(key, []);
+        this.baseMap.get(key).push(r.i);
+      }
+    });
+    this.ready = true;
+  },
+  record(index) { return this.records[index] || null; },
+  exact(text) { return this.seqMap.get(sequenceKey(text)) || []; },
+  sameBase(text) {
+    const b = Array.from(text || "")[0] || "";
+    return this.baseMap.get(sequenceKey(b)) || [];
+  },
+};
 
 /* =========================================================
-   fontDetect.js
+   glyphProvider.js — PCフォントに依存しない候補描画
    ========================================================= */
-const fontAvailabilityCache = new Map();
-
-/* 日本語フォントは全角送り幅がどれも同一なので measureText の幅比較では判定できない。
-   実際に描画したピクセルを比較し、3つの総称フォールバックすべてと異なる場合に導入済みとみなす。 */
-function isFontAvailable(family) {
-  if (fontAvailabilityCache.has(family)) return fontAvailabilityCache.get(family);
-  const sample = "永";
-  let available = true;
-  for (const base of ["monospace", "serif", "sans-serif"]) {
-    const baseHash = hashGlyph(sample, base).hash;
-    const testHash = hashGlyph(sample, family + "," + base).hash;
-    if (testHash === baseHash) {
-      available = false;
-      break;
-    }
+const EmbeddedFontService = {
+  loaded:new Set(),
+  async init(source){
+    const key = source === "GJ" ? "gj" : "mj";
+    if (this.loaded.has(key)) return;
+    const spec=(ADMIN_CHAR_DATA_PACK.fonts||{})[key];
+    if (!spec) throw new Error("表示用フォント情報がありません。");
+    const name=key === "gj" ? "AdminGJ" : "AdminMJ";
+    let bytes;
+    if (spec.url) bytes=await fetchGzipAsset(spec.url);
+    else if (spec.gz) bytes=await gunzipBytes(spec.gz);
+    else throw new Error("表示用フォントを取得できません。");
+    const exact=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
+    const face=new FontFace(name,exact); await face.load(); document.fonts.add(face); this.loaded.add(key);
   }
-  fontAvailabilityCache.set(family, available);
-  return available;
-}
+};
+
+const GlyphProvider = {
+  displayText(record){if(!record||record.impl===false)return "";if(record.src==="GJ"&&record.pup)return String.fromCodePoint(Number(record.pup));return record.seq||"";},
+  fontFamily(record){return record&&record.src==="GJ"?"AdminGJ":"AdminMJ";},
+  async draw(canvas,record,size=76){await EmbeddedFontService.init(record?.src);const t=this.displayText(record);if(!t)return false;const ctx=canvas.getContext("2d");canvas.width=size;canvas.height=size;ctx.clearRect(0,0,size,size);ctx.save();ctx.fillStyle="#111";ctx.textAlign="center";ctx.textBaseline="middle";ctx.font=`${Math.floor(size*.78)}px "${this.fontFamily(record)}"`;ctx.fillText(t,size/2,size/2+1);ctx.restore();return true;},
+  async toSourceCanvas(record,size=512){await EmbeddedFontService.init(record?.src);const t=this.displayText(record);if(!t)return null;const out=document.createElement("canvas");out.width=size;out.height=size;const ctx=out.getContext("2d");ctx.fillStyle="#000";ctx.textAlign="center";ctx.textBaseline="middle";ctx.font=`${Math.floor(size*.80)}px "${this.fontFamily(record)}"`;ctx.fillText(t,size/2,size/2);return out;}
+};
 
 /* =========================================================
-   ivsDetect.js — 実際に字形が変わるIVSだけを実フォントから探す
+   searchEngine.js — 関係字 + 全文字の視覚類似検索
+   類似走査はWeb Workerへ退避し、約7万字でもUIスレッドを塞がない。
    ========================================================= */
-const IVS_CANVAS_SIZE = 48;
-const ivsCanvas = document.createElement("canvas");
-ivsCanvas.width = IVS_CANVAS_SIZE;
-ivsCanvas.height = IVS_CANVAS_SIZE;
-const ivsCtx = ivsCanvas.getContext("2d", { willReadFrequently: true });
-
-function hashGlyph(text, family) {
-  ivsCtx.clearRect(0, 0, IVS_CANVAS_SIZE, IVS_CANVAS_SIZE);
-  ivsCtx.fillStyle = "#000";
-  ivsCtx.textBaseline = "middle";
-  ivsCtx.textAlign = "center";
-  ivsCtx.font = "36px " + family;
-  ivsCtx.fillText(text, IVS_CANVAS_SIZE / 2, IVS_CANVAS_SIZE / 2);
-  const data = ivsCtx.getImageData(0, 0, IVS_CANVAS_SIZE, IVS_CANVAS_SIZE).data;
-  let h = 2166136261;
-  let ink = 0;
-  for (let i = 3; i < data.length; i += 4) {
-    const v = data[i];
-    if (v > 8) ink++;
-    h ^= v;
-    h = Math.imul(h, 16777619);
+const SimilarityService = {
+  worker: null,
+  pending: new Map(),
+  nextId: 1,
+  init() {
+    if (typeof Worker === "undefined" || !CharacterRepository.featureDim || !CharacterRepository.features.length) return;
+    const source = `
+      let features = null, dim = 0, count = 0;
+      function distToQueries(index, queryIndices) {
+        const off = index * dim;
+        let best = Number.POSITIVE_INFINITY;
+        for (const q of queryIndices) {
+          const qoff = q * dim;
+          let d = 0;
+          for (let j = 0; j < dim; j++) {
+            const x = features[qoff + j] - features[off + j];
+            d += x * x;
+          }
+          if (d < best) best = d;
+        }
+        return best;
+      }
+      onmessage = (ev) => {
+        const m = ev.data || {};
+        if (m.type === 'init') {
+          features = new Uint8Array(m.features); dim = m.dim; count = m.count; return;
+        }
+        if (m.type !== 'rank' || !features) return;
+        const excluded = new Set(m.excluded || []);
+        const queryIndices = m.queryIndices || [];
+        const topK = m.topK || 24;
+        const scores = [];
+        for (let i = 0; i < count; i++) {
+          if (excluded.has(i) || queryIndices.includes(i)) continue;
+          const d = distToQueries(i, queryIndices);
+          if (scores.length < topK) {
+            scores.push([d, i]);
+            if (scores.length === topK) scores.sort((a,b) => b[0] - a[0]);
+          } else if (d < scores[0][0]) {
+            scores[0] = [d, i];
+            let k = 0;
+            while (k + 1 < scores.length && scores[k][0] < scores[k + 1][0]) {
+              const t = scores[k]; scores[k] = scores[k + 1]; scores[k + 1] = t; k++;
+            }
+          }
+        }
+        scores.sort((a,b) => a[0] - b[0]);
+        postMessage({ id: m.id, scores });
+      };
+    `;
+    try {
+      const url = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));
+      this.worker = new Worker(url);
+      URL.revokeObjectURL(url);
+      this.worker.onmessage = (ev) => {
+        const p = this.pending.get(ev.data.id);
+        if (!p) return;
+        this.pending.delete(ev.data.id);
+        p.resolve(ev.data.scores || []);
+      };
+      this.worker.onerror = () => {
+        for (const p of this.pending.values()) p.reject(new Error("類似検索ワーカーでエラーが発生しました。"));
+        this.pending.clear(); this.worker = null;
+      };
+      const copy = CharacterRepository.features.buffer.slice(0);
+      this.worker.postMessage({ type: "init", features: copy, dim: CharacterRepository.featureDim, count: CharacterRepository.records.length }, [copy]);
+    } catch (_) { this.worker = null; }
+  },
+  rank(queryIndices, excluded, topK) {
+    if (!this.worker) return Promise.resolve(null);
+    const id = this.nextId++;
+    return new Promise((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+      this.worker.postMessage({ type: "rank", id, queryIndices, excluded: Array.from(excluded), topK });
+    });
   }
-  return { hash: h >>> 0, ink };
-}
+};
 
-/* 導入判定でフォントを除外しない。未導入ならフォールバックで描画されるだけで、
-   その場合は基底文字と「基底＋異体字選択子」が同一に描画されるため誤検出にならない。
-   判定を誤っても検出漏れが起きないようにするのが目的。 */
-function detectIvsVariants(baseChar) {
-  const found = [];
-  const seenGlyphs = new Set();
-  for (const font of COMPARE_FONTS) {
-    const baseInfo = hashGlyph(baseChar, font.family);
-    if (baseInfo.ink === 0) continue;
-    for (let vs = 0xe0100; vs <= 0xe01ef; vs++) {
-      const seq = baseChar + String.fromCodePoint(vs);
-      const info = hashGlyph(seq, font.family);
-      if (info.ink === 0) continue;
-      if (info.hash === baseInfo.hash) continue;
-      // 同じ字形が複数フォント経由で重複しないよう、字形ハッシュ全体で重複排除する
-      if (seenGlyphs.has(info.hash)) continue;
-      seenGlyphs.add(info.hash);
-      found.push({ seq: seq, vs: vs, font: font });
+const SearchEngine = {
+  topK: 24,
+  direct(query) {
+    const exact = new Set(CharacterRepository.exact(query));
+    const found = new Set();
+    for (const i of CharacterRepository.sameBase(query)) if (!exact.has(i)) found.add(i);
+    for (const q of exact) {
+      for (const r of (CharacterRepository.relations[String(q)] || [])) if (!exact.has(r)) found.add(r);
     }
+    return Array.from(found).map(i => CharacterRepository.record(i)).filter(Boolean);
+  },
+  similarSync(queryIndices, excluded = new Set()) {
+    const dim = CharacterRepository.featureDim;
+    if (!queryIndices.length || !dim) return [];
+    const f = CharacterRepository.features;
+    const scores = [];
+    for (let i = 0; i < CharacterRepository.records.length; i++) {
+      if (excluded.has(i) || queryIndices.includes(i)) continue;
+      const off = i * dim;
+      if (off + dim > f.length) break;
+      let best = Number.POSITIVE_INFINITY;
+      for (const q of queryIndices) {
+        const qoff = q * dim;
+        let d = 0;
+        for (let j = 0; j < dim; j++) {
+          const x = f[qoff + j] - f[off + j]; d += x * x;
+        }
+        if (d < best) best = d;
+      }
+      if (scores.length < this.topK) {
+        scores.push([best, i]);
+        if (scores.length === this.topK) scores.sort((a,b) => b[0] - a[0]);
+      } else if (best < scores[0][0]) {
+        scores[0] = [best, i];
+        let k = 0;
+        while (k + 1 < scores.length && scores[k][0] < scores[k + 1][0]) {
+          [scores[k], scores[k + 1]] = [scores[k + 1], scores[k]]; k++;
+        }
+      }
+    }
+    scores.sort((a,b) => a[0] - b[0]);
+    return scores;
+  },
+  async similar(query, excluded = new Set()) {
+    let exact = CharacterRepository.exact(query);
+    if (!exact.length) exact = CharacterRepository.sameBase(query);
+    if (!exact.length || !CharacterRepository.featureDim) return [];
+    let scores = await SimilarityService.rank(exact, excluded, this.topK);
+    if (!scores) scores = this.similarSync(exact, excluded);
+    return scores.map(([distance, i], rank) => ({ record: CharacterRepository.record(i), distance, rank: rank + 1 }));
+  },
+  async search(query) {
+    const direct = this.direct(query);
+    const excluded = new Set(direct.map(r => r.i));
+    (CharacterRepository.exact(query).length ? CharacterRepository.exact(query) : CharacterRepository.sameBase(query)).forEach(i => excluded.add(i));
+    return { direct, similar: await this.similar(query, excluded) };
   }
-  return found;
-}
+};
 
 /* =========================================================
    imageProcessing.js
    ========================================================= */
 function loadImageFile(file) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        /* 容量が小さくても解像度が巨大な画像(展開爆弾)があるため、
-           原寸のcanvasを作る前に画素数で弾く */
-        const w = img.naturalWidth, h = img.naturalHeight;
-        if (w === 0 || h === 0) {
-          reject(new Error("画像のサイズを取得できませんでした。"));
-          return;
-        }
-        if (w > MAX_IMAGE_DIMENSION || h > MAX_IMAGE_DIMENSION) {
-          reject(new Error(
-            "画像の解像度が大きすぎます(" + w + "×" + h + " / 上限 " +
-            MAX_IMAGE_DIMENSION + "px)。縮小してからお試しください。"
-          ));
-          return;
-        }
-        if (w * h > MAX_IMAGE_PIXELS) {
-          reject(new Error(
-            "画像の総画素数が多すぎます(" + (w * h).toLocaleString() + " / 上限 " +
-            MAX_IMAGE_PIXELS.toLocaleString() + ")。縮小してからお試しください。"
-          ));
-          return;
-        }
-        resolve(img);
-      };
-      img.onerror = () => reject(new Error("画像の読み込みに失敗しました。"));
-      img.src = reader.result;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    const cleanup = () => URL.revokeObjectURL(url);
+    img.onload = () => {
+      const w = img.naturalWidth, h = img.naturalHeight;
+      if (w === 0 || h === 0) {
+        cleanup();
+        reject(new Error("画像のサイズを取得できませんでした。"));
+        return;
+      }
+      if (w > MAX_IMAGE_DIMENSION || h > MAX_IMAGE_DIMENSION || w * h > MAX_IMAGE_PIXELS) {
+        cleanup();
+        reject(new Error(
+          "画像の解像度が大きすぎます(" + w + "×" + h + ")。対象の1文字だけを切り取ってから読み込んでください。"
+        ));
+        return;
+      }
+      cleanup();
+      resolve(img);
     };
-    reader.onerror = () => reject(new Error("ファイルの読み込みに失敗しました。"));
-    reader.readAsDataURL(file);
+    img.onerror = () => {
+      cleanup();
+      reject(new Error("画像の読み込みに失敗しました。対応形式は PNG / JPEG / WebP / BMP です。"));
+    };
+    img.decoding = "async";
+    img.src = url;
   });
 }
 
 function drawSourceToCanvas(img) {
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  const scale = Math.min(1, MAX_WORKING_DIMENSION / Math.max(w, h));
   const c = document.createElement("canvas");
-  c.width = img.naturalWidth;
-  c.height = img.naturalHeight;
-  c.getContext("2d").drawImage(img, 0, 0);
+  c.width = Math.max(1, Math.round(w * scale));
+  c.height = Math.max(1, Math.round(h * scale));
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, c.width, c.height);
   return c;
 }
 
@@ -1087,10 +1300,9 @@ function applyThresholdInvert(canvas, threshold, invert) {
 }
 
 function renderPreview() {
-  if (!appState.originalImage) return;
+  if (!appState.sourceCanvas) return;
   const size = appState.outputSize;
-  const src = drawSourceToCanvas(appState.originalImage);
-  const rotated = rotateCanvas(src, appState.rotation);
+  const rotated = rotateCanvas(appState.sourceCanvas, appState.rotation);
   const squared = fitToSquare(rotated, size, appState.fitMode);
   previewCanvasEl.width = size;
   previewCanvasEl.height = size;
@@ -1104,20 +1316,18 @@ function renderPreview() {
    validation.js
    ========================================================= */
 function validateImageFile(file) {
-  if (!file.type.startsWith("image/")) {
-    return { valid: false, message: "画像ファイルを選択してください。" };
+  if (!file || !ALLOWED_IMAGE_TYPES.has((file.type || "").toLowerCase())) {
+    return { valid: false, message: "PNG / JPEG / WebP / BMP の画像ファイルを選択してください。SVG・GIF等は安全性と一貫した処理のため対象外です。" };
+  }
+  if (file.size <= 0) {
+    return { valid: false, message: "空の画像ファイルは読み込めません。" };
   }
   if (file.size > MAX_FILE_SIZE) {
-    return { valid: false, message: "ファイルサイズが大きすぎます(20MBまで)。" };
+    return { valid: false, message: "ファイルサイズが大きすぎます(10MBまで)。対象の1文字だけを切り取ってください。" };
   }
   return { valid: true };
 }
 
-function validateReading(value) {
-  if (!value) return { valid: false, message: "読み(ひらがな)を入力してください。" };
-  if (!/^[ぁ-ゖー]+$/.test(value)) return { valid: false, message: "ひらがなで入力してください。" };
-  return { valid: true };
-}
 
 function validateCodePoint(value) {
   if (!/^[0-9A-Fa-f]{4}$/.test(value)) {
@@ -1136,7 +1346,7 @@ function validateCodePoint(value) {
 /* クリップボードからの画像取り込み(スニッピングツール等)に使う。
    画像の書き出しは行わない — 外字エディターへ直接貼ると黒潰れするため、
    出力は必ずBMPファイル経由にしている。 */
-const clipboardReadSupported = !!(navigator.clipboard && navigator.clipboard.read);
+const clipboardReadSupported = !!(window.isSecureContext && navigator.clipboard && navigator.clipboard.read);
 
 async function copyTextWithFallback(text) {
   try {
@@ -1227,188 +1437,145 @@ function buildMonochromeBmp(grid, size) {
 }
 
 /* =========================================================
-   dictFile.js
-   ========================================================= */
-function buildDictLine(reading, word, pos) {
-  return reading + "\t" + word + "\t" + pos + "\r\n";
-}
-
-/* TextEncoder は UTF-8 専用なので UTF-16LE を手組みする。
-   charCodeAt はコードユニット単位なのでサロゲートペア(IVS選択子)も正しく出力される。 */
-function encodeUtf16LeWithBom(text) {
-  const units = [0xfeff];
-  for (let i = 0; i < text.length; i++) units.push(text.charCodeAt(i));
-  const buf = new ArrayBuffer(units.length * 2);
-  const view = new DataView(buf);
-  units.forEach((u, i) => view.setUint16(i * 2, u, true));
-  return new Blob([buf], { type: "text/plain" });
-}
-
-/* =========================================================
    searchUi.js
    ========================================================= */
-function cpLabel(ch) {
-  return Array.from(ch)
-    .map((c) => "U+" + c.codePointAt(0).toString(16).toUpperCase().padStart(4, "0"))
-    .join(" ");
+function cpLabel(text) {
+  return Array.from(text || "").map(ch => "U+" + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")).join(" + ");
 }
 
-/* チップは「コピー」と「登録対象」の2操作を持つ。ボタンの入れ子は不正なHTMLに
-   なるため、外枠は div にして中にボタンを2つ置く。 */
-function makeCharChip(ch, onSelect) {
-  const wrap = document.createElement("div");
-  wrap.className = "char-chip";
-
-  const big = document.createElement("span");
-  big.className = "big";
-  big.textContent = ch;
-
-  const cp = document.createElement("span");
-  cp.className = "cp";
-  cp.textContent = cpLabel(ch);
-
-  const actions = document.createElement("div");
-  actions.className = "chip-actions";
-
-  const copyBtn = document.createElement("button");
-  copyBtn.type = "button";
-  copyBtn.className = "chip-btn";
-  copyBtn.textContent = "コピー";
-  copyBtn.addEventListener("click", async () => {
-    const ok = await copyTextWithFallback(ch);
-    const isSequence = Array.from(ch).length > 1;
-    if (ok) {
-      manualCopyRowEl.hidden = true;
-      showToast(
-        "「" + ch + "」をコピーしました。" +
-        (isSequence ? "(異体字シーケンス " + cpLabel(ch) + " の2文字分)" : "")
-      );
-    } else {
-      showToast("自動コピーできませんでした。下の欄から手動でコピーしてください。", true);
-      showManualCopyFallback(ch);
-    }
-  });
-
-  const useBtn = document.createElement("button");
-  useBtn.type = "button";
-  useBtn.className = "chip-btn";
-  useBtn.textContent = "登録対象";
-  useBtn.addEventListener("click", () => onSelect(ch, wrap));
-
-  actions.appendChild(copyBtn);
-  actions.appendChild(useBtn);
-  wrap.appendChild(big);
-  wrap.appendChild(cp);
-  wrap.appendChild(actions);
-  return wrap;
+function showManualCopyFallback(text) {
+  manualCopyRowEl.hidden = false;
+  manualCopyInputEl.value = text;
+  manualCopyInputEl.focus();
+  manualCopyInputEl.select();
 }
 
-function renderFontCompare(char) {
-  fontCompareGridEl.innerHTML = "";
-  for (const f of COMPARE_FONTS) {
-    const available = isFontAvailable(f.family);
-    const cell = document.createElement("div");
-    cell.className = "font-compare-cell" + (available ? "" : " unavailable");
+function candidateKind(record) {
+  if (record.src === "GJ") return "ツール内表示";
+  if (record.seq && Array.from(record.seq).length > 1) return "字形指定";
+  return "標準文字";
+}
 
-    const glyph = document.createElement("div");
-    glyph.className = "glyph";
-    glyph.style.fontFamily = f.family;
-    glyph.textContent = char;
-
-    const name = document.createElement("div");
-    name.className = "fontname";
-    name.textContent = f.label;
-
-    cell.appendChild(glyph);
-    cell.appendChild(name);
-    if (!available) {
-      const missing = document.createElement("div");
-      missing.className = "missing";
-      missing.textContent = "未インストール";
-      cell.appendChild(missing);
-    }
-    fontCompareGridEl.appendChild(cell);
+function showCandidateDetails(record, extra = {}) {
+  if (!candidateDetailDialogEl || !candidateDetailListEl) return;
+  const rows = [
+    ["文字ID", record.id || "—"],
+    ["区分", record.src === "GJ" ? "GJ追加文字" : record.src === "MJ" ? "MJ文字" : "開発用データ"],
+    ["表示方式", record.src === "GJ" ? "ツール内蔵字形" : candidateKind(record)],
+    ["文字コード", record.seq ? cpLabel(record.seq) : "テキストコピー対象外"],
+  ];
+  if (Number.isFinite(extra.rank)) rows.push(["類似候補順位", String(extra.rank)]);
+  if (record.st != null) rows.push(["画数", String(record.st)]);
+  candidateDetailListEl.innerHTML = "";
+  for (const [k, v] of rows) {
+    const dt = document.createElement("dt"); dt.textContent = k;
+    const dd = document.createElement("dd"); dd.textContent = v;
+    candidateDetailListEl.append(dt, dd);
   }
+  if (typeof candidateDetailDialogEl.showModal === "function") candidateDetailDialogEl.showModal();
 }
 
-function selectExistingChar(ch) {
-  appState.selectedExisting = ch;
-  const radio = document.querySelector('input[name="dict-target"][value="existing"]');
-  if (radio) radio.checked = true;
-  appState.dictTarget = "existing";
-  updateTargetPreview();
-  document.querySelectorAll(".char-chip").forEach((el) => el.classList.remove("selected"));
-  showToast("「" + ch + "」を登録対象にしました。");
-}
-
-function renderVariants(char) {
-  variantListEl.innerHTML = "";
-  const variants = lookupVariants(char);
-  if (variants.length === 0) {
-    variantEmptyEl.hidden = false;
+async function useEmbeddedGlyphForGaiji(record) {
+  const source = await GlyphProvider.toSourceCanvas(record);
+  if (!source) {
+    showToast("この字形は内蔵フォントで正確に描画できないため、住民票等の画像から外字を作成してください。", true);
+    goToStep(2, true);
     return;
   }
-  variantEmptyEl.hidden = true;
-  for (const v of variants) {
-    variantListEl.appendChild(
-      makeCharChip(v, (ch, btn) => {
-        selectExistingChar(ch);
-        btn.classList.add("selected");
-      })
-    );
-  }
+  appState.sourceCanvas = source;
+  appState.sourceOrigin = record.id || "標準文字";
+  appState.gaijiSaved = false;
+  if (ui.gaijiSavedCheck) ui.gaijiSavedCheck.checked = false;
+  resetImageAdjustments();
+  renderPreview();
+  setImageLoadedState(true);
+  updateWorkflowStatus();
+  goToStep(3, true);
+  showToast((record.id || "候補") + " の内蔵字形を外字原稿へ読み込みました。");
 }
 
-function runSearch() {
-  const char = Array.from(searchCharInputEl.value)[0] || "";
-  appState.searchChar = char;
-  ivsScanBtnEl.disabled = !char;
-  if (!char) {
+async function makeCandidateCard(record, extra = {}) {
+  const card = document.createElement("article");
+  card.className = "candidate-card" + (record.src === "GJ" ? " is-gj" : "") + (CharacterRepository.mode === "seed" ? " is-dev" : "");
+  const wrap = document.createElement("div"); wrap.className = "candidate-glyph-wrap";
+  const canvas = document.createElement("canvas"); canvas.className = "candidate-glyph";
+  wrap.appendChild(canvas);
+  const id = document.createElement("div"); id.className = "candidate-id"; id.textContent = record.id || candidateKind(record);
+  const actions = document.createElement("div"); actions.className = "candidate-actions";
+  if (record.impl === false) {
+    const unavailable = document.createElement("button"); unavailable.type = "button"; unavailable.className = "gaiji-candidate"; unavailable.textContent = "画像から作成";
+    unavailable.addEventListener("click", () => { goToStep(2, true); showToast("このMJ字形はIPAmj明朝 Ver.006.01に未実装のため、住民票等の画像から外字を作成してください。"); });
+    actions.appendChild(unavailable);
+    const note = document.createElement("div"); note.className = "candidate-id"; note.textContent = "IPAmj未実装"; wrap.appendChild(note);
+  } else if (record.copy && record.seq) {
+    const copy = document.createElement("button"); copy.type = "button"; copy.className = "copy-candidate"; copy.textContent = "コピー";
+    copy.addEventListener("click", async () => {
+      const ok = await copyTextWithFallback(record.seq);
+      if (!ok) showManualCopyFallback(record.seq);
+      appState.lastCopiedChar = record.seq;
+      updateWorkflowStatus();
+      showToast(ok ? "候補をコピーしました。" : "入力欄を選択しました。Ctrl+Cでコピーしてください。");
+    });
+    actions.appendChild(copy);
+  } else {
+    const gaiji = document.createElement("button"); gaiji.type = "button"; gaiji.className = "gaiji-candidate"; gaiji.textContent = "外字にする";
+    gaiji.addEventListener("click", () => useEmbeddedGlyphForGaiji(record));
+    actions.appendChild(gaiji);
+  }
+  const detail = document.createElement("button"); detail.type = "button"; detail.className = "detail-candidate"; detail.textContent = "詳細";
+  detail.addEventListener("click", () => showCandidateDetails(record, extra));
+  actions.appendChild(detail);
+  card.append(wrap, id, actions);
+  await GlyphProvider.draw(canvas, record, 78);
+  return card;
+}
+
+async function renderCandidateList(container, items, similar = false) {
+  container.innerHTML = "";
+  const frag = document.createDocumentFragment();
+  for (const item of items) {
+    const record = similar ? item.record : item;
+    if (!record) continue;
+    frag.appendChild(await makeCandidateCard(record, similar ? { rank: item.rank } : {}));
+  }
+  container.appendChild(frag);
+}
+
+let searchGeneration = 0;
+async function runSearch() {
+  const query = firstGrapheme(searchCharInputEl.value);
+  appState.searchChar = query;
+  appState.searchCompleted = false;
+  appState.lastCopiedChar = "";
+  const generation = ++searchGeneration;
+  manualCopyRowEl.hidden = true;
+  if (!query) {
     searchResultsEl.hidden = true;
+    searchEmptyStateEl.hidden = false;
+    relatedListEl.innerHTML = "";
+    similarListEl.innerHTML = "";
+    resultSummaryEl.textContent = "";
+    updateWorkflowStatus();
     return;
   }
+  if (!CharacterRepository.ready) {
+    showToast("文字データを準備中です。", true);
+    return;
+  }
+  searchEmptyStateEl.hidden = true;
   searchResultsEl.hidden = false;
-  renderFontCompare(char);
-  renderVariants(char);
-  ivsListEl.innerHTML = "";
-  ivsNoteEl.hidden = false;
-  ivsNoteEl.textContent = "「IVS異体字を検出」を押すと、お使いのPCのフォントで実際に表示できる異体字シーケンスを探します。";
-}
-
-function runIvsScan() {
-  const char = appState.searchChar;
-  if (!char) return;
-  ivsNoteEl.hidden = false;
-  ivsNoteEl.textContent = "検出中…";
-  ivsListEl.innerHTML = "";
-  setTimeout(() => {
-    let results = [];
-    try {
-      results = detectIvsVariants(char);
-    } catch (err) {
-      ivsNoteEl.textContent = "検出中にエラーが発生しました。";
-      return;
-    }
-    if (results.length === 0) {
-      ivsNoteEl.textContent =
-        "このPCのフォントで表示できるIVS異体字は見つかりませんでした。" +
-        "この文字にIVS異体字が登録されていないか、お使いのフォントが対応していない可能性があります。";
-      return;
-    }
-    ivsNoteEl.hidden = true;
-    for (const r of results) {
-      const chip = makeCharChip(r.seq, (seq, btn) => {
-        selectExistingChar(seq);
-        btn.classList.add("selected");
-      });
-      chip.querySelector(".big").style.fontFamily = r.font.family;
-      const note = document.createElement("span");
-      note.className = "cp";
-      note.textContent = r.font.label;
-      chip.insertBefore(note, chip.querySelector(".chip-actions"));
-      ivsListEl.appendChild(chip);
-    }
-  }, 20);
+  relatedListEl.innerHTML = '<div class="search-loading">候補を検索しています…</div>';
+  similarListEl.innerHTML = "";
+  await new Promise(resolve => setTimeout(resolve, 10));
+  const result = await SearchEngine.search(query);
+  if (generation !== searchGeneration) return;
+  await renderCandidateList(relatedListEl, result.direct, false);
+  await renderCandidateList(similarListEl, result.similar, true);
+  relatedEmptyEl.hidden = result.direct.length > 0;
+  similarEmptyEl.hidden = result.similar.length > 0;
+  resultSummaryEl.textContent = `候補 ${result.direct.length + result.similar.length}件`;
+  appState.searchCompleted = true;
+  updateWorkflowStatus();
 }
 
 /* =========================================================
@@ -1422,8 +1589,15 @@ const blankCtx = blankCanvas.getContext("2d", { willReadFrequently: true });
    確実に未使用のコードポイントの描画結果を基準として、それと同じ字形なら空きとみなす */
 const TOFU_SAMPLE_CPS = [0xe7f8, 0xe7f9, 0xe7fa];
 let tofuHashes = null;
+const glyphSignatureCache = new Map();
+const isWindowsPlatform = /Windows/i.test(navigator.userAgent);
+const isMicrosoftEdge = (navigator.userAgentData && Array.isArray(navigator.userAgentData.brands)
+  ? navigator.userAgentData.brands.some((b) => /Microsoft Edge/i.test(b.brand))
+  : /Edg\//.test(navigator.userAgent));
+const eudcProbeSupported = isWindowsPlatform && isMicrosoftEdge;
 
 function glyphSignature(cp) {
+  if (glyphSignatureCache.has(cp)) return glyphSignatureCache.get(cp);
   blankCtx.clearRect(0, 0, 24, 24);
   blankCtx.fillStyle = "#000";
   blankCtx.textBaseline = "middle";
@@ -1438,10 +1612,13 @@ function glyphSignature(cp) {
     h ^= data[i];
     h = Math.imul(h, 16777619);
   }
-  return { hash: h >>> 0, ink: ink };
+  const result = { hash: h >>> 0, ink: ink };
+  glyphSignatureCache.set(cp, result);
+  return result;
 }
 
 function isCodepointUsed(cp) {
+  if (!eudcProbeSupported) return null;
   if (tofuHashes === null) {
     tofuHashes = new Set(TOFU_SAMPLE_CPS.map((c) => glyphSignature(c).hash));
   }
@@ -1473,11 +1650,12 @@ function renderCpGrid() {
     btn.type = "button";
     btn.className = "cp-cell";
     if (cp === appState.codepoint) btn.classList.add("selected");
-    if (isCodepointUsed(cp)) btn.classList.add("used");
-    /* 豆腐字形との比較による推定であり断定はできないため、表現を「可能性」に留める */
-    const stateLabel = btn.classList.contains("used") ? "使用中の可能性" : "空きの可能性";
+    const usage = isCodepointUsed(cp);
+    if (usage === true) btn.classList.add("used");
+    const stateLabel = usage === true ? "使用中の可能性" : usage === false ? "空きの可能性" : "使用状況はブラウザ判定不可";
     btn.title = "U+" + hex + " (" + stateLabel + ")";
     btn.setAttribute("aria-label", "U+" + hex + " " + stateLabel);
+    btn.dataset.cp = String(cp);
 
     const glyph = document.createElement("span");
     glyph.className = "cell-glyph";
@@ -1487,13 +1665,19 @@ function renderCpGrid() {
     label.textContent = hex.slice(-2);
     btn.appendChild(glyph);
     btn.appendChild(label);
-    btn.addEventListener("click", () => setCodepoint(cp));
     cpGridEl.appendChild(btn);
   }
   cpPageSelectEl.value = String(appState.cpPage);
   cpPrevBtnEl.disabled = appState.cpPage === 0;
   cpNextBtnEl.disabled = start + CP_PAGE_SIZE > PUA_MAX;
 }
+
+cpGridEl.addEventListener("click", (e) => {
+  const btn = e.target.closest(".cp-cell");
+  if (!btn || !cpGridEl.contains(btn)) return;
+  const cp = Number(btn.dataset.cp);
+  if (Number.isInteger(cp)) setCodepoint(cp);
+});
 
 function setCodepoint(cp, skipGrid) {
   appState.codepoint = cp;
@@ -1502,298 +1686,272 @@ function setCodepoint(cp, skipGrid) {
   codepointLabelEl.textContent = hex;
   if (pasteCodepointLabelEl) pasteCodepointLabelEl.textContent = hex;
   codepointErrorEl.hidden = true;
-  const page = Math.floor((cp - PUA_MIN) / CP_PAGE_SIZE);
-  if (page !== appState.cpPage) {
-    appState.cpPage = page;
-    renderCpGrid();
-  } else if (!skipGrid) {
-    renderCpGrid();
-  }
-  updateTargetPreview();
+  appState.cpPage = Math.floor((cp - PUA_MIN) / CP_PAGE_SIZE);
+  cpPageSelectEl.value = String(appState.cpPage);
+  const manualDetails = document.getElementById("cp-manual-details");
+  if (!skipGrid && manualDetails && manualDetails.open) renderCpGrid();
 }
 
+
 /* =========================================================
-   ui.js
+   ui.js — 4工程の表示・状態管理
    ========================================================= */
+const APP_META = Object.freeze({ version: "4.3.1-web", build: "2026-08-27" });
+
+const ui = Object.freeze({
+  stepViews: Array.from(document.querySelectorAll("[data-step-view]")),
+  navButtons: Array.from(document.querySelectorAll(".step-nav-button[data-step-nav]")),
+  resetWorkBtn: document.getElementById("reset-work-btn"),
+  caseSource: document.getElementById("case-source"),
+  caseSearch: document.getElementById("case-search"),
+  caseCopied: document.getElementById("case-copied"),
+  caseImage: document.getElementById("case-image"),
+  caseRegister: document.getElementById("case-register"),
+  startGaijiBtn: document.getElementById("start-gaiji-btn"),
+  chooseImageBtn: document.getElementById("choose-image-btn"),
+  autoCodepointBtn: document.getElementById("auto-codepoint-btn"),
+  toAdjustBtn: document.getElementById("to-adjust-btn"),
+  toRegisterBtn: document.getElementById("to-register-btn"),
+  gaijiSavedCheck: document.getElementById("gaiji-saved-check"),
+  uploadStatus: document.getElementById("upload-status"),
+  cpManualDetails: document.getElementById("cp-manual-details"),
+  versionLabels: Array.from(document.querySelectorAll("[data-app-version]")),
+});
+
 function showToast(message, isError = false) {
   toastEl.textContent = message;
   toastEl.hidden = false;
-  toastEl.style.background = isError ? "var(--danger)" : "var(--text)";
-  toastEl.style.color = isError ? "#fff" : "var(--bg)";
-  clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => {
-    toastEl.hidden = true;
-  }, 3200);
+  toastEl.classList.toggle("error", isError);
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => { toastEl.hidden = true; }, 3200);
 }
 
-function currentHex() {
-  return appState.codepoint.toString(16).toUpperCase().padStart(4, "0");
-}
+function currentHex() { return appState.codepoint.toString(16).toUpperCase().padStart(4, "0"); }
 
-function currentTargetWord() {
-  if (appState.dictTarget === "existing") return appState.selectedExisting;
-  return String.fromCodePoint(appState.codepoint);
-}
-
-function updateTargetPreview() {
-  const word = currentTargetWord();
-  if (appState.dictTarget === "existing") {
-    targetCharEl.textContent = word || "—";
-    targetDescEl.textContent = word
-      ? "(既存文字 " + cpLabel(word) + ")"
-      : "(Step 0 の検索結果から文字を選んでください)";
-  } else {
-    targetCharEl.textContent = word;
-    targetDescEl.textContent = "(外字 U+" + currentHex() + ")";
+function syncCaseSummary() {
+  if (ui.caseSource) ui.caseSource.textContent = appState.searchChar || "未入力";
+  if (ui.caseSearch) ui.caseSearch.textContent = appState.searchCompleted ? "検索済み" : (appState.searchChar ? "未完了" : "未検索");
+  if (ui.caseCopied) ui.caseCopied.textContent = appState.lastCopiedChar || "—";
+  if (ui.caseImage) ui.caseImage.textContent = appState.sourceCanvas ? (appState.sourceOrigin ? "標準文字から読込" : "読み込み済み") : "未読み込み";
+  if (ui.caseRegister) ui.caseRegister.textContent = appState.gaijiSaved ? "完了（U+" + currentHex() + "）" : (appState.sourceCanvas ? "未完了（U+" + currentHex() + "）" : "未完了");
+  if (ui.toAdjustBtn) ui.toAdjustBtn.disabled = !appState.sourceCanvas;
+  if (ui.toRegisterBtn) ui.toRegisterBtn.disabled = !appState.sourceCanvas;
+  if (ui.uploadStatus) {
+    ui.uploadStatus.textContent = appState.sourceCanvas ? (appState.sourceOrigin ? appState.sourceOrigin + " の内蔵字形を読み込みました。" : "画像を読み込みました。次に字形を確認してください。") : "まだ画像は読み込まれていません。";
+    ui.uploadStatus.classList.toggle("is-ok", !!appState.sourceCanvas);
   }
 }
 
+function stepAccessible(step) {
+  if (step <= 2) return true;
+  if (step === 3 || step === 4) return !!appState.sourceCanvas;
+  return false;
+}
+
+function goToStep(step, force = false) {
+  if (!force && !stepAccessible(step)) { showToast("先に文字画像を読み込むか、内蔵字形を外字原稿へ読み込んでください。", true); return; }
+  appState.currentStep = step;
+  ui.stepViews.forEach(view => { view.hidden = Number(view.dataset.stepView) !== step; });
+  updateWorkflowStatus();
+}
+
+function updateWorkflowStatus() {
+  const hasImage = !!appState.sourceCanvas;
+  const states = {
+    1: appState.currentStep > 1 ? "done" : (appState.currentStep === 1 ? "active" : ""),
+    2: hasImage ? "done" : (appState.currentStep === 2 ? "active" : ""),
+    3: hasImage && appState.currentStep > 3 ? "done" : (appState.currentStep === 3 ? "active" : ""),
+    4: appState.gaijiSaved ? "done" : (appState.currentStep === 4 ? "active" : ""),
+  };
+  ui.navButtons.forEach(btn => {
+    const step = Number(btn.dataset.stepNav);
+    btn.classList.remove("done", "active", "skip", "is-current");
+    if (states[step]) btn.classList.add(states[step]);
+    if (step === appState.currentStep) btn.classList.add("is-current");
+    btn.setAttribute("aria-current", step === appState.currentStep ? "step" : "false");
+    const status = btn.querySelector(".nav-status");
+    if (status) status.textContent = states[step] === "done" ? "完了" : states[step] === "active" ? "作業中" : "";
+  });
+  syncCaseSummary();
+}
+
 function setImageLoadedState(loaded) {
-  rotateBtnEl.disabled = !loaded;
-  invertToggleEl.disabled = !loaded;
-  fitModeSelectEl.disabled = !loaded;
-  thresholdSliderEl.disabled = !loaded;
-  downloadBmpBtnEl.disabled = !loaded;
+  rotateBtnEl.disabled = !loaded; invertToggleEl.disabled = !loaded; fitModeSelectEl.disabled = !loaded;
+  thresholdSliderEl.disabled = !loaded; downloadBmpBtnEl.disabled = !loaded;
+  if (clearImageBtnEl) clearImageBtnEl.disabled = !loaded;
+  syncCaseSummary();
+}
+
+function resetImageAdjustments() {
+  appState.rotation = 0; appState.fitMode = "contain"; appState.threshold = 128; appState.inverted = false; appState.outputSize = 64;
+  invertToggleEl.checked = false; fitModeSelectEl.value = "contain"; thresholdSliderEl.value = "128"; thresholdValueEl.textContent = "128"; outputSizeSelectEl.value = "64";
+}
+
+function clearImageData(showMessage = true) {
+  appState.sourceCanvas = null; appState.sourceOrigin = ""; appState.gaijiSaved = false;
+  if (ui.gaijiSavedCheck) ui.gaijiSavedCheck.checked = false;
+  resetImageAdjustments();
+  previewCanvasEl.width = 64; previewCanvasEl.height = 64; previewCanvasEl.getContext("2d").clearRect(0, 0, 64, 64);
+  imageInputEl.value = ""; imageErrorEl.hidden = true; setImageLoadedState(false); updateWorkflowStatus();
+  if (showMessage) showToast("読み込んだ画像データを破棄しました。");
 }
 
 async function handleImageFile(file) {
   const check = validateImageFile(file);
-  if (!check.valid) {
-    imageErrorEl.textContent = check.message;
-    imageErrorEl.hidden = false;
-    return;
-  }
+  if (!check.valid) { imageErrorEl.textContent = check.message; imageErrorEl.hidden = false; return; }
   imageErrorEl.hidden = true;
   try {
     const img = await loadImageFile(file);
-    appState.originalImage = img;
-    appState.rotation = 0;
-    renderPreview();
-    setImageLoadedState(true);
-  } catch (err) {
-    imageErrorEl.textContent = err.message || "画像の読み込みに失敗しました。";
-    imageErrorEl.hidden = false;
-  }
+    appState.sourceCanvas = drawSourceToCanvas(img); appState.sourceOrigin = ""; appState.gaijiSaved = false;
+    if (ui.gaijiSavedCheck) ui.gaijiSavedCheck.checked = false;
+    resetImageAdjustments(); renderPreview(); setImageLoadedState(true); updateWorkflowStatus();
+  } catch (err) { imageErrorEl.textContent = err.message || "画像の読み込みに失敗しました。"; imageErrorEl.hidden = false; }
 }
 
-dropZoneEl.addEventListener("click", () => imageInputEl.click());
-dropZoneEl.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" || e.key === " ") {
-    e.preventDefault();
-    imageInputEl.click();
-  }
-});
-imageInputEl.addEventListener("change", () => {
-  if (imageInputEl.files[0]) handleImageFile(imageInputEl.files[0]);
-});
-["dragover", "dragenter"].forEach((evt) =>
-  dropZoneEl.addEventListener(evt, (e) => {
-    e.preventDefault();
-    dropZoneEl.classList.add("dragover");
-  })
-);
-["dragleave", "drop"].forEach((evt) =>
-  dropZoneEl.addEventListener(evt, (e) => {
-    e.preventDefault();
-    dropZoneEl.classList.remove("dragover");
-  })
-);
-dropZoneEl.addEventListener("drop", (e) => {
-  const file = e.dataTransfer.files && e.dataTransfer.files[0];
-  if (file) handleImageFile(file);
-});
-
-/* スニッピングツール等からの Ctrl+V 貼り付け */
-document.addEventListener("paste", (e) => {
-  const target = e.target;
-  if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
-    const items0 = e.clipboardData ? e.clipboardData.items : null;
-    let hasImage = false;
-    if (items0) {
-      for (const it of items0) if (it.type && it.type.startsWith("image/")) hasImage = true;
-    }
-    if (!hasImage) return;
-  }
-  const items = e.clipboardData ? e.clipboardData.items : null;
-  if (!items) return;
-  for (const item of items) {
-    if (item.type && item.type.startsWith("image/")) {
-      const file = item.getAsFile();
-      if (file) {
-        e.preventDefault();
-        handleImageFile(file);
-        showToast("クリップボードの画像を読み込みました。");
-      }
-      return;
-    }
-  }
-});
-
-pasteClipboardBtnEl.addEventListener("click", async () => {
-  try {
-    const items = await navigator.clipboard.read();
-    for (const item of items) {
-      const type = item.types.find((t) => t.startsWith("image/"));
-      if (type) {
-        const blob = await item.getType(type);
-        await handleImageFile(new File([blob], "clipboard.png", { type: type }));
-        showToast("クリップボードの画像を読み込みました。");
-        return;
-      }
-    }
-    showToast("クリップボードに画像がありません。", true);
-  } catch (err) {
-    showToast("クリップボードを読み取れませんでした。Ctrl+V をお試しください。", true);
-  }
-});
-
-rotateBtnEl.addEventListener("click", () => {
-  appState.rotation = (appState.rotation + 90) % 360;
-  renderPreview();
-});
-invertToggleEl.addEventListener("change", () => {
-  appState.inverted = invertToggleEl.checked;
-  renderPreview();
-});
-fitModeSelectEl.addEventListener("change", () => {
-  appState.fitMode = fitModeSelectEl.value;
-  renderPreview();
-});
-thresholdSliderEl.addEventListener("input", () => {
-  appState.threshold = Number(thresholdSliderEl.value);
-  thresholdValueEl.textContent = String(appState.threshold);
-  renderPreview();
-});
-outputSizeSelectEl.addEventListener("change", () => {
-  appState.outputSize = Number(outputSizeSelectEl.value);
-  renderPreview();
-});
-
-/* ---- 外字フォント生成 ---- */
 function getBinaryGrid() {
   const size = previewCanvasEl.width;
   const ctx = previewCanvasEl.getContext("2d", { willReadFrequently: true });
   const d = ctx.getImageData(0, 0, size, size).data;
   const grid = new Uint8Array(size * size);
   for (let i = 0, p = 0; i < d.length; i += 4, p++) grid[p] = d[i + 3] > 127 ? 1 : 0;
-  return { grid: grid, size: size };
+  return { grid, size };
 }
 
-downloadBmpBtnEl.addEventListener("click", () => {
-  const src = getBinaryGrid();
-  const bmp = buildMonochromeBmp(src.grid, src.size);
-  downloadBlob(new Blob([bmp], { type: "image/bmp" }), "gaiji-" + currentHex() + ".bmp");
-});
+function chooseFirstAvailableCodepoint() {
+  const note = document.getElementById("auto-codepoint-note");
+  if (!eudcProbeSupported) { note.textContent = "このブラウザではWindows外字の使用状況を安全に判定できません。外字エディターで空き番号を確認してください。"; showToast("自動判定はMicrosoft Edge上でのみ利用できます。", true); return; }
+  note.textContent = "空き候補を確認しています…";
+  setTimeout(() => {
+    let found = null;
+    for (let cp = PUA_MIN; cp <= PUA_MAX; cp++) if (isCodepointUsed(cp) === false) { found = cp; break; }
+    if (found === null) { note.textContent = "空き候補を自動判定できませんでした。外字エディターで確認してください。"; showToast("空き候補を判定できませんでした。", true); return; }
+    setCodepoint(found); note.textContent = "空きの可能性が高い U+" + currentHex() + " を選びました。外字エディターでも空きを確認してください。"; showToast("保存番号 U+" + currentHex() + " を選びました。");
+  }, 20);
+}
 
-codepointInputEl.addEventListener("input", () => {
-  const raw = codepointInputEl.value.trim().toUpperCase();
-  const check = validateCodePoint(raw);
-  if (!check.valid) {
-    codepointErrorEl.textContent = check.message;
-    codepointErrorEl.hidden = false;
-    return;
-  }
-  codepointErrorEl.hidden = true;
-  setCodepoint(parseInt(raw, 16), true);
-  renderCpGrid();
-});
+function resetForNewTask() {
+  const hasWork = !!(appState.searchChar || appState.sourceCanvas || appState.lastCopiedChar);
+  if (hasWork && !window.confirm("現在の画像・検索結果・コピー履歴を破棄して、新しい作業を開始しますか？")) return;
+  clearImageData(false);
+  appState.searchChar = ""; appState.searchCompleted = false; appState.lastCopiedChar = ""; appState.gaijiSaved = false;
+  searchCharInputEl.value = ""; searchResultsEl.hidden = true; searchEmptyStateEl.hidden = false;
+  relatedListEl.innerHTML = ""; similarListEl.innerHTML = ""; resultSummaryEl.textContent = ""; manualCopyRowEl.hidden = true;
+  codepointErrorEl.hidden = true; if (ui.gaijiSavedCheck) ui.gaijiSavedCheck.checked = false;
+  goToStep(1, true); searchCharInputEl.focus(); showToast("新しい作業を開始しました。");
+}
 
-cpPageSelectEl.addEventListener("change", () => {
-  appState.cpPage = Number(cpPageSelectEl.value);
-  renderCpGrid();
-});
-cpPrevBtnEl.addEventListener("click", () => {
-  if (appState.cpPage > 0) {
-    appState.cpPage--;
-    renderCpGrid();
-  }
-});
-cpNextBtnEl.addEventListener("click", () => {
-  const pageCount = Math.ceil((PUA_MAX - PUA_MIN + 1) / CP_PAGE_SIZE);
-  if (appState.cpPage < pageCount - 1) {
-    appState.cpPage++;
-    renderCpGrid();
-  }
-});
-
-searchCharInputEl.addEventListener("input", runSearch);
-ivsScanBtnEl.addEventListener("click", runIvsScan);
-
-document.querySelectorAll('input[name="dict-target"]').forEach((radio) => {
-  radio.addEventListener("change", () => {
-    appState.dictTarget = radio.value;
-    updateTargetPreview();
-  });
-});
-
-dictFormEl.addEventListener("submit", (e) => {
-  e.preventDefault();
-  let hasError = false;
-
-  const readingCheck = validateReading(readingInputEl.value.trim());
-  if (!readingCheck.valid) {
-    readingErrorEl.textContent = readingCheck.message;
-    readingErrorEl.hidden = false;
-    hasError = true;
+function updateDatasetUi() {
+  const count = CharacterRepository.records.length;
+  const src = CharacterRepository.source || {};
+  if (CharacterRepository.mode === "seed") {
+    datasetCardEl.classList.add("dev");
+    datasetTitleEl.textContent = "簡易検索データ";
+    datasetCountEl.textContent = count + "字";
+    datasetStatusEl.textContent = "行政事務標準文字の全件データが読み込まれていません。配布元へ連絡してください。";
+    if (datasetBadgeEl) datasetBadgeEl.textContent = "文字データ不完全";
   } else {
-    readingErrorEl.hidden = true;
+    datasetCardEl.classList.remove("dev");
+    datasetTitleEl.textContent = "行政事務標準文字";
+    datasetCountEl.textContent = count.toLocaleString("ja-JP") + "字";
+    datasetStatusEl.textContent = `MJ ${Number(src.mjCount || 0).toLocaleString("ja-JP")}字 + GJ ${Number(src.gjCount || 0).toLocaleString("ja-JP")}字を内蔵。候補字形はHTML内に同梱した公式フォント原本から表示します。端末へのフォント導入は不要です。`;
+    if (datasetBadgeEl) datasetBadgeEl.textContent = "行政事務標準文字 内蔵";
   }
-
-  const word = currentTargetWord();
-  if (!word) {
-    targetErrorEl.textContent = "登録する文字が選択されていません。Step 0 の検索結果から文字を選ぶか、外字を登録する設定に切り替えてください。";
-    targetErrorEl.hidden = false;
-    hasError = true;
-  } else {
-    targetErrorEl.hidden = true;
-  }
-
-  if (appState.dictTarget === "gaiji") {
-    const cpCheck = validateCodePoint(codepointInputEl.value.trim());
-    if (!cpCheck.valid) {
-      codepointErrorEl.textContent = cpCheck.message;
-      codepointErrorEl.hidden = false;
-      hasError = true;
-    }
-  }
-
-  if (hasError) return;
-
-  const line = buildDictLine(readingInputEl.value.trim(), word, posSelectEl.value);
-  const blob = encodeUtf16LeWithBom(line);
-  const name =
-    appState.dictTarget === "existing" ? "gaiji-dict-existing.txt" : "gaiji-dict-" + currentHex() + ".txt";
-  downloadBlob(blob, name);
-  showToast("辞書ファイルをダウンロードしました。");
-});
+}
 
 /* =========================================================
-   main.js
+   events.js
    ========================================================= */
-function populatePosOptions() {
-  POS_OPTIONS.forEach((label) => {
-    const opt = document.createElement("option");
-    opt.value = label;
-    opt.textContent = label;
-    posSelectEl.appendChild(opt);
-  });
-  posSelectEl.value = "名詞";
+if (ui.resetWorkBtn) ui.resetWorkBtn.addEventListener("click", resetForNewTask);
+ui.navButtons.forEach(btn => btn.addEventListener("click", () => goToStep(Number(btn.dataset.stepNav))));
+document.querySelectorAll("[data-go-step]").forEach(btn => btn.addEventListener("click", () => goToStep(Number(btn.dataset.goStep))));
+let inputTimer = 0;
+let searchInputComposing = false;
+
+function scheduleSearchFromInput(delay = 90) {
+  clearTimeout(inputTimer);
+  inputTimer = setTimeout(() => {
+    if (!searchInputComposing) runSearch();
+  }, delay);
 }
 
-function init() {
-  populatePosOptions();
-  buildCompatIndex();
-  buildKyujiIndex();
-  buildGroupIndex();
-  populateCpPages();
-  renderCpGrid();
-  setCodepoint(0xe000);
-  if (clipboardReadSupported) {
-    pasteClipboardBtnEl.hidden = false;
+searchCharInputEl.addEventListener("compositionstart", () => {
+  searchInputComposing = true;
+  clearTimeout(inputTimer);
+});
+
+searchCharInputEl.addEventListener("compositionend", () => {
+  searchInputComposing = false;
+  // IME確定直後はブラウザ側のvalue反映を待ってから検索する。
+  scheduleSearchFromInput(0);
+});
+
+searchCharInputEl.addEventListener("input", (event) => {
+  // 日本語IMEの変換途中ではvalueを書き換えない。
+  if (searchInputComposing || event.isComposing) return;
+  scheduleSearchFromInput(90);
+});
+if (ui.startGaijiBtn) ui.startGaijiBtn.addEventListener("click", () => goToStep(2, true));
+if (candidateDetailCloseEl) candidateDetailCloseEl.addEventListener("click", () => candidateDetailDialogEl.close());
+
+if (ui.chooseImageBtn) ui.chooseImageBtn.addEventListener("click", () => imageInputEl.click());
+if (clearImageBtnEl) clearImageBtnEl.addEventListener("click", () => clearImageData(true));
+dropZoneEl.addEventListener("click", () => imageInputEl.click());
+dropZoneEl.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); imageInputEl.click(); } });
+imageInputEl.addEventListener("change", () => { if (imageInputEl.files[0]) handleImageFile(imageInputEl.files[0]); });
+["dragover", "dragenter"].forEach(evt => dropZoneEl.addEventListener(evt, e => { e.preventDefault(); dropZoneEl.classList.add("dragover"); }));
+["dragleave", "drop"].forEach(evt => dropZoneEl.addEventListener(evt, e => { e.preventDefault(); dropZoneEl.classList.remove("dragover"); }));
+dropZoneEl.addEventListener("drop", e => { const file = e.dataTransfer.files && e.dataTransfer.files[0]; if (file) handleImageFile(file); });
+document.addEventListener("paste", e => {
+  const target = e.target;
+  if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable)) return;
+  const items = e.clipboardData ? e.clipboardData.items : null; if (!items) return;
+  for (const item of items) if (item.type && item.type.startsWith("image/")) { const file = item.getAsFile(); if (file) { e.preventDefault(); handleImageFile(file); showToast("クリップボードの画像を読み込みました。"); } return; }
+});
+pasteClipboardBtnEl.addEventListener("click", async () => {
+  try { const items = await navigator.clipboard.read(); for (const item of items) { const type = item.types.find(t => t.startsWith("image/")); if (type) { const blob = await item.getType(type); await handleImageFile(new File([blob], "clipboard.png", { type })); return; } } showToast("クリップボードに画像がありません。", true); }
+  catch (err) { showToast("クリップボードを読み取れませんでした。Ctrl+Vをお試しください。", true); }
+});
+rotateBtnEl.addEventListener("click", () => { appState.rotation = (appState.rotation + 90) % 360; renderPreview(); });
+invertToggleEl.addEventListener("change", () => { appState.inverted = invertToggleEl.checked; renderPreview(); });
+fitModeSelectEl.addEventListener("change", () => { appState.fitMode = fitModeSelectEl.value; renderPreview(); });
+thresholdSliderEl.addEventListener("input", () => { appState.threshold = Number(thresholdSliderEl.value); thresholdValueEl.textContent = String(appState.threshold); renderPreview(); });
+outputSizeSelectEl.addEventListener("change", () => { appState.outputSize = Number(outputSizeSelectEl.value); renderPreview(); });
+if (ui.toAdjustBtn) ui.toAdjustBtn.addEventListener("click", () => goToStep(3));
+if (ui.toRegisterBtn) ui.toRegisterBtn.addEventListener("click", () => goToStep(4));
+downloadBmpBtnEl.addEventListener("click", () => {
+  if (!appState.sourceCanvas) return;
+  const src = getBinaryGrid(); const bmp = buildMonochromeBmp(src.grid, src.size);
+  downloadBlob(new Blob([bmp], { type: "image/bmp" }), "gaiji-" + currentHex() + ".bmp");
+  appState.gaijiSaved = false; if (ui.gaijiSavedCheck) ui.gaijiSavedCheck.checked = false; updateWorkflowStatus(); showToast("BMPを保存しました。ペイントから外字エディターへ貼り付けてください。");
+});
+if (ui.autoCodepointBtn) ui.autoCodepointBtn.addEventListener("click", chooseFirstAvailableCodepoint);
+if (ui.cpManualDetails) ui.cpManualDetails.addEventListener("toggle", () => { if (ui.cpManualDetails.open) renderCpGrid(); });
+codepointInputEl.addEventListener("input", () => {
+  const raw = codepointInputEl.value.trim().toUpperCase(); const check = validateCodePoint(raw);
+  if (!check.valid) { codepointErrorEl.textContent = check.message; codepointErrorEl.hidden = false; return; }
+  codepointErrorEl.hidden = true; setCodepoint(parseInt(raw, 16), true); if (ui.cpManualDetails && ui.cpManualDetails.open) renderCpGrid();
+});
+cpPageSelectEl.addEventListener("change", () => { appState.cpPage = Number(cpPageSelectEl.value); renderCpGrid(); });
+cpPrevBtnEl.addEventListener("click", () => { if (appState.cpPage > 0) { appState.cpPage--; renderCpGrid(); } });
+cpNextBtnEl.addEventListener("click", () => { const count = Math.ceil((PUA_MAX - PUA_MIN + 1) / CP_PAGE_SIZE); if (appState.cpPage < count - 1) { appState.cpPage++; renderCpGrid(); } });
+if (ui.gaijiSavedCheck) ui.gaijiSavedCheck.addEventListener("change", () => { appState.gaijiSaved = ui.gaijiSavedCheck.checked; updateWorkflowStatus(); });
+
+async function init() {
+  ui.versionLabels.forEach(el => { el.textContent = APP_META.version; });
+  try {
+    await CharacterRepository.init(ADMIN_CHAR_DATA_PACK);
+    SimilarityService.init();
+    updateDatasetUi();
+  } catch (err) {
+    datasetCardEl.classList.add("dev"); datasetStatusEl.textContent = "文字データを読み込めませんでした: " + (err.message || err);
+    if (datasetBadgeEl) datasetBadgeEl.textContent = "文字データ読込エラー";
+    searchCharInputEl.disabled = true;
   }
-  updateTargetPreview();
+  populateCpPages(); setCodepoint(PUA_MIN, true);
+  if (clipboardReadSupported) pasteClipboardBtnEl.hidden = false;
+  if (ui.autoCodepointBtn && !eudcProbeSupported) { ui.autoCodepointBtn.disabled = true; document.getElementById("auto-codepoint-note").textContent = "自動判定はWindows版Microsoft Edgeでのみ利用できます。それ以外では外字エディターで空き番号を確認してください。"; }
+  setImageLoadedState(false); goToStep(1, true); searchCharInputEl.focus();
 }
-
 init();
 </script>
 </body>
