@@ -1,4 +1,4 @@
-const CACHE_NAME = "law-tools-portal-v9";
+const CACHE_NAME = "law-tools-portal-v10";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,7 +8,6 @@ const APP_SHELL = [
   "./icons/apple-touch-icon.png",
   "./tools/kouatsu-gas-law-viewer.html",
   "./tools/lp-law-viewer.html",
-  "./tools/gaiji-maker.html",
 ];
 
 self.addEventListener("install", (event) => {
@@ -35,7 +34,8 @@ self.addEventListener("fetch", (event) => {
     // e-Gov API 呼び出しなど他オリジンへのリクエストはSWを介さずそのまま通す
     return;
   }
-  // ネットワーク優先: オンライン時は常に最新版を表示し、オフライン時のみキャッシュへフォールバックする
+  // ネットワーク優先。大容量の異体字ツールと文字データはAPP_SHELLへ事前キャッシュせず、
+  // 実際に利用された資材だけをここでランタイムキャッシュする。
   event.respondWith(
     fetch(req)
       .then((res) => {
