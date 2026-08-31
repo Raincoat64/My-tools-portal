@@ -1,0 +1,66 @@
+name: Build gaiji standalone distribution
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/gaiji-maker-source/build_standalone.py'
+      - '.github/workflows/build-gaiji-standalone.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build standalone HTML
+        run: |
+          mkdir -p /tmp/gaiji-standalone
+          python tools/gaiji-maker-source/build_standalone.py \
+            --web-html tools/gaiji-maker.html \
+            --assets-dir tools/gaiji-maker-assets \
+            --output /tmp/gaiji-standalone/住民票字形確認・外字作成支援ツール_配布用_v4.3.1.html
+
+      - name: Verify standalone HTML
+        run: |
+          FILE='/tmp/gaiji-standalone/住民票字形確認・外字作成支援ツール_配布用_v4.3.1.html'
+          test -s "$FILE"
+          grep -q "connect-src 'none'" "$FILE"
+          grep -q '"mode":"embedded-single"' "$FILE"
+          ! grep -q 'fetch(' "$FILE"
+          ! grep -q 'recordsUrl' "$FILE"
+          ! grep -q 'featuresUrl' "$FILE"
+          ! grep -q 'relationsUrl' "$FILE"
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('/tmp/gaiji-standalone/住民票字形確認・外字作成支援ツール_配布用_v4.3.1.html')
+          text = p.read_text('utf-8')
+          scripts = re.findall(r'<script>(.*?)</script>', text, re.S)
+          if len(scripts) != 1:
+              raise SystemExit(f'expected one inline script, got {len(scripts)}')
+          Path('/tmp/gaiji-standalone/app.js').write_text(scripts[0], 'utf-8')
+          print('standalone bytes:', p.stat().st_size)
+          PY
+          node --check /tmp/gaiji-standalone/app.js
+          rm /tmp/gaiji-standalone/app.js
+
+      - name: Upload distribution file
+        uses: actions/upload-artifact@v4
+        with:
+          name: gaiji-maker-standalone-v4.3.1
+          path: /tmp/gaiji-standalone/住民票字形確認・外字作成支援ツール_配布用_v4.3.1.html
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
