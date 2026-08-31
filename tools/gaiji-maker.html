@@ -6,53 +6,13 @@
   <meta name="referrer" content="no-referrer" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src blob: data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; font-src 'self' blob: data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src blob:" />
   <title>住民票字形確認・外字作成支援ツール</title>
-<!--
-    埋め込みデータの出典:
-      旧字体対応表 (773組) は kyujitai.js (https://github.com/hakatashi/kyujitai.js) の
-      data/kyujitai.json より抽出。
-      互換漢字の対応は実行時に String.prototype.normalize("NFD") から導出しており、
-      データの埋め込みや通信は行っていません。
-      人名・戸籍で頻出する異体字グループ(崎/﨑/嵜 等)は本ツール独自の手動作成データです。
 
-    ---------------------------------------------------------------------------
-    kyujitai.js — MIT License
-
-    Copyright (c) 2014 hakatashi
-
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
-
-    The above copyright notice and this permission notice shall be included in
-    all copies or substantial portions of the Software.
-
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-    THE SOFTWARE.
-    ---------------------------------------------------------------------------
-
-    注意: 配布HTMLはフォントファイルを職員PCへインストールしません。
-    IPAmj明朝および追加文字行政事務標準明朝の公式フォント原本を改変せず可逆圧縮して内蔵し、
-    実行時にメモリ上へ復元して本HTML内の候補表示にのみ使用します。
-    類似検索にはフォント輪郭そのものではなく、ビルド時に生成した非可逆の形状特徴量を使用します。
-    入力画像をブラウザ内でモノクロBMPへ変換し、Windows 外字エディターへの受け渡しを補助します。
-    入力画像・氏名等の情報をネットワーク送信する処理や永続保存する処理は実装していません。
-  -->
   <!--
-    v4.3 配布版設計方針:
-    - 利用者の判断軸を「住民票の字形と一致するか」に限定する。
-    - 行政事務標準文字を検索母集団とし、MJ/GJ文字図形名を安定IDとして扱う。
-    - 候補字形は配布HTML内蔵の公式フォント原本をメモリ上で使用して表示し、端末へのフォント配布を要求しない。
-    - 24インチFHDに加え、13.3インチ・Windows表示倍率125～150%相当でも横スクロールなしで操作できるレスポンシブ構成とする。
-    - 外部通信・永続保存を行わず、単一HTMLで配布可能とする。
-    - 主要設定値・データ・画像処理・UI制御の責務をコード内で分離する。
+    v4.3.1-web:
+    - 行政事務標準文字68,282字（MJ 58,862字、GJ 9,420字）を検索対象とする。
+    - 検索データと表示用公式フォントは同一GitHub Pagesから取得する。
+    - 入力文字・入力画像はネットワーク送信せず、永続保存しない。
+    - Windows外字が必要な場合は、ブラウザ内でBMP作成までを支援する。
   -->
   <style>
 :root {
@@ -134,7 +94,6 @@ h1 { margin:0; font-size:1.22rem; letter-spacing:.01em; }
 .case-row:first-of-type { border-top:0; }
 .case-row dt { color:var(--muted); }
 .case-row dd { margin:0; font-weight:700; overflow-wrap:anywhere; }
-.sidebar-foot { padding:0 12px 12px; color:var(--muted); font-size:.64rem; }
 
 .workspace-card { height:calc(100vh - 114px); min-height:690px; max-height:910px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
 .step-view { height:100%; display:flex; flex-direction:column; }
@@ -372,7 +331,6 @@ body { min-width:0; overflow-x:hidden; }
   .step-nav-button { padding:6px 8px; }
   .step-copy span { display:none; }
   .case-summary { display:none; }
-  .sidebar-foot { margin-top:auto; padding:8px 10px; }
   .step-header { min-height:72px; padding:11px 16px 9px; }
   .step-number { width:34px; height:34px; }
   .step-header h2 { font-size:1.05rem; }
@@ -413,7 +371,7 @@ body { min-width:0; overflow-x:hidden; }
     overflow:visible;
     border-radius:10px;
   }
-  .sidebar-head, .case-summary, .sidebar-foot { display:none; }
+  .sidebar-head, .case-summary { display:none; }
   .step-nav { grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; padding:5px; }
   .step-nav-button { grid-template-columns:26px minmax(0,1fr); gap:5px; padding:6px; min-width:0; }
   .step-index { width:26px; height:26px; }
@@ -505,7 +463,7 @@ body { min-width:0; overflow-x:hidden; }
       </div>
       <div class="header-meta">
         <button type="button" id="reset-work-btn" class="secondary-button">新しい作業</button>
-        <span class="badge safe">● 入力内容・画像は外部送信なし</span>
+        <span class="badge safe">入力文字・画像は送信しません</span>
         <span class="badge">v<span data-app-version>4.3.1-web</span></span>
       </div>
     </div>
@@ -531,7 +489,6 @@ body { min-width:0; overflow-x:hidden; }
         <div class="case-row"><dt>画像</dt><dd id="case-image">未読み込み</dd></div>
         <div class="case-row"><dt>外字登録</dt><dd id="case-register">未完了</dd></div>
       </dl>
-      <div class="sidebar-foot">v<span data-app-version>4.3.1-web</span> ／ 入力画像や氏名等をネットワーク送信・永続保存する処理はありません。</div>
     </aside>
 
     <div class="workspace-card" id="workspace-card">
@@ -548,7 +505,7 @@ body { min-width:0; overflow-x:hidden; }
                 <div class="dataset-card" id="dataset-card">
                   <div class="dataset-card-top"><strong id="dataset-title">行政事務標準文字データ</strong><span id="dataset-count">読込中</span></div>
                   <p id="dataset-status">検索データを準備しています。</p>
-                </div><details class="maintenance" id="license-details" style="margin-top:10px"><summary>データ・フォントの出典とライセンス</summary><div class="details-body" style="padding:12px"><p class="small-note"><strong>MJ文字情報一覧表 Ver.006.02：</strong>独立行政法人情報処理推進機構（IPA）の著作物を基にした文字対応メタデータを収録しています。当該派生データ部分は Creative Commons 表示－継承 2.1 日本（CC BY-SA 2.1 JP）に従います。原著作物の案内：<span class="license-uri">https://moji.or.jp/mojikiban/mjlist/</span> ／ ライセンス：<span class="license-uri">https://creativecommons.org/licenses/by-sa/2.1/jp/</span></p><p class="small-note"><strong>IPAmj明朝 Ver.006.01：</strong>公式ファイル <code>ipamjm.ttf</code> の原本バイト列を改変せず可逆圧縮して本HTMLへ内蔵し、実行時にメモリ上へ復元して本HTML内の字形表示にのみ使用します。IPAフォントライセンスv1.0全文を以下に添付しています。</p><p class="small-note"><strong>追加文字行政事務標準明朝：</strong>公式ファイル <code>acgjm.woff2</code> の原本バイト列を改変せず内蔵し、同梱されていた選択可能ライセンスのうち SIL Open Font License 1.1 を採用します。著作権表示およびOFL全文を以下に添付しています。</p><details><summary>IPAフォントライセンスv1.0 全文</summary><pre style="white-space:pre-wrap;font-size:.68rem;max-height:320px;overflow:auto">--------------------------------------------------
+                </div><details class="maintenance" id="license-details" style="margin-top:10px"><summary>データ・フォントの出典とライセンス</summary><div class="details-body" style="padding:12px"><p class="small-note"><strong>MJ文字情報一覧表 Ver.006.02：</strong>IPA原著作物に基づく文字メタデータを使用しています（CC BY-SA 2.1 JP）。出典：<span class="license-uri">https://moji.or.jp/mojikiban/mjlist/</span> ／ ライセンス：<span class="license-uri">https://creativecommons.org/licenses/by-sa/2.1/jp/</span></p><p class="small-note"><strong>IPAmj明朝 Ver.006.01：</strong><code>ipamjm.ttf</code> を無改変のまま可逆圧縮した資材として同一サイトから取得し、ブラウザ内の字形表示に使用します。IPAフォントライセンスv1.0全文は以下のとおりです。</p><p class="small-note"><strong>追加文字行政事務標準明朝：</strong><code>acgjm.woff2</code> を無改変のまま可逆圧縮した資材として同一サイトから取得し、SIL Open Font License 1.1に基づき使用します。著作権表示とOFL全文は以下のとおりです。</p><details><summary>IPAフォントライセンスv1.0 全文</summary><pre style="white-space:pre-wrap;font-size:.68rem;max-height:320px;overflow:auto">--------------------------------------------------
 IPA Font License Agreement v1.0 &lt;Japanese/English&gt;
 --------------------------------------------------
 
@@ -772,23 +729,23 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
                   <div class="result-group similar-group"><div class="result-heading-row"><h3>形が近い候補</h3><span>別の漢字を含め、字形の近い順に表示</span></div><div id="similar-list" class="candidate-grid"></div><p id="similar-empty" class="empty-note" hidden>形が近い候補を表示できませんでした。</p></div>
                   <div class="field" id="manual-copy-row" hidden><label for="manual-copy-input">自動コピーできない場合</label><input type="text" id="manual-copy-input" readonly /></div>
                 </div>
-                <div class="info-box" id="search-empty-state"><h3>左側に漢字を1文字入力してください</h3><p>候補はここに表示します。</p></div>
+                <div class="info-box" id="search-empty-state"><h3>漢字を1文字入力してください</h3></div>
               </div>
             </div>
           </div>
         </div>
-        <footer class="step-footer"><span class="footer-hint">通常の文字・IVS候補は「コピー」で利用できます。<br>ツール内表示専用の字形は、その字形から外字を作成できます。</span></footer>
+        <footer class="step-footer"><span class="footer-hint">文字・IVSは「コピー」、コピー対象外の字形は「外字にする」を使用します。</span></footer>
       </section>
 
       <!-- Step 2 -->
       <section class="step-view" id="upload-section" data-step-view="2" hidden>
-        <header class="step-header"><div class="step-title-wrap"><span class="step-number">2</span><div><h2>住民票から対象の1文字だけを取り込む</h2><p>最も簡単なのはWindowsの切り取り機能です。<br>氏名全体ではなく、必要な1文字だけを切り取ってください。</p></div></div><span class="current-step">Step 2 / 4</span></header>
+        <header class="step-header"><div class="step-title-wrap"><span class="step-number">2</span><div><h2>住民票から対象の1文字だけを取り込む</h2><p>必要な1文字だけを切り取って貼り付けます。</p></div></div><span class="current-step">Step 2 / 4</span></header>
         <div class="step-scroll">
           <div class="source-layout">
             <div>
               <div class="capture-card"><h3>推奨：画面から1文字を切り取る</h3><div class="capture-steps"><div class="capture-step"><b>① 原資料を拡大</b><span>PDFや業務画面を<br><strong>200～400%程度</strong>に拡大します。</span></div><div class="capture-step"><b>② 切り取り</b><span class="capture-key">Win + Shift + S</span><span class="capture-instruction"><strong>文字の周囲に少し余白を残して</strong><br>1文字だけ選択します。</span></div><div class="capture-step"><b>③ この画面へ貼付</b><span class="capture-key">Ctrl + V</span><span class="capture-instruction">このツールへ戻り、<br>そのまま貼り付けます。</span></div></div></div>
-              <div class="info-box maintenance"><h3>紙の住民票しかない場合</h3><p>庁内の適切なスキャン手段で画像化し、対象文字だけを切り出してください。<br>不要な氏名・住所等を画像に含めない運用を推奨します。</p></div>
-              <div class="privacy-note"><strong>個人情報の最小化</strong><br>このHTMLは外部送信しませんが、取り込む画像自体も必要な1文字に限定してください。</div>
+              <div class="info-box maintenance"><h3>紙の住民票の場合</h3><p>庁内の適切な方法で画像化し、対象文字だけを切り出してください。</p></div>
+              <div class="privacy-note"><strong>個人情報の最小化</strong><br>入力画像は送信・永続保存しません。取り込む範囲も必要な1文字に限定してください。</div>
             </div>
             <div>
               <input type="file" id="image-input" accept="image/png,image/jpeg,image/webp,image/bmp" hidden />
@@ -803,14 +760,14 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
       <!-- Step 3 -->
       <section class="step-view" id="adjust-section" data-step-view="3" hidden>
-        <header class="step-header"><div class="step-title-wrap"><span class="step-number">3</span><div><h2>住民票の字形として読める形に整える</h2><p>黒い線が欠けず、隣の文字や罫線が入っていないことを確認します。<br>通常は初期設定のままで構いません。</p></div></div><span class="current-step">Step 3 / 4</span></header>
+        <header class="step-header"><div class="step-title-wrap"><span class="step-number">3</span><div><h2>外字用に字形を整える</h2><p>線切れや余計な文字・罫線がないか確認します。通常は初期設定のままで構いません。</p></div></div><span class="current-step">Step 3 / 4</span></header>
         <div class="step-scroll">
           <div class="adjust-layout">
-            <div class="preview-panel"><div class="canvas-wrap"><canvas id="preview-canvas" width="64" height="64"></canvas></div><p class="preview-caption">最終的にWindows外字として登録する字形</p><div class="info-box maintenance"><h3>確認するポイント</h3><p>文字が中央に収まり、線が切れていないこと。<br>背景や隣の文字が残っていないことを確認します。</p></div></div>
+            <div class="preview-panel"><div class="canvas-wrap"><canvas id="preview-canvas" width="64" height="64"></canvas></div><p class="preview-caption">Windows外字として登録する字形</p></div>
             <div class="control-stack">
               <div class="control-block"><h3>線の拾い方</h3><div class="slider-row"><input type="range" id="threshold-slider" min="0" max="255" value="128" disabled aria-label="線の拾い方" /><span class="threshold-number" id="threshold-value">128</span></div><p class="small-note">線が欠ける場合は右へ。<br>余計な汚れを拾う場合は左へ動かします。</p><label class="switch-row maintenance"><input type="checkbox" id="invert-toggle" disabled /> 白黒が逆の場合に反転する</label></div>
               <details><summary>画像の向き・収め方など（詳細設定）</summary><div class="details-body"><div class="advanced-grid"><button type="button" id="rotate-btn" class="ghost-button" disabled>↻ 90°回転</button><label class="field-inline">画像の収め方<select id="fit-mode-select" disabled><option value="contain">全体を収める（推奨）</option><option value="cover">枠いっぱいに拡大</option></select></label><label class="field-inline">出力サイズ<select id="output-size-select"><option value="64">64×64（標準）</option><option value="128">128×128</option><option value="256">256×256</option></select></label></div></div></details>
-              <div class="info-box"><h3>迷った場合</h3><p>「線の拾い方 128」「全体を収める」「64×64」のまま次へ進んでください。<br>見た目に問題があるときだけ調整します。</p></div>
+              
             </div>
           </div>
         </div>
@@ -819,7 +776,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
       <!-- Step 4 -->
       <section class="step-view" id="codepoint-section" data-step-view="4" hidden>
-        <header class="step-header"><div class="step-title-wrap"><span class="step-number">4</span><div><h2>Windowsの外字として登録する</h2><p>保存番号を決めます。<br>BMPをペイント経由で外字エディターへ貼り付けます。</p></div></div><span class="current-step">Step 4 / 4</span></header>
+        <header class="step-header"><div class="step-title-wrap"><span class="step-number">4</span><div><h2>Windowsの外字として登録する</h2><p>保存番号を決め、BMPをペイント経由で外字エディターへ貼り付けます。</p></div></div><span class="current-step">Step 4 / 4</span></header>
         <div class="step-scroll">
           <div class="register-layout">
             <div>
@@ -840,7 +797,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <script>
 /* =========================================================
-   constants.js / embedded data pack
+   constants.js / web data pack
    ========================================================= */
 const PUA_MIN = 0xe000;
 const PUA_MAX = 0xe757;
@@ -910,14 +867,13 @@ const datasetCardEl = document.getElementById("dataset-card");
 const datasetTitleEl = document.getElementById("dataset-title");
 const datasetCountEl = document.getElementById("dataset-count");
 const datasetStatusEl = document.getElementById("dataset-status");
-const datasetBadgeEl = document.getElementById("dataset-badge");
 const candidateDetailDialogEl = document.getElementById("candidate-detail-dialog");
 const candidateDetailListEl = document.getElementById("candidate-detail-list");
 const candidateDetailCloseEl = document.getElementById("candidate-detail-close");
 const toastEl = document.getElementById("toast");
 
 /* =========================================================
-   characterRepository.js — 配布HTML内の行政事務標準文字データ
+   characterRepository.js — 行政事務標準文字データ
    ========================================================= */
 function sequenceKey(text) {
   return Array.from(text || "").map(ch => ch.codePointAt(0).toString(16).toUpperCase()).join("-");
@@ -1443,12 +1399,6 @@ function cpLabel(text) {
   return Array.from(text || "").map(ch => "U+" + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")).join(" + ");
 }
 
-function showManualCopyFallback(text) {
-  manualCopyRowEl.hidden = false;
-  manualCopyInputEl.value = text;
-  manualCopyInputEl.focus();
-  manualCopyInputEl.select();
-}
 
 function candidateKind(record) {
   if (record.src === "GJ") return "ツール内表示";
@@ -1461,7 +1411,7 @@ function showCandidateDetails(record, extra = {}) {
   const rows = [
     ["文字ID", record.id || "—"],
     ["区分", record.src === "GJ" ? "GJ追加文字" : record.src === "MJ" ? "MJ文字" : "開発用データ"],
-    ["表示方式", record.src === "GJ" ? "ツール内蔵字形" : candidateKind(record)],
+    ["表示方式", record.src === "GJ" ? "公式GJフォント" : candidateKind(record)],
     ["文字コード", record.seq ? cpLabel(record.seq) : "テキストコピー対象外"],
   ];
   if (Number.isFinite(extra.rank)) rows.push(["類似候補順位", String(extra.rank)]);
@@ -1478,7 +1428,7 @@ function showCandidateDetails(record, extra = {}) {
 async function useEmbeddedGlyphForGaiji(record) {
   const source = await GlyphProvider.toSourceCanvas(record);
   if (!source) {
-    showToast("この字形は内蔵フォントで正確に描画できないため、住民票等の画像から外字を作成してください。", true);
+    showToast("この字形を表示用フォントで描画できないため、住民票等の画像から外字を作成してください。", true);
     goToStep(2, true);
     return;
   }
@@ -1491,7 +1441,7 @@ async function useEmbeddedGlyphForGaiji(record) {
   setImageLoadedState(true);
   updateWorkflowStatus();
   goToStep(3, true);
-  showToast((record.id || "候補") + " の内蔵字形を外字原稿へ読み込みました。");
+  showToast((record.id || "候補") + " の字形を外字原稿へ読み込みました。");
 }
 
 async function makeCandidateCard(record, extra = {}) {
@@ -1696,7 +1646,7 @@ function setCodepoint(cp, skipGrid) {
 /* =========================================================
    ui.js — 4工程の表示・状態管理
    ========================================================= */
-const APP_META = Object.freeze({ version: "4.3.1-web", build: "2026-08-27" });
+const APP_META = Object.freeze({ version: "4.3.1-web", build: "2026-08-31" });
 
 const ui = Object.freeze({
   stepViews: Array.from(document.querySelectorAll("[data-step-view]")),
@@ -1737,7 +1687,7 @@ function syncCaseSummary() {
   if (ui.toAdjustBtn) ui.toAdjustBtn.disabled = !appState.sourceCanvas;
   if (ui.toRegisterBtn) ui.toRegisterBtn.disabled = !appState.sourceCanvas;
   if (ui.uploadStatus) {
-    ui.uploadStatus.textContent = appState.sourceCanvas ? (appState.sourceOrigin ? appState.sourceOrigin + " の内蔵字形を読み込みました。" : "画像を読み込みました。次に字形を確認してください。") : "まだ画像は読み込まれていません。";
+    ui.uploadStatus.textContent = appState.sourceCanvas ? (appState.sourceOrigin ? appState.sourceOrigin + " の字形を読み込みました。" : "画像を読み込みました。次に字形を確認してください。") : "まだ画像は読み込まれていません。";
     ui.uploadStatus.classList.toggle("is-ok", !!appState.sourceCanvas);
   }
 }
@@ -1749,7 +1699,7 @@ function stepAccessible(step) {
 }
 
 function goToStep(step, force = false) {
-  if (!force && !stepAccessible(step)) { showToast("先に文字画像を読み込むか、内蔵字形を外字原稿へ読み込んでください。", true); return; }
+  if (!force && !stepAccessible(step)) { showToast("先に文字画像を読み込むか、候補字形を外字原稿へ読み込んでください。", true); return; }
   appState.currentStep = step;
   ui.stepViews.forEach(view => { view.hidden = Number(view.dataset.stepView) !== step; });
   updateWorkflowStatus();
@@ -1848,13 +1798,11 @@ function updateDatasetUi() {
     datasetTitleEl.textContent = "簡易検索データ";
     datasetCountEl.textContent = count + "字";
     datasetStatusEl.textContent = "行政事務標準文字の全件データが読み込まれていません。配布元へ連絡してください。";
-    if (datasetBadgeEl) datasetBadgeEl.textContent = "文字データ不完全";
   } else {
     datasetCardEl.classList.remove("dev");
     datasetTitleEl.textContent = "行政事務標準文字";
     datasetCountEl.textContent = count.toLocaleString("ja-JP") + "字";
-    datasetStatusEl.textContent = `MJ ${Number(src.mjCount || 0).toLocaleString("ja-JP")}字 + GJ ${Number(src.gjCount || 0).toLocaleString("ja-JP")}字を内蔵。候補字形はHTML内に同梱した公式フォント原本から表示します。端末へのフォント導入は不要です。`;
-    if (datasetBadgeEl) datasetBadgeEl.textContent = "行政事務標準文字 内蔵";
+    datasetStatusEl.textContent = `MJ ${Number(src.mjCount || 0).toLocaleString("ja-JP")}字 + GJ ${Number(src.gjCount || 0).toLocaleString("ja-JP")}字。字形表示に必要な公式フォントは同一サイトから読み込みます（端末へのインストール不要）。`;
   }
 }
 
@@ -1944,7 +1892,6 @@ async function init() {
     updateDatasetUi();
   } catch (err) {
     datasetCardEl.classList.add("dev"); datasetStatusEl.textContent = "文字データを読み込めませんでした: " + (err.message || err);
-    if (datasetBadgeEl) datasetBadgeEl.textContent = "文字データ読込エラー";
     searchCharInputEl.disabled = true;
   }
   populateCpPages(); setCodepoint(PUA_MIN, true);

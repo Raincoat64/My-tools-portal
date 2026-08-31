@@ -5,8 +5,8 @@
   "regressionRank": 1,
   "files": {
     "gaiji-maker.html": {
-      "size": 130053,
-      "sha256": "27f1628bc8959bf25e35e30209a4ff4d96822fe53a052bf8fdec9a858474956a"
+      "size": 125233,
+      "sha256": "eee387479978c4ebfc8281801d70477fadeccfc49df22ce0209de2416587d7e1"
     },
     "records.pack": {
       "size": 777051,
