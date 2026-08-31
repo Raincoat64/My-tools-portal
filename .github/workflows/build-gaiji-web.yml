@@ -59,6 +59,9 @@ jobs:
           python tools/gaiji-maker-source/normalize_web_html.py \
             /tmp/gaiji-out/gaiji-maker.html \
             /tmp/gaiji-out/gaiji-maker-build-report.json
+          python tools/gaiji-maker-source/prune_web_html.py \
+            /tmp/gaiji-out/gaiji-maker.html \
+            /tmp/gaiji-out/gaiji-maker-build-report.json
           rm -rf tools/gaiji-maker-assets
           cp /tmp/gaiji-out/gaiji-maker.html tools/gaiji-maker.html
           cp /tmp/gaiji-out/gaiji-maker-build-report.json tools/gaiji-maker-build-report.json
@@ -77,6 +80,19 @@ jobs:
           ! grep -q 'kyujitai.js' tools/gaiji-maker.html
           ! grep -q '単一HTMLで配布可能' tools/gaiji-maker.html
           ! grep -q '本HTMLへ内蔵' tools/gaiji-maker.html
+          ! grep -q 'CharacterRepository.mode' tools/gaiji-maker.html
+          ! grep -q 'gunzipBytes' tools/gaiji-maker.html
+          ! grep -q 'char-list' tools/gaiji-maker.html
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path('tools/gaiji-maker.html').read_text('utf-8')
+          scripts = re.findall(r'<script>([\s\S]*?)</script>', html)
+          if len(scripts) != 1:
+              raise SystemExit(f'expected 1 inline script, found {len(scripts)}')
+          Path('/tmp/gaiji-generated.js').write_text(scripts[0], 'utf-8')
+          PY
+          node --check /tmp/gaiji-generated.js
 
       - name: Commit generated Pages assets
         run: |
