@@ -56,6 +56,9 @@ jobs:
             --template /tmp/gaiji-template.html \
             --output-dir /tmp/gaiji-out \
             --inputs .cache/gaiji
+          python tools/gaiji-maker-source/normalize_web_html.py \
+            /tmp/gaiji-out/gaiji-maker.html \
+            /tmp/gaiji-out/gaiji-maker-build-report.json
           rm -rf tools/gaiji-maker-assets
           cp /tmp/gaiji-out/gaiji-maker.html tools/gaiji-maker.html
           cp /tmp/gaiji-out/gaiji-maker-build-report.json tools/gaiji-maker-build-report.json
@@ -70,6 +73,10 @@ jobs:
           test -s tools/gaiji-maker-assets/ipamjm.pack
           test -s tools/gaiji-maker-assets/acgjm.pack
           python -m json.tool tools/gaiji-maker-build-report.json >/dev/null
+          test "$(grep -c 'function showManualCopyFallback(text)' tools/gaiji-maker.html)" -eq 1
+          ! grep -q 'kyujitai.js' tools/gaiji-maker.html
+          ! grep -q '単一HTMLで配布可能' tools/gaiji-maker.html
+          ! grep -q '本HTMLへ内蔵' tools/gaiji-maker.html
 
       - name: Commit generated Pages assets
         run: |
@@ -80,5 +87,5 @@ jobs:
             echo "Generated assets are unchanged."
             exit 0
           fi
-          git commit -m "Build gaiji web edition v4.3.1 [skip ci]"
+          git commit -m "Build gaiji web edition [skip ci]"
           git push
