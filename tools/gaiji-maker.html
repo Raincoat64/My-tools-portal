@@ -34,7 +34,6 @@
   --amber-soft: #fff7e8;
   --amber-line: #edd7a8;
   --danger: #a33c34;
-  --danger-soft: #fff1ef;
   --ok: #17613e;
   --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 8px 24px rgba(16, 24, 40, .05);
   --radius: 12px;
@@ -87,7 +86,6 @@ h1 { margin:0; font-size:1.22rem; letter-spacing:.01em; }
 .step-nav-button.is-current, .step-nav-button.active { background:var(--brand-soft); }
 .step-nav-button.is-current .step-index, .step-nav-button.active .step-index { border-color:var(--brand); color:var(--brand); }
 .step-nav-button.done .step-index { background:var(--brand); border-color:var(--brand); color:#fff; }
-.step-nav-button.skip { opacity:.58; }
 .case-summary { margin:auto 10px 10px; padding:12px; border:1px solid var(--line); border-radius:10px; background:var(--surface-subtle); }
 .case-summary h3 { margin:0 0 8px; font-size:.76rem; }
 .case-row { display:grid; grid-template-columns:78px minmax(0,1fr); gap:8px; padding:5px 0; border-top:1px solid #e7ebee; font-size:.7rem; }
@@ -109,14 +107,14 @@ h1 { margin:0; font-size:1.22rem; letter-spacing:.01em; }
 .footer-actions { display:flex; gap:8px; margin-left:auto; }
 
 /* Components */
-.primary-button, .secondary-button, .ghost-button, .chip-btn, .btn-chip, .btn-primary, .btn-secondary, .source-action {
+.primary-button, .secondary-button, .ghost-button {
   border-radius:8px; cursor:pointer; min-height:38px; padding:7px 13px; font-weight:700; font-size:.8rem;
 }
-.primary-button, .btn-primary, .source-action.primary { border:1px solid var(--brand); background:var(--brand); color:#fff; }
-.primary-button:hover, .btn-primary:hover, .source-action.primary:hover { background:var(--brand-hover); }
-.secondary-button, .btn-secondary, .source-action { border:1px solid var(--line-strong); background:#fff; }
-.secondary-button:hover, .btn-secondary:hover, .source-action:hover { background:var(--surface-subtle); }
-.ghost-button, .btn-chip { border:1px solid var(--line); background:var(--surface-subtle); }
+.primary-button { border:1px solid var(--brand); background:var(--brand); color:#fff; }
+.primary-button:hover { background:var(--brand-hover); }
+.secondary-button { border:1px solid var(--line-strong); background:#fff; }
+.secondary-button:hover { background:var(--surface-subtle); }
+.ghost-button { border:1px solid var(--line); background:var(--surface-subtle); }
 button:disabled, input:disabled, select:disabled { opacity:.45; cursor:not-allowed; }
 .action-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .field { margin-bottom:13px; }
@@ -132,17 +130,13 @@ details { border:1px solid var(--line); border-radius:10px; background:#fff; }
 details + details { margin-top:10px; }
 summary { padding:10px 12px; cursor:pointer; font-size:.76rem; font-weight:800; }
 .details-body { border-top:1px solid var(--line); padding:12px; }
-code, .shortcut { font-family:Consolas,"Yu Gothic UI",monospace; background:#eef1f4; border:1px solid #dbe1e6; border-radius:5px; padding:1px 5px; font-size:.76em; }
+code { font-family:Consolas,"Yu Gothic UI",monospace; background:#eef1f4; border:1px solid #dbe1e6; border-radius:5px; padding:1px 5px; font-size:.76em; }
 
 /* Step 1 */
 .search-layout { display:grid; grid-template-columns:minmax(300px, .82fr) minmax(420px, 1.18fr); gap:18px; }
 .search-control { padding:16px; border:1px solid var(--line); border-radius:10px; background:var(--surface-subtle); }
 .search-row { display:flex; gap:8px; align-items:end; }
 #search-char-input { width:120px; min-height:52px; border:1px solid var(--line-strong); border-radius:9px; text-align:center; font-size:1.8rem; background:#fff; }
-.search-guidance { margin-top:12px; display:grid; gap:8px; }
-.guidance-line { display:grid; grid-template-columns:24px 1fr; gap:8px; align-items:start; color:var(--muted); font-size:.73rem; }
-.guidance-line b { color:var(--text); }
-.guide-num { width:22px; height:22px; border-radius:6px; display:grid; place-items:center; background:#e8ecef; color:var(--muted); font-weight:800; font-size:.66rem; }
 .result-panel { min-height:340px; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
 .result-panel-head { padding:10px 12px; border-bottom:1px solid var(--line); background:#fbfcfd; font-size:.76rem; font-weight:800; }
 .result-panel-body { max-height:480px; overflow:auto; padding:12px; }
@@ -150,30 +144,10 @@ code, .shortcut { font-family:Consolas,"Yu Gothic UI",monospace; background:#eef
 .result-group { margin-top:14px; }
 .result-group:first-child { margin-top:0; }
 .result-group h3 { margin:0 0 7px; font-size:.76rem; }
-.char-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(112px, 1fr)); gap:8px; }
-.char-chip { border:1px solid var(--line); border-radius:9px; background:#fff; padding:9px; text-align:center; }
-.char-chip .big { display:block; font-family:"Yu Mincho","MS Mincho",serif; font-size:2.15rem; line-height:1.15; }
-.char-chip .cp { display:none; }
-.chip-actions { display:flex; gap:5px; justify-content:center; margin-top:7px; }
-.chip-btn { min-height:28px; padding:3px 7px; border:1px solid var(--line); background:#fff; font-size:.66rem; }
-.chip-btn.copy-action { border-color:var(--brand-line); background:var(--brand-soft); color:var(--brand); font-weight:800; }
 .empty-note { margin:4px 0; color:var(--muted); font-size:.74rem; }
-.font-compare-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); gap:7px; }
-.font-compare-cell { border:1px solid var(--line); border-radius:7px; padding:7px; text-align:center; background:#fff; }
-.font-compare-cell.unavailable { opacity:.45; }
-.font-compare-cell .glyph { font-size:1.9rem; line-height:1.2; }
-.font-compare-cell .fontname, .font-compare-cell .missing { color:var(--muted); font-size:.62rem; }
-.priority-search-card { margin-top:14px; border:2px solid var(--brand-line); border-radius:12px; background:linear-gradient(180deg,#f0f8f5 0%,#f8fbfa 100%); padding:14px; }
-.priority-search-card h3 { margin:0 0 5px; font-size:.88rem; }
-.priority-search-card p { margin:0 0 10px; color:var(--muted); font-size:.72rem; }
-.priority-search-card .primary-button { width:100%; justify-content:center; }
-.priority-search-card.needs-attention { box-shadow:0 0 0 3px rgba(31,95,74,.08); }
 .fallback-card { margin-top:10px; border:1px solid var(--line); border-radius:10px; padding:12px; background:#fff; }
 .fallback-card strong { display:block; margin-bottom:3px; font-size:.78rem; }
 .fallback-card p { margin:0 0 9px; color:var(--muted); font-size:.7rem; }
-.precision-results { margin-top:16px; padding-top:14px; border-top:1px solid var(--line); }
-.precision-results h3 { display:flex; align-items:center; gap:6px; }
-.precision-results h3::before { content:"重要"; padding:2px 5px; border-radius:999px; background:var(--brand-soft); color:var(--brand); font-size:.56rem; letter-spacing:.03em; }
 
 /* Step 2 */
 .source-layout { display:grid; grid-template-columns:minmax(380px,.95fr) minmax(460px,1.05fr); gap:18px; }
@@ -240,19 +214,6 @@ input[type="range"] { width:100%; accent-color:var(--brand); }
 .toast { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:100; max-width:680px; padding:9px 14px; border-radius:8px; background:#17212b; color:#fff; box-shadow:var(--shadow); font-size:.76rem; text-align:center; }
 .toast.error { background:#7d2d28; }
 
-@media (max-width: 1180px) {
-  body { min-width: 0; }
-  .app-shell { grid-template-columns:250px minmax(0,1fr); padding:0 12px; }
-  .search-layout, .source-layout, .register-layout { grid-template-columns:1fr; }
-  .capture-steps { grid-template-columns:1fr 1fr 1fr; }
-}
-@media (max-width: 900px) {
-  body { min-width: 720px; }
-  .sidebar { display:none; }
-  .app-shell { grid-template-columns:1fr; }
-  .workspace-card { height:auto; min-height:calc(100vh - 110px); max-height:none; }
-  .step-scroll { max-height:none; }
-}
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto!important; transition:none!important; } }
 
 /* ---- v4: 行政事務標準文字統合検索 ---- */
@@ -262,7 +223,6 @@ input[type="range"] { width:100%; accent-color:var(--brand); }
 .dataset-card-top strong { font-size:.78rem; }
 .dataset-card-top span { font-size:.68rem; color:var(--muted); font-weight:700; }
 .dataset-card p { margin:5px 0 0; font-size:.7rem; color:var(--muted); line-height:1.5; }
-.dataset-card.dev { border-color:var(--amber-line); background:var(--amber-soft); }
 .result-panel-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .result-summary { font-size:.68rem; font-weight:500; color:var(--muted); }
 .result-heading-row { display:flex; align-items:baseline; gap:10px; margin-bottom:8px; }
@@ -281,7 +241,6 @@ input[type="range"] { width:100%; accent-color:var(--brand); }
 .candidate-actions .gaiji-candidate { border:1px solid var(--amber-line); background:var(--amber-soft); color:#6e4d15; font-weight:700; }
 .candidate-actions .detail-candidate { flex:0 0 36px; border:1px solid var(--line); background:var(--surface-subtle); color:var(--muted); }
 .candidate-card.is-gj .candidate-id::before { content:"GJ  "; color:#8a5d18; font-weight:700; }
-.candidate-card.is-dev .candidate-glyph-wrap { background:repeating-linear-gradient(135deg,#fff,#fff 8px,#fbfbfb 8px,#fbfbfb 16px); }
 .search-loading { padding:20px; text-align:center; color:var(--muted); font-size:.76rem; }
 .candidate-detail-dialog { border:0; border-radius:12px; box-shadow:0 16px 60px rgba(0,0,0,.22); width:min(520px,calc(100vw - 32px)); padding:0; }
 .candidate-detail-dialog::backdrop { background:rgba(16,24,40,.3); }
@@ -448,7 +407,6 @@ body { min-width:0; overflow-x:hidden; }
   .candidate-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
   .candidate-glyph-wrap { height:86px; }
   .candidate-glyph { width:80px; height:80px; }
-  .card, .panel { padding-left:10px; padding-right:10px; }
   .cp-grid { grid-template-columns:repeat(6,1fr); }
 }
 
@@ -895,26 +853,6 @@ function firstGrapheme(value) {
   return cps[0] || "";
 }
 
-function b64Bytes(b64) {
-  const raw = atob(b64);
-  const out = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-  return out;
-}
-
-async function gunzipBytes(b64) {
-  if (!b64) return new Uint8Array();
-  if (typeof DecompressionStream === "undefined") throw new Error("このブラウザは内蔵文字データの展開に対応していません。Microsoft Edgeの更新版を使用してください。");
-  const compressed = b64Bytes(b64);
-  const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream("gzip"));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
-}
-
-async function gunzipJson(b64) {
-  const bytes = await gunzipBytes(b64);
-  return JSON.parse(new TextDecoder("utf-8").decode(bytes));
-}
-
 async function fetchGzipAsset(url) {
   if (!url) throw new Error("文字データのURLがありません。");
   const response = await fetch(url, { cache: "force-cache", credentials: "same-origin" });
@@ -926,7 +864,6 @@ async function fetchGzipAsset(url) {
 
 const CharacterRepository = {
   ready: false,
-  mode: "",
   records: [],
   features: new Uint8Array(),
   featureDim: 0,
@@ -935,32 +872,16 @@ const CharacterRepository = {
   baseMap: new Map(),
   source: {},
   async init(pack) {
-    this.mode = pack.mode || "full";
     this.featureDim = Number(pack.featureDim || 0);
     this.source = pack.source || {};
-    if (this.mode === "seed") {
-      this.records = pack.records || [];
-      this.features = Uint8Array.from(pack.features || []);
-      this.relations = pack.relations || {};
-    } else if (this.mode === "external-web") {
-      const [recordsBytes, featuresBytes, relationsBytes] = await Promise.all([
-        fetchGzipAsset(pack.recordsUrl),
-        fetchGzipAsset(pack.featuresUrl),
-        fetchGzipAsset(pack.relationsUrl),
-      ]);
-      this.records = JSON.parse(new TextDecoder("utf-8").decode(recordsBytes));
-      this.features = featuresBytes;
-      this.relations = JSON.parse(new TextDecoder("utf-8").decode(relationsBytes)) || {};
-    } else {
-      const [records, features, relations] = await Promise.all([
-        gunzipJson(pack.recordsGz),
-        gunzipBytes(pack.featuresGz),
-        gunzipJson(pack.relationsGz),
-      ]);
-      this.records = records;
-      this.features = features;
-      this.relations = relations || {};
-    }
+    const [recordsBytes, featuresBytes, relationsBytes] = await Promise.all([
+      fetchGzipAsset(pack.recordsUrl),
+      fetchGzipAsset(pack.featuresUrl),
+      fetchGzipAsset(pack.relationsUrl),
+    ]);
+    this.records = JSON.parse(new TextDecoder("utf-8").decode(recordsBytes));
+    this.features = featuresBytes;
+    this.relations = JSON.parse(new TextDecoder("utf-8").decode(relationsBytes)) || {};
     this.records.forEach((r, i) => {
       r.i = Number.isInteger(r.i) ? r.i : i;
       if (r.seq) {
@@ -995,10 +916,8 @@ const EmbeddedFontService = {
     const spec=(ADMIN_CHAR_DATA_PACK.fonts||{})[key];
     if (!spec) throw new Error("表示用フォント情報がありません。");
     const name=key === "gj" ? "AdminGJ" : "AdminMJ";
-    let bytes;
-    if (spec.url) bytes=await fetchGzipAsset(spec.url);
-    else if (spec.gz) bytes=await gunzipBytes(spec.gz);
-    else throw new Error("表示用フォントを取得できません。");
+    if (!spec.url) throw new Error("表示用フォントのURLがありません。");
+    const bytes=await fetchGzipAsset(spec.url);
     const exact=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
     const face=new FontFace(name,exact); await face.load(); document.fonts.add(face); this.loaded.add(key);
   }
@@ -1410,7 +1329,7 @@ function showCandidateDetails(record, extra = {}) {
   if (!candidateDetailDialogEl || !candidateDetailListEl) return;
   const rows = [
     ["文字ID", record.id || "—"],
-    ["区分", record.src === "GJ" ? "GJ追加文字" : record.src === "MJ" ? "MJ文字" : "開発用データ"],
+    ["区分", record.src === "GJ" ? "GJ追加文字" : "MJ文字"],
     ["表示方式", record.src === "GJ" ? "公式GJフォント" : candidateKind(record)],
     ["文字コード", record.seq ? cpLabel(record.seq) : "テキストコピー対象外"],
   ];
@@ -1446,7 +1365,7 @@ async function useEmbeddedGlyphForGaiji(record) {
 
 async function makeCandidateCard(record, extra = {}) {
   const card = document.createElement("article");
-  card.className = "candidate-card" + (record.src === "GJ" ? " is-gj" : "") + (CharacterRepository.mode === "seed" ? " is-dev" : "");
+  card.className = "candidate-card" + (record.src === "GJ" ? " is-gj" : "");
   const wrap = document.createElement("div"); wrap.className = "candidate-glyph-wrap";
   const canvas = document.createElement("canvas"); canvas.className = "candidate-glyph";
   wrap.appendChild(canvas);
@@ -1715,7 +1634,7 @@ function updateWorkflowStatus() {
   };
   ui.navButtons.forEach(btn => {
     const step = Number(btn.dataset.stepNav);
-    btn.classList.remove("done", "active", "skip", "is-current");
+    btn.classList.remove("done", "active", "is-current");
     if (states[step]) btn.classList.add(states[step]);
     if (step === appState.currentStep) btn.classList.add("is-current");
     btn.setAttribute("aria-current", step === appState.currentStep ? "step" : "false");
@@ -1793,17 +1712,9 @@ function resetForNewTask() {
 function updateDatasetUi() {
   const count = CharacterRepository.records.length;
   const src = CharacterRepository.source || {};
-  if (CharacterRepository.mode === "seed") {
-    datasetCardEl.classList.add("dev");
-    datasetTitleEl.textContent = "簡易検索データ";
-    datasetCountEl.textContent = count + "字";
-    datasetStatusEl.textContent = "行政事務標準文字の全件データが読み込まれていません。配布元へ連絡してください。";
-  } else {
-    datasetCardEl.classList.remove("dev");
-    datasetTitleEl.textContent = "行政事務標準文字";
-    datasetCountEl.textContent = count.toLocaleString("ja-JP") + "字";
-    datasetStatusEl.textContent = `MJ ${Number(src.mjCount || 0).toLocaleString("ja-JP")}字 + GJ ${Number(src.gjCount || 0).toLocaleString("ja-JP")}字。字形表示に必要な公式フォントは同一サイトから読み込みます（端末へのインストール不要）。`;
-  }
+  datasetTitleEl.textContent = "行政事務標準文字";
+  datasetCountEl.textContent = count.toLocaleString("ja-JP") + "字";
+  datasetStatusEl.textContent = `MJ ${Number(src.mjCount || 0).toLocaleString("ja-JP")}字 + GJ ${Number(src.gjCount || 0).toLocaleString("ja-JP")}字。字形表示に必要な公式フォントは同一サイトから読み込みます（端末へのインストール不要）。`;
 }
 
 /* =========================================================
