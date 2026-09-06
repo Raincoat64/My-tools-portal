@@ -1,4 +1,4 @@
-const CACHE_NAME = "law-tools-portal-v10";
+const CACHE_NAME = "law-tools-portal-v11";
 const APP_SHELL = [
   "./",
   "./index.html",
