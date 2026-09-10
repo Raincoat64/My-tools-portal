@@ -22,7 +22,9 @@ function preflight(doc){
   for(let i=1;i<doc.countObjects();i++){
     const ref=doc.newIndirect(i),obj=ref.resolve();
     try{
-      if(obj.isDictionary())obj.forEach((value,key)=>{if(forbidden.has(key))fail('ACTIVE_OR_OPTIONAL_CONTENT_UNSUPPORTED');});
+      // Free xref slots and explicit PDF nulls have no document-bound dictionary.
+      if(!obj.isDictionary())continue;
+      obj.forEach((value,key)=>{if(forbidden.has(key))fail('ACTIVE_OR_OPTIONAL_CONTENT_UNSUPPORTED');});
       const action=obj.get('S').asName();if(['JavaScript','Launch','SubmitForm','ImportData','GoToR','Rendition'].includes(action))fail('ACTIVE_CONTENT_UNSUPPORTED');
       if(obj.get('Subtype').asName()==='Image'){
         const w=obj.get('Width').asNumber(),h=obj.get('Height').asNumber(),pixels=w*h;totalPixels+=pixels;
@@ -53,7 +55,10 @@ function textData(page){
   }});}finally{s.destroy();}return chars;
 }
 async function documentState(doc){
-  const info=doc.getTrailer().get('Info').resolve().toString(),metadata=doc.getTrailer().get('Root','Metadata');let xmp=null;
+  const infoObject=doc.getTrailer().get('Info');
+  // /Info is optional. MuPDF's PDFObject.Null cannot be resolved again.
+  let info='null';if(!infoObject.isNull()){const resolved=infoObject.resolve();try{info=resolved.toString();}finally{resolved.destroy();}}infoObject.destroy();
+  const metadata=doc.getTrailer().get('Root','Metadata');let xmp=null;
   if(metadata.isStream()){const stream=metadata.readStream();try{xmp=await sha256(stream.asUint8Array());}finally{stream.destroy();}}
   return {info,xmp,outline:doc.loadOutline()};
 }
