@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; worker-src 'self'; connect-src 'self'; img-src 'self' blob: data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#244e42">
+<title>PaperMirror-JP — 論文を日本語へ</title>
+<link rel="stylesheet" href="./style.css"><link rel="icon" href="./icon.svg" type="image/svg+xml">
+<script type="module" src="./app.mjs"></script>
+</head>
+<body>
+<header class="topbar"><a class="brand" href="./"><span class="brand-icon">文</span><span>PaperMirror<span class="jp">JP</span></span></a><span class="local-badge">ブラウザ内で PDF を処理</span></header>
+<div class="shell">
+<aside class="sidebar"><div class="side-heading">ワークスペース<button id="new-job" class="icon-button" title="新しい原稿">＋</button></div><p class="muted small">このブラウザに保存した作業</p><div id="job-list"></div><button id="refresh-jobs" class="text-button">一覧を更新</button><label class="file-button secondary">作業ファイルから再開<input id="project-file" type="file" accept=".json,.papermirror"></label><p class="storage-note">別の端末や Work で続けるときは、作業ファイルを保存して受け渡してください。</p><button id="delete-all" class="text-button danger">保存した作業をすべて削除</button></aside>
+<main>
+<nav class="steps" aria-label="作業の流れ"><span id="step-upload" class="active">01 原稿</span><span id="step-analysis">02 確認</span><span id="step-translate">03 翻訳</span><span id="step-output">04 保存</span></nav>
+<div id="notice" class="notice" role="status" hidden></div><div class="activity" id="activity" hidden><progress id="progress" max="100" value="0"></progress><button id="cancel" class="secondary">処理を中止</button></div>
+<section id="upload-panel">
+<p class="eyebrow">READ BEYOND THE LANGUAGE</p><h1>論文のレイアウトを確かめながら、<br>日本語へ。</h1><p class="lead">図表や数値を保ち、本文を読みやすく。<br>使い慣れた AI と翻訳データを受け渡して仕上げます。</p>
+<div class="upload-card"><label class="dropzone" for="pdf-file"><span class="paper-symbol">↥</span><strong id="file-label">PDF ファイルを選ぶ</strong><span>文字を選択できる PDF · 最大 30 MB / 100 ページ</span><input id="pdf-file" type="file" accept="application/pdf"></label><div class="upload-actions"><label>パスワード（必要な場合）<input id="pdf-password" type="password" autocomplete="off"></label><button id="analyze-pdf" class="primary" disabled>エンジンを準備中…</button></div></div>
+<details class="settings"><summary>翻訳 AI・用語・保護する表記</summary><div class="form-grid"><label>翻訳 AI<select id="provider"><option value="chatgpt-work">ChatGPT Work</option><option value="generic-relay">その他の AI</option><option value="claude-relay">Claude</option><option value="gemini-relay">Gemini</option></select></label><label>モデル名（記録用）<input id="provider-model" maxlength="120" placeholder="使用したモデル名"></label><label>用語集（JSON）<textarea id="glossary" rows="3" spellcheck="false" placeholder='{"treatment":"処置"}'></textarea></label><label>翻訳せず保持する表記（1 行 1 件）<textarea id="protected-terms" rows="3" placeholder="製品名や固有の識別子"></textarea></label></div></details>
+<div class="principles"><article><b>01</b><h3>図表を保つ</h3><p>原稿を土台に文字を置換。図や罫線の変化も検査します。</p></article><article><b>02</b><h3>数値を照合</h3><p>引用・識別子・数値を保護し、翻訳の取り込み時に確認します。</p></article><article><b>03</b><h3>不確かなら止まる</h3><p>読めない文字や収まらない訳文を、完成扱いにしません。</p></article></div>
+<p class="muted small">PDF はこのページからサーバーへ送信しません。AI に渡す翻訳データは、その AI の環境で扱われます。スキャン原稿、複雑な数式、3 段以上の組版は対象外です。</p>
+</section>
+<section id="workspace" hidden>
+<div class="document-heading"><div><p class="eyebrow">YOUR DOCUMENT</p><h1 id="document-name"></h1><p id="job-expiry" class="muted small"></p></div><span id="job-status" class="status-pill"></span></div>
+<div class="document-actions"><button id="export-project" class="secondary">作業ファイルを保存</button><a id="download-layout" class="button secondary" download="layout.json">解析データ</a><button id="delete-job" class="text-button danger">この作業を削除</button></div>
+<div id="metrics" class="metrics"></div><div id="analysis-issues"></div>
+<div class="review-grid"><section class="panel preview-panel"><div class="panel-heading"><h2>原稿を確認</h2><label>ページ <select id="preview-page"></select></label><label class="check"><input id="preview-translated" type="checkbox">日本語版</label></div><div class="preview-wrap"><img id="page-preview" alt="選択ページの PDF プレビュー"></div></section><section class="panel"><div class="panel-heading"><h2>読み順と翻訳範囲</h2></div><ol id="region-list" class="region-list"></ol></section></div>
+<div class="review-confirm"><label class="check"><input id="analysis-ack" type="checkbox">読み順・翻訳範囲・原文を保持する領域を確認しました</label><button id="review-analysis" class="primary">確認して翻訳へ →</button></div>
+<section id="translation-panel" class="panel" hidden><div class="panel-heading"><div><p class="eyebrow">TRANSLATION</p><h2>AI と翻訳データを受け渡す</h2></div><span id="batch-progress" class="muted"></span></div><p class="muted">パケットを AI に渡し、返された JSON を読み込みます。サイトを操作できない AI でも、コピーやファイルで利用できます。</p><div class="toolbar"><label>バッチ <select id="batch-select"></select></label><button id="copy-batch" class="secondary">パケットをコピー</button><a id="export-packet" class="button secondary" download="translation-packet.md">パケットを保存</a><button id="retry-failed" class="text-button">未完了の単位だけ再試行</button></div><details><summary>翻訳パケットを表示</summary><textarea id="batch-json" rows="12" readonly spellcheck="false" aria-label="翻訳パケット JSON"></textarea></details><label class="response-label">AI からの翻訳 JSON<textarea id="provider-response" rows="9" spellcheck="false" placeholder="AI が返した JSON をここに貼り付け"></textarea></label><div class="toolbar"><label class="file-button secondary">JSON ファイルを読み込む<input id="response-file" type="file" accept=".json"></label><button id="validate-response" class="secondary">内容を検証</button><button id="submit-response" class="primary">翻訳を保存</button></div><pre id="validation-result" hidden></pre></section>
+<section id="output-panel" class="panel" hidden><div class="panel-heading"><div><p class="eyebrow">FINAL CHECK</p><h2>検証して、日本語 PDF を保存</h2></div><button id="render-pdf" class="primary">日本語 PDF を生成</button></div><div id="qa-result"></div><div class="toolbar"><a id="download-result" class="button primary" download="paper_ja.pdf" hidden>日本語 PDF を保存 ↓</a><a id="download-qa" class="button secondary" download="qa.json" hidden>QA レポート</a><a id="download-manifest" class="button secondary" download="manifest.json" hidden>生成記録</a></div><p class="semantic-note">機械検査 PASS は、翻訳の意味の正確さを保証しません。否定・条件・因果関係などは原文と照合してください。</p></section>
+</section>
+<footer>PaperMirror-JP · Browser edition 1.1 <a href="./README.html">使い方と対応範囲</a><a href="./LICENSE.txt">AGPL-3.0</a><a href="./source.zip" download>ソースコード</a></footer>
+</main></div>
+<dialog id="delete-dialog"><h2 id="delete-title">この作業を削除しますか</h2><p>ブラウザ内の原稿・翻訳・生成結果を削除します。保存済みの作業ファイルは残ります。</p><div class="toolbar"><button id="cancel-delete" class="secondary">戻る</button><button id="confirm-delete" class="primary danger-bg">削除する</button></div></dialog>
+</body></html>

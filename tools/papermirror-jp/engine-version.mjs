@@ -1,0 +1,1 @@
+export const ENGINE={"name":"MuPDF.js","version":"1.28.1","wasm_sha256":"5a30ef7b027f541ea8fc54e7c73f16414b0b59940741a12efe5e55f1fd0a99d7","npm_integrity":"sha512-Gi11Ow2G1SlrXKJNZBL1eAIGFVih5+4ZKqjptamTVaj/5hnlrcVrVbyb7lHE2lfFKdxZPyv9ZtfOOq7XgjzEig=="};
