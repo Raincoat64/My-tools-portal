@@ -13,7 +13,7 @@
 ## 実行方法
 
 - ローカル閲覧: `python -m http.server 8931`。
-- 高圧ガス配布物の生成: `python scripts/build_kouatsu.py`。確認: `node --test tests/kouatsu.test.cjs`。
+- 高圧ガス配布物の生成: `python scripts/build_kouatsu.py`。生成一致: `python scripts/build_kouatsu.py --check`。確認: `node --test tests/kouatsu-*.test.mjs`。ブラウザー検証はsrc/kouatsu/README.md参照。
 - 外字Web版の生成手順と依存は.github/workflows/build-gaiji-web.ymlにある。
 - 外字単体版: `python tools/gaiji-maker-source/build_standalone.py --web-html tools/gaiji-maker.html --assets-dir tools/gaiji-maker-assets --output <出力HTML>`。対応workflowは.github/workflows/build-gaiji-standalone.yml。
 - PaperMirror-JP の更新: source.zip を別の作業フォルダーに展開し `node scripts/build-web.mjs`。生成した `_site/` の内容を tools/papermirror-jp/ に配置する。公開サイトには PDF 原稿や作業ファイルを置かない。ソース ZIP 内の Pages workflow は単独リポジトリ用で、このポータルの既存公開設定には追加しない。

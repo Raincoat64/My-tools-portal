@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>高圧ガス手続きナビ | 奈良県向け</title>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <a class="skip-link" href="#stage">本文へ移動</a>
+  <header class="app-header">
+    <div class="header-inner"><div><p class="app-region">奈良県の事業者向け</p><h1>高圧ガス手続きナビ</h1></div>
+    <a href="https://www.pref.nara.lg.jp/n011/39583.html" target="_blank" rel="noopener noreferrer">奈良県の公式案内 ↗</a></div>
+  </header>
+
+  <div class="app-layout">
+    <main class="main-panel">
+      <nav class="mode-tabs" id="mode-tabs" aria-label="メインメニュー">
+        <button type="button" class="mode-tab" data-mode="home">ホーム</button>
+        <button type="button" class="mode-tab" data-mode="catalogue">手続き・様式を探す</button>
+        <button type="button" class="mode-tab" data-mode="browse">条文を調べる</button>
+      </nav>
+      <nav class="breadcrumb" id="breadcrumb" aria-label="選択パンくず"></nav>
+      <p id="storage-status" class="storage-status" role="status" hidden></p>
+      <p id="legacy-history-notice" class="note-box no-print" role="status" hidden></p>
+      <section class="stage" id="stage" tabindex="-1"></section>
+    </main>
+
+    <details class="history-panel no-print"><summary>この端末の照会履歴</summary>
+      <div class="history-header">
+        <h2>照会履歴</h2>
+        <button id="clear-history-btn" class="btn-link" type="button">すべて削除</button>
+      </div>
+      <ul class="history-list" id="history-list"></ul>
+    </details>
+  </div>
+
+  <footer class="app-footer"><p>奈良県の手続き案内を整理した参考ツールです。県の公式サイトではありません。</p><p>対象：一般則・液石則・冷凍則。条文閲覧では容器則にも対応。<a href="https://laws.e-gov.go.jp/" target="_blank" rel="noopener noreferrer">法令出典：e-Gov法令検索 ↗</a></p></footer>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <noscript>このツールの利用にはJavaScriptを有効にしてください。上部の「奈良県の公式案内」からも手続き・様式を確認できます。</noscript>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
