@@ -288,3 +288,72 @@ test("未回答・未知値・数値空欄はinvalidとして安全な結果形�
   assert.doesNotThrow(() => getStepsForGasCategory("sales", "general", null));
   assert.equal(evaluate("unknown-action", "unknown-category", {}).verdict, "invalid");
 });
+
+test("液石則製造は供給用の回答で打ち切り、非供給用だけ能力へ進む", () => {
+  for (const [answer, verdict] of [["yes", "other_law"], ["unknown", "invalid"]]) {
+    const a = { lpgasConsumerSupply: answer };
+    assert.deepEqual(getStepsForGasCategory("manufacture", "lpgas", a).map(s => s.id), ["lpgasConsumerSupply"]);
+    assert.equal(evaluate("manufacture", "lpgas", a).verdict, verdict);
+  }
+  assert.deepEqual(getStepsForGasCategory("manufacture", "lpgas", { lpgasConsumerSupply: "no" }).map(s => s.id), ["lpgasConsumerSupply", "capacityBand", "isBusiness"]);
+  assert.equal(evaluate("manufacture", "lpgas", { lpgasConsumerSupply: "no", capacityBand: "over", isBusiness: "yes" }).verdict, "permit");
+});
+test("一般則製造の300/100立方メートルの許可境界", () => {
+  for (const [scope, threshold] of [["type1only", 300], ["otherOnly", 100]]) {
+    const a = { gasScope: scope, capacityBand: "over", isBusiness: "yes" };
+    const step = getStepsForGasCategory("manufacture", "general", a).find(s => s.id === "capacityBand");
+    assert.match(step.options.find(o => o.value === "over").label, new RegExp(String(threshold) + ".*以上"));
+    assert.equal(evaluate("manufacture", "general", a).verdict, "permit");
+    assert.equal(evaluate("manufacture", "general", { ...a, capacityBand: "under" }).verdict, "notification");
+  }
+});
+test("第一種ガスだけの貯蔵は第三種の質問・回答を不要にする", () => {
+  for (const cat of ["general", "refrigeration"]) {
+    const a = { selfManufactureStorage: "no", storageGasScope: "type1only", storageCapacityBand: "over" };
+    assert.ok(!getStepsForGasCategory("storage", cat, a).some(s => s.id === "storageThirdGas"));
+    assert.equal(evaluate("storage", cat, a).verdict, "permit");
+  }
+  for (const scope of ["otherOnly", "mixed"]) for (const answer of ["yes", "unknown", undefined]) {
+    const a = { selfManufactureStorage: "no", storageGasScope: scope, storageThirdGas: answer };
+    assert.ok(getStepsForGasCategory("storage", "general", a).some(s => s.id === "storageThirdGas"));
+    assert.equal(evaluate("storage", "general", a).verdict, "invalid");
+  }
+});
+test("貯蔵の技術基準は各規則の先頭条文を開く", () => {
+  for (const [cat, lawId, num, a] of [
+    ["general", "341M50000400053", "21", { storageGasScope: "type1only" }],
+    ["lpgas", "341M50000400052", "22", { lpgasSupply: "no" }],
+  ]) {
+    const r = evaluate("storage", cat, { selfManufactureStorage: "no", storageCapacityBand: "over", ...a });
+    const citation = r.procedures.find(p => p.label.startsWith("技術基準の遵守"));
+    assert.deepEqual([citation.lawId, citation.num], [lawId, num]);
+  }
+});
+test("一般則消費の全数量境界・導管供給・その他のガス", () => {
+  for (const [gas, amount, unit] of [["hydrogen", 300, "立方メートル"], ["natgas", 300, "立方メートル"], ["oxygen", 3000, "キログラム"], ["ammonia", 3000, "キログラム"], ["chlorine", 1000, "キログラム"]]) {
+    const a = { consumptionGasType: gas, consumptionPipeline: "no", consumptionStorageBand: "over" };
+    const step = getStepsForGasCategory("consumption", "general", a).find(s => s.id === "consumptionStorageBand");
+    assert.equal(step.options.find(o => o.value === "over").label, amount + " " + unit + " 以上");
+    assert.equal(evaluate("consumption", "general", a).verdict, "notification");
+    assert.equal(evaluate("consumption", "general", { ...a, consumptionStorageBand: "under" }).verdict, "none");
+    assert.equal(evaluate("consumption", "general", { consumptionGasType: gas, consumptionPipeline: "yes" }).verdict, "notification");
+  }
+  assert.equal(evaluate("consumption", "general", { consumptionGasType: "other" }).verdict, "none");
+});
+test("販売主任者は一般則の列挙ガスに条件付き、冷凍へ追加しない", () => {
+  const common = { smallSalesException: "no", selfSale: "no" };
+  const general = evaluate("sales", "general", common);
+  const p = general.procedures.find(p => p.num === "72");
+  assert.equal(p.lawId, "341M50000400053");
+  assert.match(p.label, /法第28条第1項/);
+  assert.match(p.condition, /販売するガスに上記を含む場合/);
+  assert.match(p.condition, /40％未満/);
+  assert.match(p.condition, /圧縮水素スタンド/);
+  assert.equal(p.condition.split("対象ガス：")[1].split("。")[0].split("、").length, 22);
+  assert.equal(p.procedureId, "personnel-sales");
+  const cold = evaluate("sales", "refrigeration", common);
+  assert.ok(!cold.procedures.some(p => p.num === "72" || /販売主任者/.test(p.label)));
+  const lpg = evaluate("sales", "lpgas", { ...common, lpgasConsumer: "no" });
+  assert.equal(lpg.verdict, "notification");
+  assert.ok(lpg.procedures.some(p => p.num === "70" && p.lawId === "341M50000400052"));
+});

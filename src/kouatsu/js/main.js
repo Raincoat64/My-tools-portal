@@ -2,8 +2,11 @@ import { TARGET_LAWS, findLawMeta } from "./constants.js";
 import { fetchLawData } from "./api.js";
 import { buildChapters, getMainProvision, getLawTitle, findArticleByNum } from "./lawTree.js";
 import { renderArticle } from "./render.js";
-import { PROCEDURE_VERSION, PROCEDURE_CHECKED_AT, PROCEDURES, PURPOSES, REGULATION_LABELS, ACTIVITY_LABELS, NARA_PAGES, getProcedure, searchProcedures, diagnosisProcedureIds, getLifecycleSteps, evaluateLifecycle, lifecycleFacts, minorLawLink } from "./procedures.js";
+import { PROCEDURE_VERSION, PROCEDURE_CHECKED_AT, PURPOSES, REGULATION_LABELS, ACTIVITY_LABELS, NARA_PAGES, getProcedure, searchProcedures, diagnosisProcedureIds, getLifecycleSteps, evaluateLifecycle, lifecycleFacts, minorLawLink, documentFactKey } from "./procedures.js";
 import { officialLink, procedureListItem, renderProcedureGuide } from "./procedureView.js";
+import { checkLawRevisions } from "./revisions.js";
+import { renderGlossaryEntries, renderQuestionAssistance, renderRevisionWarning, renderRevisionSource } from "./assistView.js";
+import { makePortableEnvelope, readPortableFile, portableFilename, createShareUrl, decodeShareFragment, SHARE_FRAGMENT_PREFIX } from "./portability.js";
 import {
   ACTION_TYPES,
   getCategoriesForAction,
@@ -20,6 +23,7 @@ import {
   deleteHistoryEntry,
   readDraft,
   writeDraft,
+  trimPreparations,
 } from "./storage.js";
 
 const breadcrumbEl = document.getElementById("breadcrumb");
@@ -55,6 +59,10 @@ let draftReady = false;
 let saveQueue = Promise.resolve();
 const lawFetchedAt = new Map();
 let citationRenderIndex = 0;
+let revisionState = { status: "pending", changes: [] };
+let pendingTransfer = null;
+let transferError = "";
+let displayOnlyTransfer = false;
 
 function navigationButton(text, handler, className = "btn-secondary") {
   const button = document.createElement("button"); button.type = "button"; button.className = className; button.textContent = text;
@@ -68,13 +76,14 @@ function storageWarning() {
   el.hidden = false; el.textContent = "このブラウザーでは端末内保存が使えません。案内は利用できますが、閉じる前に印刷・PDF保存してください。";
 }
 function currentDraft() {
+  navigationState.preparations = trimPreparations(navigationState.preparations);
   return { version: PROCEDURE_VERSION, savedAt: new Date().toISOString(), mode: appState.mode,
-    diag: { actionType: appState.diag.actionType, gasCategory: appState.diag.gasCategory, stepIndex: appState.diag.stepIndex, answers: appState.diag.answers, finished: Boolean(appState.diag.result) },
+    diag: { actionType: appState.diag.actionType, gasCategory: appState.diag.gasCategory, stepIndex: appState.diag.stepIndex, answers: appState.diag.answers, finished: Boolean(appState.diag.result), unconfirmedResult: appState.diag.result?.verdict === "needs_confirmation" ? appState.diag.result : null },
     nav: { purpose: navigationState.purpose, answers: navigationState.answers, stepIndex: navigationState.stepIndex, finished: Boolean(navigationState.result), selectedId: navigationState.selectedId, returnMode: navigationState.returnMode, caseId: navigationState.caseId, preparations: navigationState.preparations },
   };
 }
 function persistDraft() {
-  if (!draftReady) return;
+  if (!draftReady || displayOnlyTransfer) return;
   const snapshot = JSON.parse(JSON.stringify(currentDraft()));
   navigationState.saved = snapshot;
   saveQueue = saveQueue.then(() => writeDraft(snapshot)).catch(storageWarning);
@@ -166,12 +175,18 @@ function render() {
     if (appState.mode === "catalogue") stageEl.append(renderCatalogue());
     if (appState.mode === "lifecycle") stageEl.append(renderLifecycle());
     if (appState.mode === "detail") stageEl.append(renderSelectedProcedure());
+    if (appState.mode === "glossary") stageEl.append(renderGlossaryScreen());
+    if (appState.mode === "import-confirm") stageEl.append(renderTransferConfirmation());
   }
+  if (["diagnosis", "lifecycle", "detail"].includes(appState.mode)) stageEl.append(renderTransferActions());
+  if (transferError) { const error = navigationText("p", transferError, "transfer-error"); error.setAttribute("role", "alert"); stageEl.prepend(error); }
+  if (displayOnlyTransfer) stageEl.prepend(navigationText("p", "共有・読み込み内容は保存せず表示しています。端末の下書きは保持されています。保存した回答を使う場合はホームから再開してください。", "note-box display-only-notice"));
+  refreshRevisionDisplays();
   for (const el of stageEl.querySelectorAll("details[data-disclosure]")) if (openDetails.includes(el.dataset.disclosure)) el.open = true;
   const focusTarget = activeId && document.getElementById(activeId);
   if (focusTarget && stageEl.contains(focusTarget)) focusTarget.focus({ preventScroll: true });
   else { const heading = stageEl.querySelector("h2"); if (heading) { heading.tabIndex = -1; heading.focus(); } }
-  if (appState.mode !== "home" && appState.mode !== "browse") persistDraft();
+  if (["diagnosis", "lifecycle", "detail", "catalogue"].includes(appState.mode)) persistDraft();
 }
 
 function crumbButton(label, onClick) {
@@ -236,7 +251,7 @@ async function finalizeDiagnosisResult() {
   appState.diag.result = result;
   render();
 
-  if (result.verdict !== "invalid") {
+  if (result.verdict !== "invalid" && !displayOnlyTransfer) {
     try {
       await addHistoryEntry({
         type: "diagnosis",
@@ -287,12 +302,16 @@ async function answerStep(step, value) {
   await finalizeDiagnosisResult();
 }
 
+function diagnosisRegulationLabel() {
+  return appState.diag.actionType === "storage" && appState.diag.gasCategory === "refrigeration" ? "冷凍用ガス(一般則)" : REGULATION_LABELS[appState.diag.gasCategory];
+}
+
 function renderDiagBreadcrumb() {
   breadcrumbEl.replaceChildren(crumbButton("ホーム", navigateHome), crumbSep(), crumbCurrent("新しく始める"));
   if (appState.diag.actionType) {
     breadcrumbEl.append(crumbSep(), crumbButton(ACTIVITY_LABELS[appState.diag.actionType], () => selectActionType(ACTION_TYPES.find(a => a.id === appState.diag.actionType))));
   }
-  if (appState.diag.gasCategory) breadcrumbEl.append(crumbSep(), crumbCurrent(REGULATION_LABELS[appState.diag.gasCategory]));
+  if (appState.diag.gasCategory) breadcrumbEl.append(crumbSep(), crumbCurrent(diagnosisRegulationLabel()));
 }
 
 function renderDiagStage() {
@@ -323,6 +342,7 @@ function renderDiagStage() {
     help.append(navigationButton("未確認の条件として残す", () => {
       d.result = { verdict: "needs_confirmation", title: "この条件を確認してから判定してください", summary: current.prompt, note: "未確認のまま手続き不要とは判断しません。資料を確認して回答を修正するか、手続き一覧から候補の書類をご覧ください。", citations: [], procedures: [] }; render();
     }));
+    help.append(renderQuestionAssistance({ action: d.actionType, category: d.gasCategory, step: current, answers: d.answers, onApply: value => answerStep(current, value) }));
     stageEl.append(help);
   }
   if (d.actionType) stageEl.append(navigationButton("一つ前に戻る", () => {
@@ -505,6 +525,10 @@ function renderCitationCard(citation) {
   toggle.setAttribute("aria-expanded", String(expanded));
   toggle.addEventListener("click", () => toggleCitation(citation));
   card.appendChild(toggle);
+  if (citation.condition) {
+    card.append(navigationText("p", citation.condition, "note-box"));
+    if (citation.procedureId) card.append(navigationButton("該当する場合の様式・必要書類", () => openProcedure(citation.procedureId), "btn-link"));
+  }
 
   if (expanded) {
     const body = document.createElement("div");
@@ -599,7 +623,8 @@ function renderNavigationHome() {
   direct.append(navigationText("h3", "手続き名・様式から探す"), navigationText("p", "手続きが分かっている方は、名前からすぐに資料を開けます。"));
   direct.append(renderSearchForm(() => setMode("catalogue")));
   wrap.append(direct);
-  const support = document.createElement("details"); support.className = "support-details";
+  wrap.append(navigationButton("用語を調べる", () => setMode("glossary")), renderImportControl());
+  const support = document.createElement("details"); support.className = "support-details source-details";
   support.append(navigationText("summary", "対象範囲・情報の確認日"), navigationText("p", `案内データ確認日：${PROCEDURE_CHECKED_AT}。奈良県の製造・貯蔵・販売・消費を対象とします。申請の送信機能はありません。コンビナート則・特別な認定制度等の個別判断は対象外です。`), navigationText("p", "県が事前連絡や検査日程調整を求める手続きは、その工程を案内します。条文の取得日と、固定の案内・判定条件の確認日は別です。"), officialLink("奈良県消防救急課の申請案内", NARA_PAGES.index));
   wrap.append(support);
   return wrap;
@@ -672,6 +697,9 @@ function renderLifecycle() {
       render();
     }, "pick-card"));
     wrap.append(choices);
+    const help = navigationText("details", "", "support-details no-print");
+    help.append(navigationText("summary", "答えが分からないとき"), renderQuestionAssistance({ action: nav.answers.activity, category: nav.answers.regulation, step, answers: nav.answers }));
+    wrap.append(help);
   }
   wrap.append(navigationButton("一つ前に戻る", () => { if (nav.stepIndex > 0 || nav.result) lifecycleGoTo(nav.result ? nav.stepIndex : nav.stepIndex - 1); else navigateHome(); }, "btn-link no-print"), renderAnswerSummary(true));
   return wrap;
@@ -682,6 +710,7 @@ function renderAnswerSummary(lifecycle) {
   const steps = lifecycle ? getLifecycleSteps(state.purpose, state.answers) : getStepsForGasCategory(state.actionType, state.gasCategory, state.answers);
   const details = document.createElement("details"); details.className = "support-details answer-summary"; details.dataset.disclosure = lifecycle ? "flow-answers" : "new-answers";
   details.append(navigationText("summary", "回答内容を確認・修正する"));
+  if (!lifecycle && state.gasCategory) details.append(navigationText("p", `${ACTIVITY_LABELS[state.actionType]} / ${diagnosisRegulationLabel()}`));
   for (const [index, step] of steps.entries()) {
     if (!(step.id in state.answers)) continue;
     const row = navigationText("div", "", "answer-row");
@@ -700,12 +729,13 @@ function renderGuide(procedure) {
   const context = isLifecycle ? navigationState.answers : appState.mode === "diagnosis" ? { activity: appState.diag.actionType, regulation: appState.diag.gasCategory, answers: appState.diag.answers } : {};
   const scope = `${navigationState.caseId}:${procedure.procedureId}:${JSON.stringify(context)}`;
   const state = navigationState.preparations[scope] ||= { facts: {}, checks: {} };
+  state.lastUsedAt = Date.now();
   const facts = { ...(isLifecycle ? lifecycleFacts(navigationState.answers) : {}), ...state.facts };
   return renderProcedureGuide(procedure, {
-    facts, checks: state.checks,
+    facts, checks: state.checks, headingLevel: appState.mode === "detail" ? 2 : 3,
     contextLabel: isLifecycle ? `${ACTIVITY_LABELS[navigationState.answers.activity] || ""} / ${REGULATION_LABELS[navigationState.answers.regulation] || ""}` : "",
-    onFact: (key, value, focusId) => { state.facts[key] = value; for (const doc of procedure.documents) if (doc.fact === key) delete state.checks[doc.id]; render(); document.getElementById(focusId)?.focus({ preventScroll: true }); },
-    onCheck: (key, value) => { state.checks[key] = value; persistDraft(); },
+    onFact: (key, value, focusId) => { state.facts[key] = value; for (const doc of procedure.documents) if (doc.kind === "conditional" && documentFactKey(doc) === key) delete state.checks[doc.id]; render(); document.getElementById(focusId)?.focus({ preventScroll: true }); },
+    onCheck: (key, value) => { state.lastUsedAt = Date.now(); state.checks[key] = value; persistDraft(); },
     onRelated: navigateHome,
   });
 }
@@ -731,14 +761,18 @@ function resumeDraft() {
     beginPurpose(PURPOSES.some(p => p.id === saved.nav?.purpose) ? saved.nav.purpose : "new");
     showToast("判定条件が更新されています。古い回答・チェックは適用せず、現在の質問で再確認してください。"); return;
   }
+  displayOnlyTransfer = false;
+  restoreDraftState(saved);
+}
+function restoreDraftState(saved) {
   const n = saved.nav || {}; Object.assign(navigationState, { purpose: n.purpose, answers: n.answers || {}, stepIndex: n.stepIndex || 0, selectedId: n.selectedId, returnMode: n.returnMode, caseId: n.caseId || "restored", preparations: n.preparations || {}, result: n.finished ? evaluateLifecycle(n.purpose, n.answers) : null });
   const d = saved.diag || {};
-  Object.assign(appState.diag, { actionType: d.actionType, gasCategory: d.gasCategory, stepIndex: d.stepIndex || 0, answers: d.answers || {}, result: d.finished && d.actionType && d.gasCategory ? evaluateDiagnosis(d.actionType, d.gasCategory, d.answers) : null });
+  Object.assign(appState.diag, { actionType: d.actionType, gasCategory: d.gasCategory, stepIndex: d.stepIndex || 0, answers: d.answers || {}, result: d.unconfirmedResult?.verdict === "needs_confirmation" ? d.unconfirmedResult : d.finished && d.actionType && d.gasCategory ? evaluateDiagnosis(d.actionType, d.gasCategory, d.answers) : null });
   appState.mode = ["diagnosis", "lifecycle", "detail", "catalogue"].includes(saved.mode) ? saved.mode : "home";
   render();
 }
 
-window.addEventListener("beforeprint", () => { for (const el of stageEl.querySelectorAll("details.answer-summary")) { el.dataset.wasOpen = String(el.open); el.open = true; } });
+window.addEventListener("beforeprint", () => { for (const el of stageEl.querySelectorAll("details.answer-summary, details.source-details")) { el.dataset.wasOpen = String(el.open); el.open = true; } });
 window.addEventListener("afterprint", () => { for (const el of stageEl.querySelectorAll("details[data-was-open]")) { el.open = el.dataset.wasOpen === "true"; delete el.dataset.wasOpen; } });
 
 function resetBrowse() {
@@ -1135,6 +1169,103 @@ clearHistoryBtn.addEventListener("click", async () => {
   try { await clearHistory(); renderHistory(); } catch { storageWarning(); }
 });
 
+
+function refreshRevisionDisplays() {
+  const relevant = appState.mode === "home" || appState.mode === "detail" || (appState.mode === "diagnosis" && appState.diag.result) || (appState.mode === "lifecycle" && navigationState.result);
+  let slot = stageEl.querySelector(".revision-warning-slot");
+  if (relevant && !slot) { slot = navigationText("div", "", "revision-warning-slot"); stageEl.prepend(slot); }
+  if (slot) slot.replaceChildren(renderRevisionWarning(revisionState));
+  let sources = [...stageEl.querySelectorAll(".source-details")];
+  if (relevant && !sources.length) {
+    const details = navigationText("details", "", "support-details source-details");
+    details.append(navigationText("summary", "出典・情報の確認日"), navigationText("p", "案内データ確認日：" + PROCEDURE_CHECKED_AT));
+    stageEl.append(details); sources = [details];
+  }
+  for (const source of sources) {
+    source.querySelector(".revision-source")?.remove();
+    source.append(renderRevisionSource(revisionState));
+  }
+}
+function renderGlossaryScreen() {
+  const wrap = navigationText("div");
+  breadcrumbEl.append(crumbSep(), crumbCurrent("用語解説"));
+  wrap.append(navigationText("h2", "用語解説"), navigationText("p", "用語を開くと、説明と根拠条文を確認できます。"), renderGlossaryEntries(), navigationButton("ホームへ", navigateHome));
+  return wrap;
+}
+function renderImportControl() {
+  const label = navigationText("label", "回答ファイルを読み込む（JSON・1MB以下）", "import-control no-print");
+  const input = document.createElement("input"); input.type = "file"; input.accept = ".json,application/json"; input.dataset.portableFile = "true";
+  input.addEventListener("change", async () => {
+    if (!input.files[0]) return;
+    try {
+      const envelope = await readPortableFile(input.files[0]);
+      pendingTransfer = { envelope, fromUrl: false, previousMode: appState.mode };
+      transferError = ""; appState.mode = "import-confirm"; render();
+    } catch (error) { transferError = error.message; render(); }
+  });
+  label.append(input); return label;
+}
+function renderTransferActions() {
+  const details = navigationText("details", "", "support-details transfer-actions no-print"); details.dataset.disclosure = "transfer";
+  details.append(navigationText("summary", "回答を共有・持ち運ぶ"),
+    navigationText("p", "URLに回答内容が含まれます。個人情報は含まれません。書類チェックはURLに含めず、JSONファイルで持ち運べます。"));
+  const output = navigationText("div");
+  details.append(navigationButton("この回答を共有するURLをコピー", async () => {
+    output.replaceChildren();
+    try {
+      const url = await createShareUrl(currentDraft(), location.href);
+      const label = navigationText("label", "共有URL", "shared-url-label");
+      const field = document.createElement("textarea"); field.readOnly = true; field.value = url; field.className = "shared-url"; label.append(field); output.append(label);
+      try { await navigator.clipboard.writeText(url); output.append(navigationText("p", "共有URLをコピーしました。", "share-status")); }
+      catch { field.focus(); field.select(); output.append(navigationText("p", "自動コピーできませんでした。上のURLを選択してコピーしてください。", "share-status")); }
+    } catch (error) { output.append(navigationText("p", error.message, "transfer-error")); }
+  }));
+  details.append(navigationButton("回答・書類チェックをJSONに書き出す", () => {
+    output.replaceChildren();
+    try {
+      const data = makePortableEnvelope(currentDraft());
+      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+      const link = document.createElement("a"); link.href = url; link.download = portableFilename(); document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) { output.append(navigationText("p", error.message, "transfer-error")); }
+  }), renderImportControl(), output);
+  return details;
+}
+function renderTransferConfirmation() {
+  const wrap = navigationText("div", "", "transfer-confirmation");
+  wrap.append(navigationText("h2", "回答を読み込む前に確認してください"));
+  if (!pendingTransfer) { wrap.append(navigationButton("ホームへ", navigateHome)); return wrap; }
+  const { envelope } = pendingTransfer;
+  const state = envelope.state;
+  const mode = { diagnosis: "新規の診断", lifecycle: "目的別の手続き", detail: "手続き詳細" }[state.mode];
+  wrap.append(navigationText("p", mode + " / 保存日時：" + new Date(envelope.savedAt).toLocaleString("ja-JP")));
+  if (state.mode === "diagnosis") wrap.append(navigationText("p", (ACTIVITY_LABELS[state.diag.actionType] || "取扱いを選ぶ画面") + " / " + (REGULATION_LABELS[state.diag.gasCategory] || "ガス区分は未選択") + " / " + (state.diag.finished ? "確認結果" : "質問 " + (state.diag.stepIndex + 1))));
+  if (state.mode === "lifecycle") wrap.append(navigationText("p", PURPOSES.find(p=>p.id===state.nav.purpose).label));
+  if (state.mode === "detail") wrap.append(navigationText("p", getProcedure(state.nav.selectedId).title));
+  if (navigationState.saved) {
+    wrap.append(navigationText("p", "この端末に下書きがあります。上書きすると、現在の下書き・書類チェックは読み込む内容に置き換わります。"),
+      navigationButton("下書きを上書きして開く", () => acceptTransfer(true), "btn-primary"),
+      navigationButton("上書きしないで開く", () => acceptTransfer(false)));
+  } else wrap.append(navigationButton("開く", () => acceptTransfer(true), "btn-primary"));
+  wrap.append(navigationButton("キャンセル", () => { appState.mode = pendingTransfer.previousMode; pendingTransfer = null; render(); }, "btn-link"));
+  return wrap;
+}
+async function acceptTransfer(overwrite) {
+  if (!pendingTransfer) return;
+  // 先行する端末内保存が、読み込み後の下書きを遅れて上書きしないよう完了を待つ。
+  await saveQueue;
+  const { envelope, fromUrl } = pendingTransfer;
+  const state = envelope.state, d = state.diag, nav = state.nav;
+  const current = d.unconfirmed ? getStepsForGasCategory(d.actionType, d.gasCategory, d.answers)[d.stepIndex] : null;
+  const unconfirmedResult = current ? { verdict: "needs_confirmation", title: "この条件を確認してから判定してください", summary: current.prompt, note: "未確認のまま手続き不要とは判断しません。資料を確認して回答を修正するか、手続き一覧から候補の書類をご覧ください。", citations: [], procedures: [] } : null;
+  const draft = { version: PROCEDURE_VERSION, savedAt: envelope.savedAt, mode: state.mode,
+    diag: { ...d, unconfirmedResult }, nav: { ...nav, preparations: nav.preparations || {} } };
+  displayOnlyTransfer = !overwrite;
+  pendingTransfer = null; transferError = "";
+  restoreDraftState(draft);
+  if (fromUrl) history.replaceState(null, "", location.href.split("#")[0]);
+}
+
 // --- 初期化 ---
 
 function showLegacyHistoryNotice() {
@@ -1155,6 +1286,26 @@ function showLegacyHistoryNotice() {
 async function initializeNavigator() {
   showLegacyHistoryNotice();
   try { navigationState.saved = await readDraft(); } catch { storageWarning(); }
-  draftReady = true; render(); renderHistory();
+  draftReady = true;
+  await prepareSharedLocation();
+  render(); renderHistory();
+  checkLawRevisions().then(state => { revisionState = state; refreshRevisionDisplays(); });
 }
+async function prepareSharedLocation() {
+  const hash = location.hash;
+  if (!hash.startsWith(SHARE_FRAGMENT_PREFIX)) return false;
+  const previousMode = pendingTransfer?.previousMode || appState.mode;
+  pendingTransfer = null;
+  if (appState.mode === "import-confirm") appState.mode = previousMode;
+  try {
+    const envelope = await decodeShareFragment(hash);
+    if (location.hash !== hash) return false;
+    pendingTransfer = { envelope, fromUrl: true, previousMode };
+    transferError = ""; appState.mode = "import-confirm";
+  } catch (error) { if (location.hash !== hash) return false; transferError = error.message; }
+  return true;
+}
+window.addEventListener("hashchange", async () => {
+  if (draftReady && await prepareSharedLocation()) render();
+});
 initializeNavigator();

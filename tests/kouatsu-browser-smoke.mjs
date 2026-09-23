@@ -23,7 +23,7 @@ await new Promise(r => server.listen(0, '127.0.0.1', r));
 const origin = `http://127.0.0.1:${server.address().port}/My-tools-portal`;
 const browser = await chromium.launch(process.env.NAV_BROWSER_PATH ? { executablePath: process.env.NAV_BROWSER_PATH, headless: true } : { headless: true });
 const published = `${origin}/tools/kouatsu-gas-law-viewer.html`;
-const urls = [published, new URL('../tools/kouatsu-gas-law-viewer.html', import.meta.url).href];
+const urls = [origin + '/src/kouatsu/index.html', published, new URL('../tools/kouatsu-gas-law-viewer.html', import.meta.url).href];
 let assertions = 0;
 const check = (value, label) => { assert.ok(value, label); assertions++; };
 const fixtureNode = (tag, children, attr = {}) => ({ tag, children, attr });
@@ -34,6 +34,7 @@ try {
   for (const url of urls) {
     const context = await browser.newContext({ viewport: { width: 1366, height: 1000 } });
     const page = await context.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
+    await context.route('https://**/*', route => route.abort());
     await context.route('https://laws.e-gov.go.jp/**', route => route.abort());
     await page.goto(url);
     await page.getByRole('heading', { name: /必要な手続きから/ }).waitFor();
@@ -46,6 +47,27 @@ try {
     await page.getByRole('button', { name: /^いいえ\(第二種/ }).click();
     await page.locator('[data-procedure-id="sales-new-general"]').waitFor();
     check((await page.locator('.download-link').first().getAttribute('href')).endsWith('20260128160748.docx'), '一般則の様式');
+
+    // バナー・外部リンク・見出しは、実際の結果画面の計算済みスタイルで確認。
+    const visual = await page.evaluate(() => {
+      const banner = document.querySelector('.verdict-banner'), original = banner.className;
+      const luminance = color => color.match(/[\d.]+/g).slice(0,3).map(Number).map(v => v/255).map(v => v <= .04045 ? v/12.92 : ((v+.055)/1.055)**2.4).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);
+      const contrast = (a,b) => (Math.max(luminance(a),luminance(b))+.05)/(Math.min(luminance(a),luminance(b))+.05);
+      const colors = ['permit','notification','none','other_law','invalid','needs_confirmation'].map(verdict => {
+        banner.className = 'verdict-banner ' + verdict;
+        const bg = getComputedStyle(banner).backgroundColor;
+        return { verdict, bg, ratios: [...banner.querySelectorAll('h3,p')].map(e=>contrast(getComputedStyle(e).color,bg)) };
+      });
+      banner.className = original;
+      const headings = [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].map(e=>Number(e.tagName[1]));
+      return { colors, hierarchy: headings.every((n,i)=>i===0 || n-headings[i-1]<=1),
+        links: [...document.querySelectorAll('a[target="_blank"]')].every(e=>e.querySelector('.sr-only')?.textContent.includes('新しいタブで開きます') && getComputedStyle(e.querySelector('.sr-only')).clipPath === 'inset(50%)') };
+    });
+    check(new Set(visual.colors.slice(0,3).map(c=>c.bg)).size === 3, '許可・届出・対象外の背景を区別');
+    check(visual.colors.every(c=>c.ratios.every(r=>r>=4.5)), '全判定バナー本文・見出しのコントラスト4.5以上');
+    check(visual.hierarchy, '診断結果の見出し階層を飛ばさない');
+    check(visual.links, 'すべての別タブ外部リンクに視覚的に隠した読み上げ文');
+
     await page.locator('[data-document-id="form"]').check();
     await page.locator('#fact-sales-new-general-structure').selectOption('no');
     check(await page.locator('[data-document-id="form"]').isChecked(), '条件変更でも無関係のチェックは保持');
@@ -62,6 +84,7 @@ try {
     check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'スマートフォン幅に収まる');
     await page.emulateMedia({ media: 'print' }); await page.evaluate(() => window.dispatchEvent(new Event('beforeprint')));
     check(await page.locator('.answer-summary').evaluate(e => e.open), '印刷に回答内容を含める');
+    check(await page.locator('.guide-print-date').isVisible() && (await page.locator('.guide-print-date').innerText()).includes('2026-09-19'), '定数由来の確認日を印刷表示');
     check(await page.locator('.mode-tabs').evaluate(e => getComputedStyle(e).display === 'none'), '印刷にナビ操作を含めない');
     await page.evaluate(() => window.dispatchEvent(new Event('afterprint'))); await page.emulateMedia({ media: 'screen' });
     await page.locator('.mode-tab[data-mode="home"]').click();
@@ -84,6 +107,51 @@ try {
     await page.evaluate(() => document.documentElement.style.zoom = '1');
     await page.locator('.mode-tab[data-mode="home"]').focus(); await page.keyboard.press('Enter');
     check(await page.getByRole('heading', { name: /必要な手続きから/ }).isVisible(), 'キーボードからホームへ移動');
+
+    // 明示的に残した未確認結果は、再評価による汎用invalidに置換しない。
+    await page.getByRole('button', { name: /^新しく始める/ }).click();
+    await page.getByRole('button', { name: /^貯蔵 / }).click();
+    await page.getByRole('button', { name: /^冷凍のための高圧ガス/ }).click();
+    check((await page.locator('#breadcrumb').innerText()).includes('一般則'), '冷凍用ガスの貯蔵パンくずは一般則');
+    await page.locator('.answer-summary summary').click();
+    check((await page.locator('.answer-summary').innerText()).includes('一般則'), '冷凍用ガスの貯蔵の回答まとめも一般則');
+    const unresolvedQuestion = await page.locator('#stage h2').innerText();
+    await page.getByText('答えが分からないとき', { exact: true }).click();
+    await page.getByRole('button', { name: '未確認の条件として残す', exact: true }).click();
+    const unresolved = await page.locator('.verdict-banner').innerText();
+    const unresolvedNote = await page.locator('#stage > div > .note-box').innerText();
+    await page.reload(); await page.getByRole('button', { name: '続きから再開', exact: true }).click();
+    check(await page.locator('.verdict-banner.needs_confirmation').count() === 1, '未確認の判定種別を保存復元');
+    check(await page.locator('.verdict-banner').innerText() === unresolved, '未確認の見出し・設問文を保存復元');
+    check(await page.locator('#stage > div > .note-box').innerText() === unresolvedNote, '未確認の注記を保存復元');
+    await page.getByRole('button', { name: '一つ前に戻る', exact: true }).click();
+    check(await page.locator('#stage h2').innerText() === unresolvedQuestion, '未確認結果から同じ設問へ戻る');
+    await page.locator('.mode-tab[data-mode="home"]').click();
+    await page.getByRole('button', { name: /^新しく始める/ }).click();
+    await page.getByRole('button', { name: /^製造 / }).click();
+    await page.getByRole('button', { name: /^冷凍のための製造/ }).click();
+    check((await page.locator('#breadcrumb').innerText()).includes('冷凍則'), '冷凍製造のパンくずは冷凍則を維持');
+    // fact未定義の補足資料にも、独立した条件と進捗・保存復元がある。
+    await page.locator('.mode-tab[data-mode="catalogue"]').click();
+    await page.getByRole('button', { name: '絞り込みを解除', exact: true }).click();
+    await page.locator('.procedure-row').filter({ hasText: '高圧ガス製造許可申請' }).click();
+    const condition = page.locator('#fact-manufacture-permit-additional');
+    const progressUnknown = await page.locator('.check-progress').innerText();
+    await condition.selectOption('yes');
+    const progressYes = await page.locator('.check-progress').innerText();
+    await page.locator('[data-document-id="additional"]').check();
+    await condition.selectOption('no');
+    const progressNo = await page.locator('.check-progress').innerText();
+    check(progressUnknown !== progressYes && progressYes !== progressNo, 'factなしの資料も条件に応じて未確認数・進捗が変わる');
+    check(await page.locator('[data-document-id="additional"]').isDisabled(), '非該当の資料を準備数から除外');
+    check(!await page.locator('[data-document-id="additional"]').isChecked(), '条件を変えた資料の古いチェックを解除');
+    await page.reload(); await page.getByRole('button', { name: '続きから再開', exact: true }).click();
+    check(await condition.inputValue() === 'no', 'factなしの資料の選択を保存復元');
+    check(await page.locator('.check-progress').innerText() === progressNo, '復元後も同じ書類準備数');
+    await condition.selectOption('unknown');
+    check((await page.locator('.document-row').filter({ has: page.locator('[data-document-id="additional"]') }).innerText()).includes('条件未確認'), '未確認へ戻せる');
+    await page.locator('.mode-tab[data-mode="home"]').click();
+
     // 現行データとは別の架空の法令を利用し、更新失敗時のキャッシュ保全を検証。
     await context.unroute('https://laws.e-gov.go.jp/**');
     await context.route('https://laws.e-gov.go.jp/**', route => route.fulfill({ json: fixture }));
@@ -110,10 +178,39 @@ try {
     check(await page.getByRole('heading', { name: '新しく始める事業・取扱いを選んでください' }).isVisible(), '旧版の履歴も再回答を求める');
     check(await page.evaluate(() => { const ids = [...document.querySelectorAll('[id]')].map(e => e.id); return new Set(ids).size === ids.length; }), 'HTMLのIDが重複しない');
     check(errors.length === 0, `ブラウザー例外なし: ${errors.join('; ')}`);
-    console.log(`PASS ${url.startsWith('file:') ? 'standalone/file' : 'normal/http'}`);
+    console.log(`PASS ${url.startsWith('file:') ? 'standalone/file' : url.includes('/src/') ? 'source/modules' : 'published/http'}`);
     await context.close();
   }
+
+  // 実IndexedDBで保存時の上限を確認（独立した一時プロファイル）。
+  const storageContext = await browser.newContext();
+  await storageContext.route('https://**/*', route => route.abort());
+  const storagePage = await storageContext.newPage();
+  await storagePage.goto(origin + '/src/kouatsu/index.html');
+  await storagePage.getByRole('heading', { name: /必要な手続きから/ }).waitFor();
+  const limits = await storagePage.evaluate(async storageUrl => {
+    const s = await import(storageUrl);
+    await s.putCachedLaw('retained-law', { fixture: true }, 'test');
+    for (let n = 0; n < 201; n++) await s.addHistoryEntry({ sequence: n });
+    const entries = await s.listHistory(1000);
+    const preparations = {};
+    for (let n = 0; n < 51; n++) for (const proc of ['one','two']) preparations[n+':'+proc+':{}'] = { lastUsedAt:n, facts:{}, checks:{ form:true, plan:true } };
+    await s.writeDraft({ nav:{ preparations }, version:'test' });
+    const saved = await s.readDraft();
+    const law = await s.getCachedLaw('retained-law');
+    const db = await new Promise(resolve => { const req=indexedDB.open('kouatsu-gas-law-db');req.onsuccess=()=>resolve(req.result); });
+    const rawCount = await new Promise(resolve=>{const r=db.transaction('history').objectStore('history').count();r.onsuccess=()=>resolve(r.result);});
+    const shape = { version:db.version, stores:[...db.objectStoreNames] }; db.close();
+    return { rawCount, sequences:entries.map(e=>e.sequence), preparations:saved.nav.preparations, cached:law.data.fixture, shape };
+  }, origin + '/src/kouatsu/js/storage.js');
+  check(limits.rawCount === 200 && limits.sequences.length === 200, '201件追加後の履歴ストアは200件');
+  check(!limits.sequences.includes(0) && limits.sequences[0] === 200, '最古の履歴だけを削除し新しい順を保持');
+  check(Object.keys(limits.preparations).length === 100 && !limits.preparations['0:one:{}'], '保存済み準備リストも50案件・複数手続きを保持');
+  check(limits.cached && limits.shape.version === 2 && limits.shape.stores.join(',') === 'draft,history,lawCache', '法令キャッシュとDBv2のストア構成を保全');
+  await storageContext.close();
+
   const blockedContext = await browser.newContext();
+  await blockedContext.route('https://**/*', route => route.abort());
   await blockedContext.addInitScript(() => Object.defineProperty(window, 'indexedDB', { get() { throw new Error('検証用: 保存禁止'); } }));
   const blockedPage = await blockedContext.newPage(); await blockedPage.goto(published);
   await blockedPage.getByRole('heading', { name: /必要な手続きから/ }).waitFor();

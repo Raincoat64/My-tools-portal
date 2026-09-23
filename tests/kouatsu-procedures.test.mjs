@@ -1,4 +1,30 @@
 import test from 'node:test';
+
+test('全軽微変更アンカーと版を固定値で検査する', async () => {
+  const { minorLawLink, PROCEDURE_VERSION, PROCEDURE_CHECKED_AT } = await import('../src/kouatsu/js/procedures.js');
+  assert.equal(PROCEDURE_VERSION, '2026-09-23.1'); assert.equal(PROCEDURE_CHECKED_AT, '2026-09-19');
+  for (const [act, reg, lawId, section, permit, notification] of [
+    ['manufacture', 'general', '341M50000400053', 'Ch_2-Se_1', '15', '17'],
+    ['manufacture', 'lpgas', '341M50000400052', 'Ch_2-Se_1', '16', '18'],
+    ['manufacture', 'refrigeration', '341M50000400051', 'Ch_2-Se_1', '17', '19'],
+    ['storage', 'general', '341M50000400053', 'Ch_2-Se_2', '28', '30'],
+    ['storage', 'lpgas', '341M50000400052', 'Ch_2-Se_2', '29', '31'],
+    ['consumption', 'general', '341M50000400053', 'Ch_8', '57', '57'],
+    ['consumption', 'lpgas', '341M50000400052', 'Ch_7', '55', '55'],
+  ]) for (const [status, num] of [['permit', permit], ['notification', notification]]) {
+    assert.equal(minorLawLink(act, reg, status), 'https://laws.e-gov.go.jp/law/' + lawId + '#Mp-' + section + '-At_' + num);
+  }
+});
+test('手数料不要の表記は一種類、条件付き資料には個別の確認キーを持てる', async () => {
+  const { documentFactKey } = await import('../src/kouatsu/js/procedures.js');
+  assert.deepEqual([...new Set(PROCEDURES.filter(p => !p.fee.startsWith('有料。')).map(p => p.fee))], ['不要(届出・報告の手数料はかかりません)']);
+  const extra = getProcedure('manufacture-permit').documents.find(d => d.id === 'additional');
+  assert.equal(extra.fact, undefined);
+  const key = documentFactKey(extra);
+  for (const [fact, expected] of [['unknown', 'unconfirmed'], ['yes', 'required'], ['no', 'notApplicable']]) {
+    assert.equal(documentRequirement(extra, { [key]: fact }), expected);
+  }
+});
 import assert from 'node:assert/strict';
 import { PROCEDURES, getProcedure, searchProcedures, getLifecycleSteps, evaluateLifecycle, diagnosisProcedureIds, documentRequirement, lifecycleFacts } from '../src/kouatsu/js/procedures.js';
 
