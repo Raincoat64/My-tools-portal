@@ -734,6 +734,41 @@ select { padding: 8px 10px; border: 1px solid #91a297; border-radius: 5px; backg
   .deadline-box, .contact-step, .verdict-banner, .note-box { background: white; padding: 10px; }
   .guide-print-date { font-size: 9pt; margin-top: 12px; }
 }
+
+/* 回答補助は既存の余白・操作サイズを共有し、入力と結果を明確に分ける。 */
+.revision-warning { padding: 18px 20px; margin: 0 0 24px; border-left: 4px solid #a86e18; background: #fff4d6; color: #674600; overflow-wrap: anywhere; }
+.revision-source { margin-top: 14px; }
+.glossary-entry { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.glossary-entry summary { cursor: pointer; padding: 8px 0; font-weight: 600; }
+.glossary-entry a { display: inline-block; margin: 4px 20px 4px 0; }
+.calculator-panel { margin: 20px 0; padding: 20px; border: 1px solid var(--border); border-radius: 5px; }
+.calc-row { min-width: 0; margin: 18px 0; padding: 16px; border: 1px solid var(--border); }
+.calc-fields { margin: 16px 0; }
+.calc-field { display: flex; flex-direction: column; gap: 5px; margin: 14px 0; min-width: 0; }
+.calc-field input, .shared-url { width: 100%; max-width: 650px; padding: 10px; border: 1px solid #91a297; border-radius: 4px; font: inherit; background: white; color: var(--text); }
+.calc-check { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.calc-check input { width: 22px; height: 22px; }
+.calc-error, .transfer-error { color: var(--danger); margin: 4px 0; overflow-wrap: anywhere; }
+.calc-field [aria-invalid="true"] { border: 2px solid var(--danger); }
+.calculator-result:not(:empty) { margin-top: 20px; padding: 16px; background: var(--chip-bg); overflow-wrap: anywhere; }
+.calculator-result a { display: block; margin: 8px 0; }
+.calculation-value { font-size: 20px; }
+.transfer-actions button, .transfer-confirmation button { margin: 6px 12px 6px 0; }
+.import-control { display: flex; flex-direction: column; gap: 8px; margin: 20px 0; }
+.import-control input { max-width: 100%; }
+.shared-url-label { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.shared-url { min-height: 100px; font-size: 14px; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .calculator-panel { padding: 14px; }
+  .calc-row { padding: 12px; }
+  .transfer-actions button, .transfer-confirmation button { width: 100%; margin-right: 0; }
+}
+@media print {
+  .support-details.source-details { display: block !important; }
+  .revision-warning, .revision-source { display: block; font-size: 10pt; }
+  .revision-warning { color: #000; background: white; border: 1px solid #666; }
+  .revision-warning[hidden] { display: none !important; }
+}
   </style>
 </head>
 <body>
@@ -3378,6 +3413,571 @@ function renderProcedureGuide(procedure, { facts = {}, checks = {}, onFact, onCh
 }
 
 /* =========================================================
+   revisions.js
+   ========================================================= */
+
+// 承認仕様で確認済みの基準。条文APIを読んだだけで更新しない。
+const REVISION_BASELINES = {
+  "326AC0000000204": "326AC0000000204_20251001_507AC0000000044",
+  "409CO0000000020": "409CO0000000020_20231221_505CO0000000276",
+  "341M50000400053": "341M50000400053_20251001_507M60000400065",
+  "341M50000400052": "341M50000400052_20251001_507M60000400065",
+  "341M50000400051": "341M50000400051_20260612_508M60000400056",
+  "341M50000400050": "341M50000400050_20260612_508M60000400056",
+  "342AC0000000149": "342AC0000000149_20251225_506AC0000000067",
+};
+const KNOWN_PENDING_REVISIONS = [
+  "326AC0000000204_20261221_504AC0000000074",
+  "342AC0000000149_20261221_504AC0000000074",
+];
+const KNOWN_PENDING_INFO = { enforcementDate: "2026-12-21", amendmentTitle: "令和4年法律第74号" };
+const KNOWN_REVISION_NOTE = "2026年12月21日に施行予定の改正(完成検査・保安検査の認定制度の見直し)があります。このツールが案内する許可・届出の区分は変わらない見込みです。";
+const REVISION_CACHE_KEY = "__revision-check__";
+const revisionCacheTag = JSON.stringify([REVISION_BASELINES, KNOWN_PENDING_REVISIONS]);
+const REVISION_CACHE_MS = 24 * 60 * 60 * 1000;
+
+function compareLawRevisions(lawId, data) {
+  if (!Object.hasOwn(REVISION_BASELINES, lawId) || !Array.isArray(data?.revisions) || !data.revisions.length) throw new Error("改正応答の形式不一致");
+  let currentCount = 0;
+  const changes = [];
+  for (const row of data.revisions) {
+    if (!row || typeof row.current_revision_status !== "string" || typeof row.law_revision_id !== "string" || !row.law_revision_id.startsWith(lawId + "_")) throw new Error("改正応答の形式不一致");
+    const status = row.current_revision_status;
+    if (!["CurrentEnforced", "UnEnforced"].includes(status)) continue;
+    if (typeof row.amendment_enforcement_date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(row.amendment_enforcement_date) || typeof row.amendment_law_title !== "string") throw new Error("改正応答の形式不一致");
+    if (status === "CurrentEnforced") currentCount++;
+    const changed = status === "CurrentEnforced" ? row.law_revision_id !== REVISION_BASELINES[lawId] : !KNOWN_PENDING_REVISIONS.includes(row.law_revision_id);
+    if (changed) changes.push({ lawId, lawTitle: ALL_LAWS.find(l => l.lawId === lawId).title, revisionId: row.law_revision_id, status,
+      enforcementDate: row.amendment_enforcement_date, amendmentTitle: row.amendment_law_title });
+  }
+  if (currentCount !== 1) throw new Error("施行中の改正を特定できません");
+  return changes;
+}
+
+async function fetchLawRevisions(lawId, { fetcher = globalThis.fetch, timeoutMs = 10000 } = {}) {
+  const controller = new AbortController();
+  let timer;
+  try {
+    return await Promise.race([
+      (async () => {
+        const response = await fetcher(API_BASE + "/law_revisions/" + encodeURIComponent(lawId), { signal: controller.signal });
+        if (!response.ok) throw new Error("改正情報を取得できません");
+        return compareLawRevisions(lawId, await response.json());
+      })(),
+      new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error("改正確認のタイムアウト")); }, timeoutMs); }),
+    ]);
+  } finally { clearTimeout(timer); }
+}
+
+async function checkLawRevisions({ now = Date.now(), online = globalThis.navigator?.onLine !== false,
+  readCache = () => getCachedLaw(REVISION_CACHE_KEY), writeCache = value => putCachedLaw(REVISION_CACHE_KEY, value),
+  fetcher = globalThis.fetch, timeoutMs = 10000 } = {}) {
+  try {
+    const cached = (await readCache())?.data;
+    if (cached?.tag === revisionCacheTag && Number.isFinite(cached.checkedAt) && now >= cached.checkedAt && now - cached.checkedAt < REVISION_CACHE_MS &&
+      ["ready", "failed"].includes(cached.status) && Array.isArray(cached.changes)) return cached;
+  } catch { /* 保存禁止でも、照合と案内は使える。 */ }
+  let result;
+  try {
+    if (!online) throw new Error("オフライン");
+    const changes = (await Promise.all(Object.keys(REVISION_BASELINES).map(id => fetchLawRevisions(id, { fetcher, timeoutMs })))).flat();
+    result = { tag: revisionCacheTag, checkedAt: now, status: "ready", changes };
+  } catch { result = { tag: revisionCacheTag, checkedAt: now, status: "failed", changes: [] }; }
+  try { await writeCache(result); } catch { /* 取得成功は保存の可否と分ける。 */ }
+  return result;
+}
+
+/* =========================================================
+   glossary.js
+   ========================================================= */
+
+// 解説文・根拠は承認仕様に固定。判定条件の代用にはしない。
+const glossaryAct = "326AC0000000204", glossaryOrder = "409CO0000000020", glossaryGeneral = "341M50000400053";
+function assistLawUrl(lawId, anchor) { return "https://laws.e-gov.go.jp/law/" + lawId + "#" + anchor; }
+const GLOSSARY = [
+  { id: "high-pressure", term: "高圧ガス", text: "常用の温度で圧力1MPa以上となる圧縮ガス、0.2MPa以上となる圧縮アセチレンガス・液化ガスなど。温度35℃で1MPa以上となる圧縮ガスも含む。", refs: [["高圧ガス保安法第2条", glossaryAct, "Mp-Ch_1-At_2"]] },
+  { id: "type1", term: "第一種ガス", text: "ヘリウム、ネオン、アルゴン、クリプトン、キセノン、ラドン、窒素、二酸化炭素、空気、及び難燃性の基準に適合するフルオロカーボン。処理能力などの基準が緩和される区分。", refs: [["高圧ガス保安法施行令第2条第5項第4号", glossaryOrder, "Mp-At_2"]] },
+  { id: "flammable", term: "可燃性ガス", text: "アセチレン、アンモニア、水素、プロパン、メタンなど一般則に列挙されたガスと、爆発限界の下限が10%以下または上限と下限の差が20%以上のガス。", refs: [["一般則第2条第1項第1号", glossaryGeneral, "Mp-Ch_1-At_2"]] },
+  { id: "toxic", term: "毒性ガス", text: "アンモニア、塩素、一酸化炭素、シアン化水素など一般則に列挙されたガスと、毒物及び劇物取締法の毒物に当たるガス。", refs: [["一般則第2条第1項第2号", glossaryGeneral, "Mp-Ch_1-At_2"]] },
+  { id: "special", term: "特殊高圧ガス", text: "アルシン、ジシラン、ジボラン、セレン化水素、ホスフィン、モノゲルマン、モノシラン。", refs: [["一般則第2条第1項第3号", glossaryGeneral, "Mp-Ch_1-At_2"]] },
+  { id: "specified", term: "特定高圧ガス", text: "特殊高圧ガスの7種(圧縮・液化したもの)。加えて、一定量以上を貯蔵して消費する圧縮水素、圧縮天然ガス、液化酸素、液化アンモニア、液化石油ガス、液化塩素。消費者の届出の対象。", refs: [["高圧ガス保安法第24条の2", glossaryAct, "Mp-Ch_2-At_24_2"], ["施行令第7条", glossaryOrder, "Mp-At_7"]] },
+  { id: "processing", term: "処理能力", text: "処理設備・減圧設備で1日に処理できるガスの容積を、温度0℃・圧力0Paの状態に換算したもの。現在の使用量ではない。", refs: [["一般則第2条第1項第18号", glossaryGeneral, "Mp-Ch_1-At_2"]] },
+  { id: "refrigeration", term: "冷凍能力", text: "省令の算定基準で求めた1日の冷凍能力(トン)。運転中の実測値ではない。", refs: [["高圧ガス保安法第5条第3項", glossaryAct, "Mp-Ch_2-At_5"], ["冷凍保安規則第5条", "341M50000400051", "Mp-Ch_2-Se_1-At_5"]] },
+  { id: "storage", term: "貯蔵能力", text: "貯蔵設備に貯蔵できる高圧ガスの数量。圧縮ガスは m³、液化ガスは kg で表す。", refs: [["一般則第2条第1項第9号", glossaryGeneral, "Mp-Ch_1-At_2"]] },
+  { id: "manufacturers", term: "第一種製造者・第二種製造者", text: "製造の許可を受けた者が第一種製造者、製造の届出をした者が第二種製造者。", refs: [["高圧ガス保安法第5条", glossaryAct, "Mp-Ch_2-At_5"]] },
+  { id: "storage-sites", term: "第一種貯蔵所・第二種貯蔵所", text: "許可を受けて設置する貯蔵所が第一種貯蔵所、届け出て設置する貯蔵所が第二種貯蔵所。", refs: [["高圧ガス保安法第16条", glossaryAct, "Mp-Ch_2-At_16"], ["高圧ガス保安法第17条の2", glossaryAct, "Mp-Ch_2-At_17_2"]] },
+  { id: "sales-site", term: "販売所", text: "高圧ガスを販売する事業所。販売事業の届出は販売所ごとに行う。", refs: [["高圧ガス保安法第20条の4", glossaryAct, "Mp-Ch_2-At_20_4"]] },
+];
+function relatedGlossary(action, category, stepId) {
+  const ids = new Set(["high-pressure"]);
+  if (action === "storage") ["storage", "storage-sites", "type1", "special"].forEach(id => ids.add(id));
+  if (action === "consumption") ["storage", "specified", "special"].forEach(id => ids.add(id));
+  if (action === "sales") ["sales-site", "manufacturers"].forEach(id => ids.add(id));
+  if (action === "manufacture") ["manufacturers", category === "refrigeration" ? "refrigeration" : "processing"].forEach(id => ids.add(id));
+  if (["gasScope", "gasType", "storageGasScope", "consumptionGasType"].includes(stepId)) ["type1", "flammable", "toxic"].forEach(id => ids.add(id));
+  return GLOSSARY.filter(item => ids.has(item.id));
+}
+
+/* =========================================================
+   calculators.js
+   ========================================================= */
+
+// 冷凍則第5条の係数。表示の丸めは回答区分の比較に使わない。
+const REFRIGERATION_Q = {
+  "二酸化炭素": 1.02, "アンモニア": 0.64, "フルオロカーボン32": 0.63, "プロピレン": 0.58,
+  "フルオロカーボン410A": 0.57, "フルオロカーボン125": 0.50, "フルオロカーボン404A": 0.50,
+  "フルオロカーボン407C": 0.49, "フルオロカーボン22": 0.47, "フルオロカーボン134a": 0.36,
+  "フルオロカーボン12": 0.34, "フルオロカーボン124": 0.24, "フルオロカーボン11": 0.10,
+};
+const REFRIGERATION_C = {
+  "フルオロカーボン21": [49.7,46.6], "フルオロカーボン114": [46.4,43.5], "ノルマルブタン": [37.2,34.9],
+  "イソブタン": [27.1,25.4], "クロルメチル": [14.5,13.6], "フルオロカーボン134a": [14.4,13.5],
+  "フルオロカーボン12": [13.9,13.1], "フルオロカーボン500": [12.0,11.3], "プロパン": [9.6,9.0],
+  "フルオロカーボン22": [8.5,7.9], "アンモニア": [8.4,7.9], "フルオロカーボン502": [8.4,7.9],
+  "フルオロカーボン13B1": [6.2,5.8], "フルオロカーボン13": [4.4,4.2], "エタン": [3.1,2.9], "二酸化炭素": [1.8,1.7],
+};
+const CALC_MANUAL_NOTE = "この設備・冷媒は自動計算の対象外です。メーカー資料・許可書等に記載の法定の能力を「記載値を使う」から入力してください。";
+function calcNumeric(value) {
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  const text = String(value).trim().normalize("NFKC");
+  if (!/^\+?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(text)) return null;
+  const number = Number(text);
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+function calcInputs(input, fields) {
+  const values = {}, errors = {};
+  for (const key of fields) {
+    const number = calcNumeric(input[key]);
+    if (number === null) errors[key] = "0以上の有限な数値を入力してください。";
+    else values[key] = number;
+  }
+  return { values, errors };
+}
+function calcFinished(value, unit, formula, errorField) {
+  if (!Number.isFinite(value)) return { valid: false, errors: { [errorField]: "計算結果が大きすぎます。入力値を確認してください。" } };
+  return { valid: true, value, unit, formula };
+}
+function calculateStorageRow(input) {
+  const fields = { compressed: ["pressure", "volume"], tank: ["density", "volume"], bulk: ["density", "volume"], containers: ["mass", "count"], documented: ["value"] }[input.method];
+  if (!fields) return { valid: false, manualRequired: true, errors: {} };
+  const { values: v, errors } = calcInputs(input, fields);
+  if (input.method === "containers" && v.count !== undefined && !Number.isInteger(v.count)) errors.count = "本数は0以上の整数で入力してください。";
+  if (Object.keys(errors).length) return { valid: false, errors };
+  if (input.method === "compressed") return calcFinished((10 * v.pressure + 1) * v.volume, "m³", "Q = (10 × " + v.pressure + " + 1) × " + v.volume, "volume");
+  if (input.method === "tank" || input.method === "bulk") {
+    if (input.lowTemperature) return { valid: false, manualRequired: true, errors: {} };
+    const factor = input.method === "bulk" && !(input.underground && v.volume >= 2000) ? 0.85 : 0.9;
+    return calcFinished(factor * v.density * v.volume, "kg", "W = " + factor + " × " + v.density + " × " + v.volume, "volume");
+  }
+  if (input.method === "containers") return calcFinished(v.mass * v.count, "kg", "W = " + v.mass + " × " + v.count, "count");
+  if (!["m³", "kg"].includes(input.unit)) return { valid: false, errors: { value: "記載値の単位を確認してください。" } };
+  return calcFinished(v.value, input.unit, "メーカー資料・許可書等の記載値 = " + v.value, "value");
+}
+function sumStorageRows(rows, { activity, unit = "m³" }) {
+  if (!rows.length) return { valid: false, errors: [{ value: "設備を1行以上入力してください。" }] };
+  const results = rows.map(calculateStorageRow);
+  const errors = results.map(r => r.errors || {});
+  if (results.some(r => !r.valid)) return { valid: false, errors, manualRequired: results.some(r => r.manualRequired) };
+  const cubicMetres = results.filter(r => r.unit === "m³").reduce((sum,r) => sum+r.value,0);
+  const kilograms = results.filter(r => r.unit === "kg").reduce((sum,r) => sum+r.value,0);
+  if (activity !== "storage" && results.some(r => r.unit !== unit)) return { valid: false, errors: rows.map(() => ({ value: "この消費設問と同じ単位の設備・記載値を使ってください。" })) };
+  const value = activity === "storage" ? cubicMetres + kilograms / 10 : unit === "kg" ? kilograms : cubicMetres;
+  if (!Number.isFinite(value)) return { valid: false, errors: rows.map(() => ({ value: "合計が大きすぎます。" })) };
+  return { valid: true, value, unit: activity === "storage" ? "m³" : unit, cubicMetres, kilograms,
+    converted: activity === "storage" ? kilograms / 10 : null, formulas: results.map(r => r.formula) };
+}
+function calculateRefrigeration(input) {
+  const fields = { centrifugal: ["power"], absorption: ["heat"], natural: ["area"], single: ["displacement"], documented: ["value"] }[input.method];
+  if (!fields) return { valid: false, manualRequired: true, errors: {} };
+  if (input.method === "natural" && !Object.hasOwn(REFRIGERATION_Q, input.refrigerant)) return { valid: false, manualRequired: true, errors: {} };
+  if (input.method === "single" && (!Object.hasOwn(REFRIGERATION_C, input.refrigerant) || !["small","large"].includes(input.cylinder))) return { valid: false, manualRequired: true, errors: {} };
+  const { values: v, errors } = calcInputs(input, fields);
+  if (Object.keys(errors).length) return { valid: false, errors };
+  let value, formula;
+  if (input.method === "centrifugal") { value = v.power / 1.2; formula = "R = " + v.power + " ÷ 1.2"; }
+  if (input.method === "absorption") { value = v.heat / 27800; formula = "R = " + v.heat + " ÷ 27,800"; }
+  if (input.method === "natural") { const q = REFRIGERATION_Q[input.refrigerant]; value = q * v.area; formula = "R = " + q + " × " + v.area; }
+  if (input.method === "single") { const c = REFRIGERATION_C[input.refrigerant][input.cylinder === "large" ? 1 : 0]; value = v.displacement / c; formula = "R = " + v.displacement + " ÷ " + c; }
+  if (input.method === "documented") { value = v.value; formula = "メーカー資料・許可書等の法定冷凍能力 = " + v.value; }
+  return calcFinished(value, "トン/日", formula, fields[0]);
+}
+function calculatorContext(action, category, step, answers = {}) {
+  if (action === "manufacture" && category === "refrigeration" && step.id === "capacityBand") return { kind: "refrigeration", activity: action, unit: "トン/日", category };
+  if (action === "storage" && ["storageCapacityBand", "storageM", "storageS2"].includes(step.id)) return { kind: "storage", activity: action, unit: "m³", category };
+  if (action === "consumption" && step.id === "consumptionStorageBand") return { kind: "storage", activity: action, unit: ["hydrogen","natgas"].includes(answers.consumptionGasType) ? "m³" : "kg", category };
+  return null;
+}
+function calculationAnswer(step, value) {
+  if (!Number.isFinite(value) || value < 0) return null;
+  if (step.type === "number") return { value: String(value), label: value.toFixed(2) + " " + (step.unit || "") };
+  for (const key of ["over", "between"]) {
+    const option = step.options?.find(o => o.value === key);
+    const threshold = option?.label.match(/^([\d,]+(?:\.\d+)?)/)?.[1];
+    if (threshold && value >= Number(threshold.replaceAll(",",""))) return option;
+  }
+  return step.options?.find(o => o.value === "under") || null;
+}
+function calculationReferences(context) {
+  if (context.kind === "refrigeration") return [["冷凍保安規則第5条", assistLawUrl("341M50000400051", "Mp-Ch_2-Se_1-At_5")]];
+  return [
+    [context.category === "lpgas" ? "液石則第2条第1項第6号" : "一般則第2条第1項第9号", assistLawUrl(context.category === "lpgas" ? "341M50000400052" : "341M50000400053", "Mp-Ch_1-At_2")],
+    ["容器保安規則第22条（容器の充塡質量）", assistLawUrl("341M50000400050", "Mp-Ch_6-At_22")],
+    ...(context.activity === "storage" ? [["高圧ガス保安法第16条第3項（10kgを1m³へ換算）", assistLawUrl("326AC0000000204", "Mp-Ch_2-At_16")]] : []),
+  ];
+}
+
+/* =========================================================
+   assistView.js
+   ========================================================= */
+
+function assistNode(tag, text = "", className = "") {
+  const node = document.createElement(tag); node.textContent = text; node.className = className; return node;
+}
+function assistButton(label, callback) {
+  const button = assistNode("button", label, "btn-secondary"); button.type = "button"; button.addEventListener("click", callback); return button;
+}
+function renderGlossaryEntries(items = GLOSSARY) {
+  const wrap = assistNode("div", "", "glossary-list");
+  for (const item of items) {
+    const entry = assistNode("details", "", "glossary-entry"); entry.dataset.term = item.id;
+    entry.append(assistNode("summary", item.term), assistNode("p", item.text));
+    for (const [label, lawId, anchor] of item.refs) entry.append(officialLink(label, assistLawUrl(lawId, anchor)));
+    wrap.append(entry);
+  }
+  return wrap;
+}
+function renderRevisionWarning(state) {
+  const wrap = assistNode("aside", "", "revision-warning");
+  wrap.hidden = state.status !== "ready" || !state.changes.length;
+  if (wrap.hidden) return wrap;
+  wrap.setAttribute("role", "note");
+  wrap.append(assistNode("strong", "案内の確認後に、改正情報が見つかりました"));
+  for (const change of state.changes) {
+    const status = change.status === "CurrentEnforced" ? "確認後に施行された改正" : "確認していない施行予定の改正";
+    wrap.append(assistNode("p", change.lawTitle + " — " + status + " / 施行日：" + change.enforcementDate + " / 改正法令：" + change.amendmentTitle));
+  }
+  wrap.append(assistNode("p", "この案内は" + PROCEDURE_CHECKED_AT + "時点の法令で確認しています。手続きの前に保安係へご確認ください。判定・案内は自動更新していません。"),
+    officialLink("奈良県の手続き案内・保安係", NARA_PAGES.index));
+  return wrap;
+}
+function renderRevisionSource(state) {
+  const wrap = assistNode("div", "", "revision-source");
+  wrap.append(assistNode("p", KNOWN_REVISION_NOTE, "revision-known-note"));
+  if (state.status === "failed") wrap.append(assistNode("p", "改正の有無を確認できませんでした", "revision-status"));
+  else if (state.status === "ready") wrap.append(assistNode("p", "改正情報の照合日：" + new Date(state.checkedAt).toLocaleString("ja-JP") + "（照合結果は24時間保持）", "revision-status"));
+  return wrap;
+}
+function renderQuestionAssistance({ action, category, step, answers, onApply }) {
+  const wrap = assistNode("div");
+  const context = calculatorContext(action, category, step, answers);
+  if (context) {
+    const container = assistNode("div");
+    const open = assistButton("計算補助を開く", () => {
+      if (!container.childElementCount) container.append(renderCalculator(context, step, onApply));
+      container.querySelector("h3").focus();
+    });
+    wrap.append(open, container);
+  } else if (action === "manufacture" && category !== "refrigeration" && ["capacityBand","s1","s2"].includes(step.id)) {
+    wrap.append(assistNode("p", "処理能力の計算補助はありません。許可申請書・届書の控え、メーカー資料に記載の処理能力を使って回答してください。", "processing-record-guide"));
+  }
+  wrap.append(assistNode("h3", "関連用語"), renderGlossaryEntries(relatedGlossary(action, category, step.id)));
+  return wrap;
+}
+function renderCalculator(context, step, onApply) {
+  const wrap = assistNode("section", "", "calculator-panel");
+  const heading = assistNode("h3", context.kind === "refrigeration" ? "冷凍能力の計算補助" : "貯蔵能力の計算補助"); heading.tabIndex = -1;
+  wrap.append(heading, assistNode("p", "算定条件が分かる設備だけを入力してください。結果の適用ボタンを押すまでは、設問の回答は変わりません。"));
+  const body = assistNode("div"), result = assistNode("div", "", "calculator-result"); result.setAttribute("role","status");
+  let sequence = 0;
+  const inputErrors = new Map();
+  const clearResult = () => result.replaceChildren();
+  function field(parent, model, key, label, prefix) {
+    const id = "calc-" + sequence++ + "-" + key;
+    const labelNode = assistNode("label", label); labelNode.htmlFor = id;
+    const input = assistNode("input"); input.type = "text"; input.inputMode = "decimal"; input.id = id; input.value = model[key] ?? ""; input.dataset.calcField = key;
+    const error = assistNode("p", "", "calc-error"); error.id = id + "-error"; error.hidden = true;
+    input.setAttribute("aria-describedby", error.id);
+    input.addEventListener("input", () => { model[key] = input.value; clearResult(); error.hidden = true; input.removeAttribute("aria-invalid"); });
+    const group = assistNode("div", "", "calc-field"); group.append(labelNode, input, error); parent.append(group);
+    inputErrors.set(prefix + ":" + key, { input, error });
+  }
+  function select(parent, model, key, label, options, changed) {
+    const group = assistNode("label", label, "calc-field");
+    const control = assistNode("select"); control.dataset.calcSelect = key;
+    for (const [value, text] of options) { const opt = assistNode("option", text); opt.value = value; control.append(opt); }
+    if (!options.some(([v]) => v === model[key])) model[key] = options[0][0];
+    control.value = model[key];
+    control.addEventListener("change", () => { model[key] = control.value; clearResult(); changed?.(); });
+    group.append(control); parent.append(group);
+  }
+  function showErrors(groups) {
+    for (const { input, error } of inputErrors.values()) { error.hidden = true; input.removeAttribute("aria-invalid"); }
+    groups.forEach((errors, index) => Object.entries(errors).forEach(([key, message]) => {
+      const target = inputErrors.get(index + ":" + key) || [...inputErrors.entries()].find(([name]) => name.startsWith(index + ":"))?.[1];
+      if (target) { target.error.textContent = message; target.error.hidden = false; target.input.setAttribute("aria-invalid","true"); }
+    }));
+    const first = [...inputErrors.values()].find(v => !v.error.hidden); first?.input.focus();
+  }
+  function display(calculation) {
+    clearResult();
+    if (!calculation.valid) {
+      if (calculation.manualRequired) result.append(assistNode("p", CALC_MANUAL_NOTE));
+      const groups = Array.isArray(calculation.errors) ? calculation.errors : [calculation.errors || {}];
+      showErrors(groups); return;
+    }
+    showErrors([]);
+    result.append(assistNode("strong", "計算結果：" + calculation.value.toFixed(2) + " " + calculation.unit, "calculation-value"));
+    for (const formula of calculation.formulas || [calculation.formula]) result.append(assistNode("p", formula, "calculation-formula"));
+    if (context.activity === "storage") result.append(assistNode("p", "換算前：圧縮ガス " + calculation.cubicMetres.toFixed(2) + " m³、液化ガス " + calculation.kilograms.toFixed(2) + " kg。液化ガス換算後：" + calculation.kilograms.toFixed(2) + " kg ÷ 10 = " + calculation.converted.toFixed(2) + " m³。合計 " + calculation.value.toFixed(2) + " m³。", "calculation-conversion"));
+    for (const [label,url] of calculationReferences(context)) result.append(officialLink(label,url));
+    const answer = calculationAnswer(step, calculation.value);
+    if (answer) {
+      result.append(assistNode("p", "この値は『" + answer.label + "』に当たります。区分は丸める前の値で確認しています。", "calculation-choice"),
+        assistButton("この選択肢を選ぶ", () => onApply(answer.value)));
+    }
+  }
+  if (context.kind === "refrigeration") {
+    const model = { method: "documented", cylinder: "small" };
+    const fields = assistNode("div", "", "calc-fields");
+    const refresh = () => {
+      fields.replaceChildren(); inputErrors.clear();
+      const manual = ["multi-stage","multi-system","rotary","unsupported","cool-natural"].includes(model.method);
+      if (manual) { fields.append(assistNode("p", CALC_MANUAL_NOTE)); return; }
+      if (model.method === "natural" || model.method === "single") {
+        const table = model.method === "natural" ? REFRIGERATION_Q : REFRIGERATION_C;
+        select(fields, model, "refrigerant", "冷媒", [...Object.keys(table).map(n=>[n,n]),["other","表にない冷媒"]], refresh);
+        if (model.refrigerant === "other") { fields.append(assistNode("p", CALC_MANUAL_NOTE)); return; }
+      }
+      if (model.method === "single") select(fields, model, "cylinder", "気筒1個の体積", [["small","5,000cm³以下"],["large","5,000cm³超"]]);
+      const labels = { documented: ["value","記載された法定冷凍能力（トン/日）"], centrifugal: ["power","原動機の定格出力（kW）"], absorption: ["heat","発生器を加熱する1時間の入熱量（kJ）"], natural: ["area","冷媒ガスに接する側の表面積（m²）"], single: ["displacement","標準回転速度で1時間のピストン押しのけ量（m³）"] };
+      const [key,label] = labels[model.method]; field(fields,model,key,label,0);
+    };
+    select(body,model,"method","計算方法", [
+      ["documented","記載値を使う（メーカー資料・許可書等）"],["centrifugal","遠心式圧縮機"],["absorption","吸収式"],
+      ["natural","自然環流式・自然循環式"],["single","単段の圧縮機（上記以外）"],["multi-stage","多段圧縮"],["multi-system","多元冷凍"],
+      ["rotary","回転ピストン型"],["unsupported","表にない冷媒"],["cool-natural","前号の製造設備で自然循環式の冷媒ガスを冷凍"],
+    ],refresh);
+    body.append(fields); refresh();
+    wrap.append(body,assistButton("計算する",()=>display(calculateRefrigeration(model))));
+  } else {
+    const rows = [{ method: "documented", unit: context.unit }], rowsElement = assistNode("div", "", "calc-rows");
+    const refresh = () => {
+      rowsElement.replaceChildren(); inputErrors.clear();
+      rows.forEach((row,index) => {
+        const group = assistNode("fieldset", "", "calc-row"); group.append(assistNode("legend","設備 " + (index+1)));
+        const methods = [["documented","記載値を使う（メーカー資料・許可書等）"]];
+        if (context.activity === "storage" || context.unit === "m³") methods.push(["compressed","圧縮ガス"]);
+        if (context.activity === "storage" || context.unit === "kg") methods.push(["tank","液化ガスの貯槽"], ...(context.category === "lpgas" ? [["bulk","液化石油ガスのバルク貯槽"]] : []),["containers","液化ガスの容器"],["low-temperature","低温貯槽（記載値で確認）"]);
+        select(group,row,"method","設備・入力方法",methods,refresh);
+        if (row.method === "documented") {
+          if (context.activity === "storage") select(group,row,"unit","記載値の単位",[["m³","m³（圧縮ガス・換算済み容積）"],["kg","kg（液化ガスの質量）"]],refresh);
+          field(group,row,"value","記載値（" + row.unit + "）",index);
+        }
+        if (row.method === "compressed") {
+          group.append(assistNode("p","Pは35℃（アセチレンは15℃）での最高充塡圧力です。内容積はm³で入力してください。"));
+          field(group,row,"pressure","最高充塡圧力 P（MPa）",index); field(group,row,"volume","内容積 V1（m³）",index);
+        }
+        if (["tank","bulk"].includes(row.method)) {
+          group.append(assistNode("p","常用温度での比重（kg/L）を使用します。低温貯槽は計算せず「記載値を使う」で確認してください。"));
+          field(group,row,"density","液化ガスの比重 w（kg/L）",index); field(group,row,"volume","内容積（L）",index);
+          if (row.method === "bulk") {
+            group.append(assistNode("p","地盤面下で内容積2,000L以上のものは、貯槽の式 W = 0.9 × w × V を使います。"));
+            const label = assistNode("label","地盤面下の貯槽","calc-check"); const input=assistNode("input"); input.type="checkbox"; input.checked=Boolean(row.underground);
+            input.addEventListener("change",()=>{ row.underground=input.checked; clearResult(); }); label.prepend(input); group.append(label);
+          }
+        }
+        if (row.method === "containers") {
+          group.append(assistNode("p","容器保安規則第22条で求めた各容器の充塡質量を使用します。係数表からの計算は行いません。"));
+          field(group,row,"mass","容器1本の充塡質量（kg）",index); field(group,row,"count","本数",index);
+        }
+        if (row.method === "low-temperature") group.append(assistNode("p",CALC_MANUAL_NOTE));
+        if (rows.length>1) group.append(assistButton("この設備を削除",()=>{ rows.splice(index,1); clearResult(); refresh(); }));
+        rowsElement.append(group);
+      });
+    };
+    body.append(rowsElement,assistButton("設備を追加",()=>{ rows.push({method:"documented",unit:context.unit}); clearResult(); refresh(); }));
+    refresh(); wrap.append(body,assistButton("計算する",()=>display(sumStorageRows(rows,context))));
+  }
+  wrap.append(result);
+  return wrap;
+}
+
+/* =========================================================
+   portability.js
+   ========================================================= */
+
+const PORTABLE_MAX_BYTES = 1024 * 1024;
+const SHARE_MAX_LENGTH = 2000;
+const SHARE_FRAGMENT_PREFIX = "#kn=";
+function portableError(message) { throw new Error(message); }
+function portableObject(value, allowed, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) portableError(label + "の形式が正しくありません。");
+  if (Object.keys(value).some(key => !allowed.includes(key))) portableError(label + "に未知の項目があります。");
+}
+function portableBoolean(value) { if (typeof value !== "boolean") portableError("結果の状態が正しくありません。"); }
+function portableAnswers(answers, steps) {
+  portableObject(answers, steps.map(s => s.id), "回答（設問ID）");
+  for (const [key, value] of Object.entries(answers)) {
+    const step = steps.find(s => s.id === key);
+    if (step.type === "choice") {
+      if (!step.options.some(o => o.value === value)) portableError("未知の選択肢があります：" + key);
+    } else if (!["number","string"].includes(typeof value) || String(value).trim() === "" || !Number.isFinite(Number(value)) || Number(value) < 0 || String(value).length > 100) portableError("数値の回答が正しくありません：" + key);
+  }
+}
+function portablePosition(data, steps, unconfirmed = false) {
+  if (!Number.isInteger(data.stepIndex) || data.stepIndex < 0 || data.stepIndex >= Math.max(1, steps.length)) portableError("設問位置が正しくありません。");
+  portableBoolean(data.finished);
+  if (unconfirmed && !data.finished) portableError("未確認結果の状態が正しくありません。");
+  if (!steps.length) {
+    if (data.finished || Object.keys(data.answers).length) portableError("回答する設問がありません。");
+    return;
+  }
+  const required = data.finished && !unconfirmed ? steps : steps.slice(0, data.stepIndex);
+  if (required.some(s => !Object.hasOwn(data.answers, s.id))) portableError("前の設問への回答が不足しています。");
+  if ((!data.finished || unconfirmed) && steps.slice(data.stepIndex).some(s => Object.hasOwn(data.answers, s.id))) portableError("設問位置と回答が一致しません。");
+}
+function portableDiagnosis(diag) {
+  portableObject(diag, ["actionType","gasCategory","stepIndex","answers","finished","unconfirmed"], "診断");
+  portableBoolean(diag.unconfirmed);
+  if (diag.actionType !== null && !ACTION_TYPES.some(a => a.id === diag.actionType)) portableError("行為の区分が正しくありません。");
+  if (diag.gasCategory !== null && (!diag.actionType || !getCategoriesForAction(diag.actionType).some(g => g.id === diag.gasCategory))) portableError("ガスの区分が正しくありません。");
+  const steps = diag.gasCategory ? getStepsForGasCategory(diag.actionType, diag.gasCategory, diag.answers) : [];
+  portableAnswers(diag.answers, steps);
+  portablePosition(diag, steps, diag.unconfirmed);
+}
+function portableLifecycle(nav) {
+  if (nav.purpose !== null && !PURPOSES.some(p => p.id === nav.purpose)) portableError("目的が正しくありません。");
+  const steps = nav.purpose && nav.purpose !== "new" ? getLifecycleSteps(nav.purpose, nav.answers) : [];
+  portableAnswers(nav.answers, steps);
+  portablePosition(nav, steps);
+}
+function portablePreparationContext(context) {
+  if (Object.hasOwn(context, "answers")) {
+    portableObject(context, ["activity","regulation","answers"], "書類の回答条件");
+    if (!ACTION_TYPES.some(a => a.id === context.activity) || !getCategoriesForAction(context.activity).some(g => g.id === context.regulation)) portableError("書類の区分が正しくありません。");
+    portableAnswers(context.answers, getStepsForGasCategory(context.activity, context.regulation, context.answers));
+  } else if (Object.keys(context).length) {
+    // 保存キーには目的を含まないため、いずれかの既存目的の質問集合に一致することを検査。
+    const valid = PURPOSES.filter(p => p.id !== "new").some(p => {
+      try { portableAnswers(context, getLifecycleSteps(p.id, context)); return true; } catch { return false; }
+    });
+    if (!valid) portableError("書類の回答条件が正しくありません。");
+  }
+}
+function portablePreparations(preparations) {
+  if (!preparations || typeof preparations !== "object" || Array.isArray(preparations)) portableError("書類チェックの形式が正しくありません。");
+  for (const [scope, state] of Object.entries(preparations)) {
+    const match = scope.match(/^([A-Za-z0-9-]{1,80}):([a-z0-9-]+):(.+)$/);
+    const procedure = match && getProcedure(match[2]);
+    if (!procedure) portableError("未知の手続きの書類チェックがあります。");
+    let context;
+    try { context = JSON.parse(match[3]); } catch { portableError("書類の回答条件を読み取れません。"); }
+    if (!context || Array.isArray(context) || typeof context !== "object") portableError("書類の回答条件が正しくありません。");
+    portablePreparationContext(context);
+    portableObject(state, ["facts","checks","lastUsedAt"], "書類チェック");
+    portableObject(state.facts, procedure.documents.filter(d => d.kind === "conditional").map(documentFactKey), "書類条件");
+    if (Object.values(state.facts).some(v => !["yes","no","unknown"].includes(v))) portableError("未知の書類条件があります。");
+    portableObject(state.checks, procedure.documents.map(d => d.id), "書類チェック");
+    if (Object.values(state.checks).some(v => typeof v !== "boolean")) portableError("書類チェックが正しくありません。");
+    if (state.lastUsedAt !== undefined && (!Number.isFinite(state.lastUsedAt) || state.lastUsedAt < 0)) portableError("書類の保存日時が正しくありません。");
+  }
+}
+function validatePortableState(state, { includeChecks = true } = {}) {
+  portableObject(state, ["mode","diag","nav"], "画面");
+  if (!["diagnosis","lifecycle","detail"].includes(state.mode)) portableError("共有する画面の種類が正しくありません。");
+  portableDiagnosis(state.diag);
+  const nav = state.nav;
+  portableObject(nav, ["purpose","answers","stepIndex","finished","selectedId","returnMode","caseId", ...(includeChecks ? ["preparations"] : [])], "手続き");
+  portableLifecycle(nav);
+  if (typeof nav.caseId !== "string" || !/^[A-Za-z0-9-]{1,80}$/.test(nav.caseId)) portableError("案件の識別子が正しくありません。");
+  if (!["catalogue","diagnosis","lifecycle","detail","home"].includes(nav.returnMode)) portableError("戻り先が正しくありません。");
+  if (nav.selectedId !== null && !getProcedure(nav.selectedId)) portableError("未知の手続きです。");
+  if (state.mode === "detail" && !nav.selectedId) portableError("表示する手続きがありません。");
+  if (state.mode === "lifecycle" && (!nav.purpose || nav.purpose === "new")) portableError("手続きの目的がありません。");
+  if (nav.preparations !== undefined) portablePreparations(nav.preparations);
+  return state;
+}
+function makePortableEnvelope(draft, { includeChecks = true, now = new Date() } = {}) {
+  const d = draft.diag, n = draft.nav;
+  const state = {
+    mode: draft.mode,
+    diag: { actionType: d.actionType ?? null, gasCategory: d.gasCategory ?? null, stepIndex: d.stepIndex, answers: { ...d.answers }, finished: d.finished, unconfirmed: d.unconfirmedResult?.verdict === "needs_confirmation" },
+    nav: { purpose: n.purpose ?? null, answers: { ...n.answers }, stepIndex: n.stepIndex, finished: n.finished, selectedId: n.selectedId ?? null, returnMode: n.returnMode || "catalogue", caseId: n.caseId,
+      ...(includeChecks ? { preparations: structuredClone(n.preparations || {}) } : {}) },
+  };
+  validatePortableState(state, { includeChecks });
+  return { format: "kouatsu-navi", schemaVersion: 1, procedureVersion: PROCEDURE_VERSION, savedAt: now.toISOString(), state };
+}
+function parsePortableEnvelope(text, { includeChecks = true } = {}) {
+  if (new TextEncoder().encode(text).byteLength > PORTABLE_MAX_BYTES) portableError("1MB以下のファイルを選んでください。");
+  let envelope;
+  try { envelope = JSON.parse(text); } catch { portableError("JSONの形式を読み取れません。"); }
+  portableObject(envelope, ["format","schemaVersion","procedureVersion","savedAt","state"], "ファイル");
+  if (envelope.format !== "kouatsu-navi" || envelope.schemaVersion !== 1) portableError("ファイルの形式・形式の版が異なります。");
+  if (envelope.procedureVersion !== PROCEDURE_VERSION) portableError("判定条件の版が異なります。古い回答は読み込まず、現在の質問に改めて回答してください。");
+  if (typeof envelope.savedAt !== "string" || envelope.savedAt.length > 40 || !Number.isFinite(Date.parse(envelope.savedAt))) portableError("保存日時が正しくありません。");
+  validatePortableState(envelope.state, { includeChecks });
+  return envelope;
+}
+async function readPortableFile(file) {
+  if (!file || file.size > PORTABLE_MAX_BYTES) portableError("1MB以下のファイルを選んでください。");
+  return parsePortableEnvelope(await file.text());
+}
+function portableFilename(date = new Date()) {
+  return "kouatsu-navi-" + date.getFullYear() + String(date.getMonth()+1).padStart(2,"0") + String(date.getDate()).padStart(2,"0") + ".json";
+}
+async function portableReadStream(stream) {
+  const reader = stream.getReader(), chunks = [];
+  let size = 0;
+  try {
+    while (true) {
+      const part = await reader.read();
+      if (part.done) break;
+      size += part.value.byteLength;
+      if (size > PORTABLE_MAX_BYTES) { await reader.cancel(); portableError("共有データが大きすぎます。"); }
+      chunks.push(part.value);
+    }
+  } finally { reader.releaseLock(); }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return bytes;
+}
+function portableBase64(bytes) {
+  let text = "";
+  for (let i=0; i<bytes.length; i+=8192) text += String.fromCharCode(...bytes.subarray(i,i+8192));
+  return btoa(text).replaceAll("+","-").replaceAll("/","_").replaceAll("=","");
+}
+async function createShareUrl(draft, baseUrl, { Compressor = globalThis.CompressionStream } = {}) {
+  const envelope = makePortableEnvelope(draft, { includeChecks: false });
+  let bytes = new TextEncoder().encode(JSON.stringify(envelope)), encoding = "u";
+  if (Compressor) {
+    try { bytes = await portableReadStream(new Blob([bytes]).stream().pipeThrough(new Compressor("deflate-raw"))); encoding = "d"; }
+    catch { /* 非対応ブラウザーは標準の非圧縮形式で共有する。 */ }
+  }
+  const url = baseUrl.split("#")[0] + SHARE_FRAGMENT_PREFIX + "1." + encoding + "." + portableBase64(bytes);
+  if (url.length > SHARE_MAX_LENGTH) portableError("共有URLが2,000文字を超えます。JSONファイルに書き出して共有してください。");
+  return url;
+}
+async function decodeShareFragment(fragment, { Decompressor = globalThis.DecompressionStream } = {}) {
+  if (fragment.length > SHARE_MAX_LENGTH) portableError("共有URLが長すぎます。JSONファイルを読み込んでください。");
+  const match = fragment.match(/^#kn=1\.([ud])\.([A-Za-z0-9_-]+)$/);
+  if (!match) portableError("共有URLを復号できません。形式を確認してください。");
+  let bytes;
+  try {
+    const binary = atob(match[2].replaceAll("-","+").replaceAll("_","/"));
+    bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+    if (match[1] === "d") {
+      if (!Decompressor) portableError("圧縮に未対応です。JSONファイルを使ってください。");
+      bytes = await portableReadStream(new Blob([bytes]).stream().pipeThrough(new Decompressor("deflate-raw")));
+    }
+  } catch { portableError("共有URLを復号できません。JSONファイルでの読み込みをお試しください。"); }
+  let text;
+  try { text = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { portableError("共有URLを復号できません。"); }
+  return parsePortableEnvelope(text, { includeChecks: false });
+}
+
+/* =========================================================
    main.js
    ========================================================= */
 
@@ -3414,6 +4014,10 @@ let draftReady = false;
 let saveQueue = Promise.resolve();
 const lawFetchedAt = new Map();
 let citationRenderIndex = 0;
+let revisionState = { status: "pending", changes: [] };
+let pendingTransfer = null;
+let transferError = "";
+let displayOnlyTransfer = false;
 
 function navigationButton(text, handler, className = "btn-secondary") {
   const button = document.createElement("button"); button.type = "button"; button.className = className; button.textContent = text;
@@ -3434,7 +4038,7 @@ function currentDraft() {
   };
 }
 function persistDraft() {
-  if (!draftReady) return;
+  if (!draftReady || displayOnlyTransfer) return;
   const snapshot = JSON.parse(JSON.stringify(currentDraft()));
   navigationState.saved = snapshot;
   saveQueue = saveQueue.then(() => writeDraft(snapshot)).catch(storageWarning);
@@ -3526,12 +4130,18 @@ function render() {
     if (appState.mode === "catalogue") stageEl.append(renderCatalogue());
     if (appState.mode === "lifecycle") stageEl.append(renderLifecycle());
     if (appState.mode === "detail") stageEl.append(renderSelectedProcedure());
+    if (appState.mode === "glossary") stageEl.append(renderGlossaryScreen());
+    if (appState.mode === "import-confirm") stageEl.append(renderTransferConfirmation());
   }
+  if (["diagnosis", "lifecycle", "detail"].includes(appState.mode)) stageEl.append(renderTransferActions());
+  if (transferError) { const error = navigationText("p", transferError, "transfer-error"); error.setAttribute("role", "alert"); stageEl.prepend(error); }
+  if (displayOnlyTransfer) stageEl.prepend(navigationText("p", "共有・読み込み内容は保存せず表示しています。端末の下書きは保持されています。保存した回答を使う場合はホームから再開してください。", "note-box display-only-notice"));
+  refreshRevisionDisplays();
   for (const el of stageEl.querySelectorAll("details[data-disclosure]")) if (openDetails.includes(el.dataset.disclosure)) el.open = true;
   const focusTarget = activeId && document.getElementById(activeId);
   if (focusTarget && stageEl.contains(focusTarget)) focusTarget.focus({ preventScroll: true });
   else { const heading = stageEl.querySelector("h2"); if (heading) { heading.tabIndex = -1; heading.focus(); } }
-  if (appState.mode !== "home" && appState.mode !== "browse") persistDraft();
+  if (["diagnosis", "lifecycle", "detail", "catalogue"].includes(appState.mode)) persistDraft();
 }
 
 function crumbButton(label, onClick) {
@@ -3596,7 +4206,7 @@ async function finalizeDiagnosisResult() {
   appState.diag.result = result;
   render();
 
-  if (result.verdict !== "invalid") {
+  if (result.verdict !== "invalid" && !displayOnlyTransfer) {
     try {
       await addHistoryEntry({
         type: "diagnosis",
@@ -3687,6 +4297,7 @@ function renderDiagStage() {
     help.append(navigationButton("未確認の条件として残す", () => {
       d.result = { verdict: "needs_confirmation", title: "この条件を確認してから判定してください", summary: current.prompt, note: "未確認のまま手続き不要とは判断しません。資料を確認して回答を修正するか、手続き一覧から候補の書類をご覧ください。", citations: [], procedures: [] }; render();
     }));
+    help.append(renderQuestionAssistance({ action: d.actionType, category: d.gasCategory, step: current, answers: d.answers, onApply: value => answerStep(current, value) }));
     stageEl.append(help);
   }
   if (d.actionType) stageEl.append(navigationButton("一つ前に戻る", () => {
@@ -3967,7 +4578,8 @@ function renderNavigationHome() {
   direct.append(navigationText("h3", "手続き名・様式から探す"), navigationText("p", "手続きが分かっている方は、名前からすぐに資料を開けます。"));
   direct.append(renderSearchForm(() => setMode("catalogue")));
   wrap.append(direct);
-  const support = document.createElement("details"); support.className = "support-details";
+  wrap.append(navigationButton("用語を調べる", () => setMode("glossary")), renderImportControl());
+  const support = document.createElement("details"); support.className = "support-details source-details";
   support.append(navigationText("summary", "対象範囲・情報の確認日"), navigationText("p", `案内データ確認日：${PROCEDURE_CHECKED_AT}。奈良県の製造・貯蔵・販売・消費を対象とします。申請の送信機能はありません。コンビナート則・特別な認定制度等の個別判断は対象外です。`), navigationText("p", "県が事前連絡や検査日程調整を求める手続きは、その工程を案内します。条文の取得日と、固定の案内・判定条件の確認日は別です。"), officialLink("奈良県消防救急課の申請案内", NARA_PAGES.index));
   wrap.append(support);
   return wrap;
@@ -4040,6 +4652,9 @@ function renderLifecycle() {
       render();
     }, "pick-card"));
     wrap.append(choices);
+    const help = navigationText("details", "", "support-details no-print");
+    help.append(navigationText("summary", "答えが分からないとき"), renderQuestionAssistance({ action: nav.answers.activity, category: nav.answers.regulation, step, answers: nav.answers }));
+    wrap.append(help);
   }
   wrap.append(navigationButton("一つ前に戻る", () => { if (nav.stepIndex > 0 || nav.result) lifecycleGoTo(nav.result ? nav.stepIndex : nav.stepIndex - 1); else navigateHome(); }, "btn-link no-print"), renderAnswerSummary(true));
   return wrap;
@@ -4101,6 +4716,10 @@ function resumeDraft() {
     beginPurpose(PURPOSES.some(p => p.id === saved.nav?.purpose) ? saved.nav.purpose : "new");
     showToast("判定条件が更新されています。古い回答・チェックは適用せず、現在の質問で再確認してください。"); return;
   }
+  displayOnlyTransfer = false;
+  restoreDraftState(saved);
+}
+function restoreDraftState(saved) {
   const n = saved.nav || {}; Object.assign(navigationState, { purpose: n.purpose, answers: n.answers || {}, stepIndex: n.stepIndex || 0, selectedId: n.selectedId, returnMode: n.returnMode, caseId: n.caseId || "restored", preparations: n.preparations || {}, result: n.finished ? evaluateLifecycle(n.purpose, n.answers) : null });
   const d = saved.diag || {};
   Object.assign(appState.diag, { actionType: d.actionType, gasCategory: d.gasCategory, stepIndex: d.stepIndex || 0, answers: d.answers || {}, result: d.unconfirmedResult?.verdict === "needs_confirmation" ? d.unconfirmedResult : d.finished && d.actionType && d.gasCategory ? evaluateDiagnosis(d.actionType, d.gasCategory, d.answers) : null });
@@ -4108,7 +4727,7 @@ function resumeDraft() {
   render();
 }
 
-window.addEventListener("beforeprint", () => { for (const el of stageEl.querySelectorAll("details.answer-summary")) { el.dataset.wasOpen = String(el.open); el.open = true; } });
+window.addEventListener("beforeprint", () => { for (const el of stageEl.querySelectorAll("details.answer-summary, details.source-details")) { el.dataset.wasOpen = String(el.open); el.open = true; } });
 window.addEventListener("afterprint", () => { for (const el of stageEl.querySelectorAll("details[data-was-open]")) { el.open = el.dataset.wasOpen === "true"; delete el.dataset.wasOpen; } });
 
 function resetBrowse() {
@@ -4505,6 +5124,103 @@ clearHistoryBtn.addEventListener("click", async () => {
   try { await clearHistory(); renderHistory(); } catch { storageWarning(); }
 });
 
+
+function refreshRevisionDisplays() {
+  const relevant = appState.mode === "home" || appState.mode === "detail" || (appState.mode === "diagnosis" && appState.diag.result) || (appState.mode === "lifecycle" && navigationState.result);
+  let slot = stageEl.querySelector(".revision-warning-slot");
+  if (relevant && !slot) { slot = navigationText("div", "", "revision-warning-slot"); stageEl.prepend(slot); }
+  if (slot) slot.replaceChildren(renderRevisionWarning(revisionState));
+  let sources = [...stageEl.querySelectorAll(".source-details")];
+  if (relevant && !sources.length) {
+    const details = navigationText("details", "", "support-details source-details");
+    details.append(navigationText("summary", "出典・情報の確認日"), navigationText("p", "案内データ確認日：" + PROCEDURE_CHECKED_AT));
+    stageEl.append(details); sources = [details];
+  }
+  for (const source of sources) {
+    source.querySelector(".revision-source")?.remove();
+    source.append(renderRevisionSource(revisionState));
+  }
+}
+function renderGlossaryScreen() {
+  const wrap = navigationText("div");
+  breadcrumbEl.append(crumbSep(), crumbCurrent("用語解説"));
+  wrap.append(navigationText("h2", "用語解説"), navigationText("p", "用語を開くと、説明と根拠条文を確認できます。"), renderGlossaryEntries(), navigationButton("ホームへ", navigateHome));
+  return wrap;
+}
+function renderImportControl() {
+  const label = navigationText("label", "回答ファイルを読み込む（JSON・1MB以下）", "import-control no-print");
+  const input = document.createElement("input"); input.type = "file"; input.accept = ".json,application/json"; input.dataset.portableFile = "true";
+  input.addEventListener("change", async () => {
+    if (!input.files[0]) return;
+    try {
+      const envelope = await readPortableFile(input.files[0]);
+      pendingTransfer = { envelope, fromUrl: false, previousMode: appState.mode };
+      transferError = ""; appState.mode = "import-confirm"; render();
+    } catch (error) { transferError = error.message; render(); }
+  });
+  label.append(input); return label;
+}
+function renderTransferActions() {
+  const details = navigationText("details", "", "support-details transfer-actions no-print"); details.dataset.disclosure = "transfer";
+  details.append(navigationText("summary", "回答を共有・持ち運ぶ"),
+    navigationText("p", "URLに回答内容が含まれます。個人情報は含まれません。書類チェックはURLに含めず、JSONファイルで持ち運べます。"));
+  const output = navigationText("div");
+  details.append(navigationButton("この回答を共有するURLをコピー", async () => {
+    output.replaceChildren();
+    try {
+      const url = await createShareUrl(currentDraft(), location.href);
+      const label = navigationText("label", "共有URL", "shared-url-label");
+      const field = document.createElement("textarea"); field.readOnly = true; field.value = url; field.className = "shared-url"; label.append(field); output.append(label);
+      try { await navigator.clipboard.writeText(url); output.append(navigationText("p", "共有URLをコピーしました。", "share-status")); }
+      catch { field.focus(); field.select(); output.append(navigationText("p", "自動コピーできませんでした。上のURLを選択してコピーしてください。", "share-status")); }
+    } catch (error) { output.append(navigationText("p", error.message, "transfer-error")); }
+  }));
+  details.append(navigationButton("回答・書類チェックをJSONに書き出す", () => {
+    output.replaceChildren();
+    try {
+      const data = makePortableEnvelope(currentDraft());
+      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+      const link = document.createElement("a"); link.href = url; link.download = portableFilename(); document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) { output.append(navigationText("p", error.message, "transfer-error")); }
+  }), renderImportControl(), output);
+  return details;
+}
+function renderTransferConfirmation() {
+  const wrap = navigationText("div", "", "transfer-confirmation");
+  wrap.append(navigationText("h2", "回答を読み込む前に確認してください"));
+  if (!pendingTransfer) { wrap.append(navigationButton("ホームへ", navigateHome)); return wrap; }
+  const { envelope } = pendingTransfer;
+  const state = envelope.state;
+  const mode = { diagnosis: "新規の診断", lifecycle: "目的別の手続き", detail: "手続き詳細" }[state.mode];
+  wrap.append(navigationText("p", mode + " / 保存日時：" + new Date(envelope.savedAt).toLocaleString("ja-JP")));
+  if (state.mode === "diagnosis") wrap.append(navigationText("p", (ACTIVITY_LABELS[state.diag.actionType] || "取扱いを選ぶ画面") + " / " + (REGULATION_LABELS[state.diag.gasCategory] || "ガス区分は未選択") + " / " + (state.diag.finished ? "確認結果" : "質問 " + (state.diag.stepIndex + 1))));
+  if (state.mode === "lifecycle") wrap.append(navigationText("p", PURPOSES.find(p=>p.id===state.nav.purpose).label));
+  if (state.mode === "detail") wrap.append(navigationText("p", getProcedure(state.nav.selectedId).title));
+  if (navigationState.saved) {
+    wrap.append(navigationText("p", "この端末に下書きがあります。上書きすると、現在の下書き・書類チェックは読み込む内容に置き換わります。"),
+      navigationButton("下書きを上書きして開く", () => acceptTransfer(true), "btn-primary"),
+      navigationButton("上書きしないで開く", () => acceptTransfer(false)));
+  } else wrap.append(navigationButton("開く", () => acceptTransfer(true), "btn-primary"));
+  wrap.append(navigationButton("キャンセル", () => { appState.mode = pendingTransfer.previousMode; pendingTransfer = null; render(); }, "btn-link"));
+  return wrap;
+}
+async function acceptTransfer(overwrite) {
+  if (!pendingTransfer) return;
+  // 先行する端末内保存が、読み込み後の下書きを遅れて上書きしないよう完了を待つ。
+  await saveQueue;
+  const { envelope, fromUrl } = pendingTransfer;
+  const state = envelope.state, d = state.diag, nav = state.nav;
+  const current = d.unconfirmed ? getStepsForGasCategory(d.actionType, d.gasCategory, d.answers)[d.stepIndex] : null;
+  const unconfirmedResult = current ? { verdict: "needs_confirmation", title: "この条件を確認してから判定してください", summary: current.prompt, note: "未確認のまま手続き不要とは判断しません。資料を確認して回答を修正するか、手続き一覧から候補の書類をご覧ください。", citations: [], procedures: [] } : null;
+  const draft = { version: PROCEDURE_VERSION, savedAt: envelope.savedAt, mode: state.mode,
+    diag: { ...d, unconfirmedResult }, nav: { ...nav, preparations: nav.preparations || {} } };
+  displayOnlyTransfer = !overwrite;
+  pendingTransfer = null; transferError = "";
+  restoreDraftState(draft);
+  if (fromUrl) history.replaceState(null, "", location.href.split("#")[0]);
+}
+
 // --- 初期化 ---
 
 function showLegacyHistoryNotice() {
@@ -4525,8 +5241,28 @@ function showLegacyHistoryNotice() {
 async function initializeNavigator() {
   showLegacyHistoryNotice();
   try { navigationState.saved = await readDraft(); } catch { storageWarning(); }
-  draftReady = true; render(); renderHistory();
+  draftReady = true;
+  await prepareSharedLocation();
+  render(); renderHistory();
+  checkLawRevisions().then(state => { revisionState = state; refreshRevisionDisplays(); });
 }
+async function prepareSharedLocation() {
+  const hash = location.hash;
+  if (!hash.startsWith(SHARE_FRAGMENT_PREFIX)) return false;
+  const previousMode = pendingTransfer?.previousMode || appState.mode;
+  pendingTransfer = null;
+  if (appState.mode === "import-confirm") appState.mode = previousMode;
+  try {
+    const envelope = await decodeShareFragment(hash);
+    if (location.hash !== hash) return false;
+    pendingTransfer = { envelope, fromUrl: true, previousMode };
+    transferError = ""; appState.mode = "import-confirm";
+  } catch (error) { if (location.hash !== hash) return false; transferError = error.message; }
+  return true;
+}
+window.addEventListener("hashchange", async () => {
+  if (draftReady && await prepareSharedLocation()) render();
+});
 initializeNavigator();
 
   </script>

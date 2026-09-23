@@ -61,7 +61,7 @@ try {
     const changed=new Promise(resolve=>navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true}));
     const registration=await navigator.serviceWorker.getRegistration();await registration.update();await changed;
   });
-  check(await page.evaluate(async()=> (await caches.keys()).some(k=>k.endsWith(':shell-v15'))),'旧SWから新世代へ更新');
+  check(await page.evaluate(async()=> (await caches.keys()).some(k=>k.endsWith(':shell-v16'))),'旧SWから新世代へ更新');
   await page.reload();
   const card=page.locator('a.pick-card[href="./tools/kouatsu-gas-law-viewer.html"]');
   check((await card.innerText()).includes('高圧ガス手続きナビ（奈良県向け）'),'ポータルの新版カード');

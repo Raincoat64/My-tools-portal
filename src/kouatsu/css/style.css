@@ -727,3 +727,38 @@ select { padding: 8px 10px; border: 1px solid #91a297; border-radius: 5px; backg
   .deadline-box, .contact-step, .verdict-banner, .note-box { background: white; padding: 10px; }
   .guide-print-date { font-size: 9pt; margin-top: 12px; }
 }
+
+/* 回答補助は既存の余白・操作サイズを共有し、入力と結果を明確に分ける。 */
+.revision-warning { padding: 18px 20px; margin: 0 0 24px; border-left: 4px solid #a86e18; background: #fff4d6; color: #674600; overflow-wrap: anywhere; }
+.revision-source { margin-top: 14px; }
+.glossary-entry { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.glossary-entry summary { cursor: pointer; padding: 8px 0; font-weight: 600; }
+.glossary-entry a { display: inline-block; margin: 4px 20px 4px 0; }
+.calculator-panel { margin: 20px 0; padding: 20px; border: 1px solid var(--border); border-radius: 5px; }
+.calc-row { min-width: 0; margin: 18px 0; padding: 16px; border: 1px solid var(--border); }
+.calc-fields { margin: 16px 0; }
+.calc-field { display: flex; flex-direction: column; gap: 5px; margin: 14px 0; min-width: 0; }
+.calc-field input, .shared-url { width: 100%; max-width: 650px; padding: 10px; border: 1px solid #91a297; border-radius: 4px; font: inherit; background: white; color: var(--text); }
+.calc-check { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.calc-check input { width: 22px; height: 22px; }
+.calc-error, .transfer-error { color: var(--danger); margin: 4px 0; overflow-wrap: anywhere; }
+.calc-field [aria-invalid="true"] { border: 2px solid var(--danger); }
+.calculator-result:not(:empty) { margin-top: 20px; padding: 16px; background: var(--chip-bg); overflow-wrap: anywhere; }
+.calculator-result a { display: block; margin: 8px 0; }
+.calculation-value { font-size: 20px; }
+.transfer-actions button, .transfer-confirmation button { margin: 6px 12px 6px 0; }
+.import-control { display: flex; flex-direction: column; gap: 8px; margin: 20px 0; }
+.import-control input { max-width: 100%; }
+.shared-url-label { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.shared-url { min-height: 100px; font-size: 14px; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .calculator-panel { padding: 14px; }
+  .calc-row { padding: 12px; }
+  .transfer-actions button, .transfer-confirmation button { width: 100%; margin-right: 0; }
+}
+@media print {
+  .support-details.source-details { display: block !important; }
+  .revision-warning, .revision-source { display: block; font-size: 10pt; }
+  .revision-warning { color: #000; background: white; border: 1px solid #666; }
+  .revision-warning[hidden] { display: none !important; }
+}

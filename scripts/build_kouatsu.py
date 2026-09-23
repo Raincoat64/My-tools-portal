@@ -31,6 +31,11 @@ FILES = [
     "diagnosis.js",
     "procedures.js",
     "procedureView.js",
+    "revisions.js",
+    "glossary.js",
+    "calculators.js",
+    "assistView.js",
+    "portability.js",
     "main.js",
 ]
 
