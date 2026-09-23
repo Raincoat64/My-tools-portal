@@ -1,32 +1,3 @@
-:root {
-  color-scheme: light dark;
-  --bg: #f5f6f4;
-  --panel-bg: #ffffff;
-  --border: #d8dcd4;
-  --text: #1f2a20;
-  --text-muted: #5c6b5e;
-  --accent: #2f6b3a;
-  --accent-contrast: #ffffff;
-  --chip-bg: #eef3ec;
-  --danger: #a5342a;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #141814;
-    --panel-bg: #1b201b;
-    --border: #333c33;
-    --text: #e7ece6;
-    --text-muted: #a3ada2;
-    --accent: #6bb37a;
-    --accent-contrast: #0d140e;
-    --chip-bg: #232b23;
-    --danger: #e08579;
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  }
-}
-
 * {
   box-sizing: border-box;
 }
@@ -54,12 +25,6 @@ a {
   font-size: 1.4rem;
 }
 
-.app-sub {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
 .app-layout {
   display: grid;
   grid-template-columns: 1fr 320px;
@@ -68,12 +33,6 @@ a {
   margin: 16px auto;
   padding: 0 16px;
   align-items: start;
-}
-
-@media (max-width: 860px) {
-  .app-layout {
-    grid-template-columns: 1fr;
-  }
 }
 
 .main-panel {
@@ -111,17 +70,6 @@ a {
   color: var(--accent);
   font-weight: 700;
   background: var(--chip-bg);
-}
-
-.disclaimer {
-  margin: 0 16px 12px;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
-  border-radius: 0 8px 8px 0;
-  background: var(--chip-bg);
-  color: var(--text-muted);
-  font-size: 0.8rem;
 }
 
 .diag-help {
@@ -180,26 +128,6 @@ a {
   border: 1px solid var(--border);
 }
 
-.verdict-banner.permit {
-  background: color-mix(in srgb, #c0392b 12%, var(--panel-bg));
-  border-color: #c0392b;
-}
-
-.verdict-banner.notification {
-  background: color-mix(in srgb, #2f6b8f 12%, var(--panel-bg));
-  border-color: #2f6b8f;
-}
-
-.verdict-banner.none {
-  background: color-mix(in srgb, var(--accent) 12%, var(--panel-bg));
-  border-color: var(--accent);
-}
-
-.verdict-banner.other_law {
-  background: color-mix(in srgb, #8a6d3b 12%, var(--panel-bg));
-  border-color: #8a6d3b;
-}
-
 .verdict-title {
   font-weight: 700;
   font-size: 1.05rem;
@@ -208,16 +136,6 @@ a {
 
 .verdict-summary {
   color: var(--text-muted);
-}
-
-.result-block {
-  margin: 14px 0;
-}
-
-.result-block h3 {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  margin: 0 0 8px;
 }
 
 .citation-card {
@@ -345,8 +263,7 @@ a {
 }
 
 .loading,
-.error-box,
-.empty-box {
+.error-box {
   padding: 24px 8px;
   color: var(--text-muted);
   text-align: center;
@@ -618,7 +535,7 @@ button { color: var(--text); }
 button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #be7510; outline-offset: 3px; }
 a { text-underline-offset: .2em; overflow-wrap: anywhere; }
 p { margin: .6em 0; }
-h2, h3 { line-height: 1.55; }
+h2, h3, h4 { line-height: 1.55; }
 [hidden] { display: none !important; }
 .skip-link { position: absolute; left: 16px; top: -100px; z-index: 10; background: white; padding: 8px 16px; }
 .skip-link:focus { top: 8px; }
@@ -639,7 +556,7 @@ h2, h3 { line-height: 1.55; }
 .stage .stage { padding: 0; }
 .stage h2 { margin: 0 0 20px; color: var(--text); font-size: 26px; font-weight: 700; }
 .stage h2:focus { outline: none; }
-.stage h3 { color: var(--text); font-size: 20px; margin: 0 0 12px; }
+.stage :is(h3, h4) { color: var(--text); font-size: 20px; margin: 0 0 12px; }
 .home-intro { margin: 6px 0 30px; }
 .home-intro h2 { font-size: 36px; white-space: pre-line; letter-spacing: .01em; line-height: 1.5; margin-bottom: 12px; }
 .home-lead { color: var(--text-muted); font-size: 18px; }
@@ -692,21 +609,23 @@ select { padding: 8px 10px; border: 1px solid #91a297; border-radius: 5px; backg
 .procedure-row .pick-sub { color: var(--text-muted); }
 .procedure-meta { margin: 0 0 6px; font-size: 14px; }
 .verdict-banner { border-radius: 5px; padding: 20px 24px; margin-bottom: 24px; }
-.verdict-banner.permit, .verdict-banner.notification, .verdict-banner.none { background: var(--chip-bg); border-color: #95b09f; }
-.verdict-banner.needs_confirmation, .verdict-banner.invalid, .verdict-banner.other_law { background: #fff6e6; border-color: #b68127; }
+.verdict-banner.permit { background: #e7f2ed; color: #174a38; border-color: #628973; }
+.verdict-banner.notification { background: #eaf2fc; color: #163d66; border-color: #6686ac; }
+.verdict-banner.none { background: #f0f2f4; color: #36414b; border-color: #8c959d; }
+.verdict-banner.needs_confirmation, .verdict-banner.invalid, .verdict-banner.other_law { background: #fff4d6; color: #674600; border-color: #b68127; }
 .verdict-title { font-size: 21px; }
-.verdict-summary { color: var(--text); }
+.stage .verdict-banner .verdict-title, .verdict-banner .verdict-summary { color: inherit; }
 .note-box { font-size: 16px; border-radius: 4px; line-height: 1.85; padding: 16px 18px; margin: 16px 0; }
 .procedure-guide { margin: 28px 0; }
-.procedure-guide h2 { font-size: 25px; margin-bottom: 12px; }
+.stage .procedure-guide .procedure-title { font-size: 25px; margin-bottom: 12px; }
 .deadline-box { border-left: 4px solid var(--accent); background: var(--chip-bg); padding: 16px 20px; margin: 20px 0; }
 .deadline-box > p { font-size: 20px; font-weight: 700; margin: 4px 0 0; }
 .contact-step { padding: 18px 20px; background: #fff6e6; border-left: 4px solid #ad781d; margin: 20px 0; }
-.contact-step h3 { font-size: 18px; margin-bottom: 6px; }
+.contact-step :is(h3, h4) { font-size: 18px; margin-bottom: 6px; }
 .guide-section { margin-top: 32px; }
 .guide-jumps { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 16px 0; }
 .guide-jumps a { min-height: 44px; display: inline-flex; align-items: center; }
-.guide-section h3 { padding-bottom: 12px; border-bottom: 2px solid var(--accent); }
+.guide-section :is(h3, h4) { padding-bottom: 12px; border-bottom: 2px solid var(--accent); }
 .check-progress { font-size: 16px; color: var(--accent); font-weight: 600; margin: 20px 0 8px; }
 .document-list { list-style: none; padding: 0; margin: 0; }
 .document-row { padding: 17px 0; border-bottom: 1px solid var(--border); }
@@ -747,7 +666,8 @@ select { padding: 8px 10px; border: 1px solid #91a297; border-radius: 5px; backg
 .app-footer { max-width: 1136px; margin: 24px auto 40px; padding: 0 24px; color: var(--text-muted); font-size: 14px; }
 .storage-status { margin: 8px 36px; padding: 14px; background: #fff6e6; color: #684305; }
 .toast { border-radius: 6px; max-width: calc(100vw - 32px); width: max-content; font-size: 16px; z-index: 30; }
-.print-context { display: none; }
+.print-context, .print-only { display: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 @media (max-width: 640px) {
   .app-header { padding: 16px; }
   .header-inner { display: block; }
@@ -792,11 +712,11 @@ select { padding: 8px 10px; border: 1px solid #91a297; border-radius: 5px; backg
   .main-panel { border: 0; }
   .stage, .stage .stage { padding: 0; }
   .stage h2 { font-size: 16pt; }
-  .stage h3 { font-size: 13pt; }
-  .print-context { display: block; }
+  .stage :is(h3, h4), .stage .procedure-guide .procedure-title { font-size: 13pt; }
+  .print-context, .print-only { display: block; }
   .procedure-guide { margin: 16px 0; }
   .document-row, .submission-list dt, .submission-list dd, .download-link, .contact-step, .deadline-box, .answer-row { break-inside: avoid; }
-  .guide-section h3 { break-after: avoid; }
+  .guide-section :is(h3, h4) { break-after: avoid; }
   .support-text, .document-help, .document-alternatives, .guide-applicability, .check-progress { font-size: 10pt; }
   .document-check strong { font-size: 11pt; }
   .document-row { padding: 8px 0; }
@@ -805,5 +725,5 @@ select { padding: 8px 10px; border: 1px solid #91a297; border-radius: 5px; backg
   .download-link { padding: 6px; border: 0; }
   .download-link::after { content: " " attr(href); display: block; font-size: 8pt; overflow-wrap: anywhere; font-weight: normal; }
   .deadline-box, .contact-step, .verdict-banner, .note-box { background: white; padding: 10px; }
-  .procedure-guide::after { content: "案内データ確認日：2026-09-19 / 奈良県の公開案内に基づく参考情報"; display: block; font-size: 9pt; margin-top: 12px; }
+  .guide-print-date { font-size: 9pt; margin-top: 12px; }
 }

@@ -1,6 +1,6 @@
 // scopeを含め、同じGitHub Pages origin上の別ポータルとキャッシュを共有しない。
 const CACHE_PREFIX = `my-tools-portal:${self.registration.scope}:`;
-const SHELL_CACHE = `${CACHE_PREFIX}shell-v14`;
+const SHELL_CACHE = `${CACHE_PREFIX}shell-v15`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}runtime`;
 const LEGACY_RUNTIME_CACHE = "law-tools-portal-v13";
 const APP_SHELL = [

@@ -1,6 +1,6 @@
 // 奈良県の公開案内・添付書類一覧と各規則を照合した手続き台帳。
 // 確認日と版は条文APIの取得日とは独立して管理する。自動更新を意味しない。
-export const PROCEDURE_VERSION = "2026-09-19.1";
+export const PROCEDURE_VERSION = "2026-09-23.1";
 export const PROCEDURE_CHECKED_AT = "2026-09-19";
 export const REGULATION_LABELS = { general: "一般則", lpgas: "液石則", refrigeration: "冷凍則" };
 export const ACTIVITY_LABELS = { manufacture: "製造", storage: "貯蔵", sales: "販売", consumption: "消費" };
@@ -38,6 +38,7 @@ const procForm = (folder, file, label = "申請・届出様式（Word）") => pr
 const procIdentity = procDoc("identity", "申請者を確認する書類", "oneOf", "法人：発行後3か月以内の登記簿謄本。個人：発行後3か月以内・マイナンバーなしの住民票。", { alternatives: ["法人：登記簿謄本", "個人：住民票"] });
 const procDelegation = procDoc("delegation", "委任状", "conditional", "申請・届出の代表者欄が代表取締役以外の場合。", { fact: "delegate" });
 const procExtra = procDoc("additional", "施設の技術基準に応じた補足図面・資料", "conditional", "設備の種類・工事内容により必要。公式一覧と技術基準を照合してください。");
+const procNoFee = "不要(届出・報告の手数料はかかりません)";
 const procFee = "有料。奈良県手数料条例（平成12年条例第33号）による。設備・処理能力・申請区分で金額が異なります。申請前の連絡時に区分と金額を確定し、奈良県収入証紙を申請書裏面に貼付してください。";
 const procContact = "県が事前連絡を求めています。許可・受理番号、ガス名、能力、施設図面、実施予定日を準備し、申請・工事の前に内容を説明してください。";
 const procRegistry = [];
@@ -46,7 +47,7 @@ function registerProcedure(id, activity, purpose, title, form, options = {}) {
     procedureId: id, activity, purpose, title, regulations: activity === "storage" || activity === "consumption" ? procGL : procAllRegs,
     applicability: "対象の許可・届出区分と発生条件を確認して使用してください。",
     deadline: "遅滞なく", forms: form ? [form] : [],
-    documents: [procDoc("form", title)], fee: "届出・報告の手数料は不要です。",
+    documents: [procDoc("form", title)], fee: procNoFee,
     source: NARA_PAGES[activity], checkedAt: PROCEDURE_CHECKED_AT, basis: "高圧ガス保安法・関係規則／奈良県の申請案内",
     ...options,
   });
@@ -85,7 +86,7 @@ for (const [kind, title, file, deadline, status] of [
   status, deadline, documents: manufactureDocuments(kind), contact: procContact,
   applicability: status === "permit" ? "第一種製造者。軽微変更は各規則の要件を満たす工事に限ります。" : "第二種製造者。規模等の変更で第一種に移る場合は新たな許可の確認が必要です。",
   forms: [procForm(409, file), procFile("県の添付書類一覧（Excel）", 409, `${file}.xlsx`)],
-  fee: kind.endsWith("permit") ? procFee : "不要", basis: kind === "permit" || kind === "notification" ? "法第5条、一般則・液石則・冷凍則第3条・第4条" : "法第14条、一般則第14〜17条・液石則第15〜18条・冷凍則第16〜19条",
+  fee: kind.endsWith("permit") ? procFee : procNoFee, basis: kind === "permit" || kind === "notification" ? "法第5条、一般則・液石則・冷凍則第3条・第4条" : "法第14条、一般則第14〜17条・液石則第15〜18条・冷凍則第16〜19条",
 });
 for (const [kind, title, file, status] of [
   ["permit", "第一種貯蔵所設置許可申請", "20260129090427", "permit"],
@@ -95,7 +96,7 @@ for (const [kind, title, file, status] of [
   ["minor", "第一種貯蔵所軽微変更届", "20260129090427_2", "permit"],
 ]) registerProcedure(`storage-${kind}`, "storage", ["permit", "notification"].includes(kind) ? "new" : "change", title, procForm(408, file), {
   status, contact: procContact, deadline: kind === "minor" ? "工事完成後、遅滞なく" : "設置・変更の前（許可対象は許可取得後に着工）",
-  fee: kind.endsWith("permit") ? procFee : "不要", basis: "法第16条・第17条の2・第19条、一般則第20・25・27〜30条／液石則第21・26・28〜31条",
+  fee: kind.endsWith("permit") ? procFee : procNoFee, basis: "法第16条・第17条の2・第19条、一般則第20・25・27〜30条／液石則第21・26・28〜31条",
   documents: [procDoc("form", title), procDoc("detail", kind === "minor" ? "変更の概要を記載した書面" : kind.startsWith("change") ? "変更明細書" : "貯蔵計画書", "required", "貯蔵の目的、貯蔵能力、技術基準への対応を整理。変更時は変更部分を明示。"), procDoc("location", "位置・付近の状況を示す図面", kind === "minor" ? "conditional" : "required", "変更時は変更内容に対応する図面。"), procExtra],
   preparation: "県のページには貯蔵所の詳細な添付書類一覧が掲載されていません。法令上の基本書類に加え、配置・配管図、容量計算、設備仕様を準備し、事前連絡で追加資料を確定してください。",
 });
@@ -211,10 +212,12 @@ export function diagnosisProcedureIds(activity, regulation, result) {
   if (activity === "consumption") return ["consumption-new"];
   return [`${activity}-${result.verdict}`];
 }
+export function documentFactKey(document) { return document.fact || `document:${document.id}`; }
 export function documentRequirement(document, facts = {}) {
-  if (document.kind !== "conditional" || !document.fact) return document.kind;
-  if (facts[document.fact] === "yes") return "required";
-  if (facts[document.fact] === "no") return "notApplicable";
+  if (document.kind !== "conditional") return document.kind;
+  const key = documentFactKey(document);
+  if (facts[key] === "yes") return "required";
+  if (facts[key] === "no") return "notApplicable";
   return "unconfirmed";
 }
 const flowChoice = (id, prompt, options, help = "") => ({ id, prompt, help, type: "choice", options: options.map(([value, label]) => ({ value, label })) });
@@ -293,5 +296,6 @@ export function lifecycleFacts(answers = {}) {
 export function minorLawLink(activity, regulation, status) {
   const nums = { manufacture: { general: status === "permit" ? "15" : "17", lpgas: status === "permit" ? "16" : "18", refrigeration: status === "permit" ? "17" : "19" }, storage: { general: status === "permit" ? "28" : "30", lpgas: status === "permit" ? "29" : "31" }, consumption: { general: "57", lpgas: "55" } };
   const num = nums[activity]?.[regulation];
-  return num ? `https://laws.e-gov.go.jp/law/${procLawIds[regulation]}#Mp-At_${num}` : NARA_PAGES.common;
+  const section = activity === "manufacture" ? "Ch_2-Se_1" : activity === "storage" ? "Ch_2-Se_2" : regulation === "general" ? "Ch_8" : "Ch_7";
+  return num ? `https://laws.e-gov.go.jp/law/${procLawIds[regulation]}#Mp-${section}-At_${num}` : NARA_PAGES.common;
 }

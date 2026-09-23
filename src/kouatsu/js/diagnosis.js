@@ -1,6 +1,6 @@
 // 「設問モード」の分岐ロジック。
 //
-// パイロット範囲: 一般則・冷凍則・液石則それぞれが管轄する「製造」。
+// 対象: 一般則・冷凍則・液石則の製造・貯蔵・販売・消費。申請資料は procedures.js の台帳を参照。
 //
 // 各法令の許可・届出基準はすべて高圧ガス保安法第5条に由来するが、
 // 政令(施行令)・省令(各則)で具体的な数値・算式が個別に定められている。
@@ -72,7 +72,7 @@ function normalizeDiagnosisResult(result) {
   };
 }
 
-const GAS_CATEGORIES = [
+const MANUFACTURE_CATEGORIES = [
   {
     id: "general",
     label: "一般の高圧ガス(不活性・可燃性・毒性ガスなど)",
@@ -130,7 +130,7 @@ function getCategoriesForAction(actionType) {
   if (actionType === "sales") return SALES_CATEGORIES;
   if (actionType === "storage") return STORAGE_CATEGORIES;
   if (actionType === "consumption") return CONSUMPTION_CATEGORIES;
-  return GAS_CATEGORIES;
+  return MANUFACTURE_CATEGORIES;
 }
 
 /* ---------- 共通設問 ---------- */
@@ -444,7 +444,8 @@ const LPGAS_CONSUMER_SUPPLY_STEP = {
   ],
 };
 
-function getLpgasSteps() {
+function getLpgasSteps(answers) {
+  if (answers.lpgasConsumerSupply !== "no") return [LPGAS_CONSUMER_SUPPLY_STEP];
   return [LPGAS_CONSUMER_SUPPLY_STEP, LPGAS_CAPACITY_STEP, BUSINESS_STEP];
 }
 
@@ -463,7 +464,7 @@ function evaluateLpgas(answers) {
         "液化石油ガス法上の一般消費者等に供給するための充塡は、高圧ガス保安法第5条第1項第1号のかっこ書きにより、同号の製造許可・届出の対象外となる場合があります。",
       citations: [
         { lawId: ACT, num: "5", label: "高圧ガス保安法 第5条第1項第1号(液化石油ガスの適用除外)" },
-        { lawId: LPG_ACT, num: "2_2", label: "液化石油ガス法 第2条第2項(一般消費者等)" },
+        { lawId: LPG_ACT, num: "2", label: "液化石油ガス法 第2条第2項(一般消費者等)" },
       ],
       procedures: [],
       note:
@@ -608,7 +609,7 @@ function evaluateSales(gasCategoryId, answers) {
           "液化石油ガス法上の販売事業登録が必要です。",
         citations: [
           baseCitation,
-          { lawId: LPG_ACT, num: "2_2", label: "液化石油ガス法 第2条第2項(一般消費者等)" },
+          { lawId: LPG_ACT, num: "2", label: "液化石油ガス法 第2条第2項(一般消費者等)" },
           { lawId: LPG_ACT, num: "3", label: "液化石油ガス法 第3条(販売事業の登録)" },
         ],
         procedures: [],
@@ -836,8 +837,10 @@ function getStorageSteps(gasCategoryId, answers) {
   }
 
   steps.push(STORAGE_GAS_SCOPE_STEP);
-  steps.push(STORAGE_THIRD_GAS_STEP);
-  if (answers.storageThirdGas !== "no") return steps;
+  if (["otherOnly", "mixed"].includes(answers.storageGasScope)) {
+    steps.push(STORAGE_THIRD_GAS_STEP);
+    if (answers.storageThirdGas !== "no") return steps;
+  }
   if (answers.storageGasScope === "type1only") {
     steps.push(makeStorageBandStep(3000, "不活性ガス等(第一種ガス)"));
   } else if (answers.storageGasScope === "otherOnly") {
@@ -914,11 +917,11 @@ function evaluateStorage(gasCategoryId, answers) {
     return invalidDiagnosis("貯蔵するガスの種類を確認できないため判定できません。");
   }
 
-  if (!isChoice(answers.storageThirdGas, ["yes", "no", "unknown"])) {
+  if (answers.storageGasScope !== "type1only" && !isChoice(answers.storageThirdGas, ["yes", "no", "unknown"])) {
     return invalidDiagnosis("第三種ガスを含むか確認できないため判定できません。");
   }
 
-  if (answers.storageThirdGas !== "no") {
+  if (answers.storageGasScope !== "type1only" && answers.storageThirdGas !== "no") {
     return invalidDiagnosis(
       "第三種ガスを含む貯蔵は施行令第5条の組合せ区分が異なるため、自動的に不要とは判定しません。都道府県窓口で確認してください。"
     );
@@ -1250,7 +1253,7 @@ function evaluateConsumption(gasCategoryId, answers) {
           "消費者の対象外です。液化石油ガス法上の規制をご確認ください。",
         citations: [
           ...citations,
-          { lawId: LPG_ACT, num: "2_2", label: "液化石油ガス法 第2条第2項(一般消費者等)" },
+          { lawId: LPG_ACT, num: "2", label: "液化石油ガス法 第2条第2項(一般消費者等)" },
         ],
         procedures: [],
         note:
@@ -1442,6 +1445,8 @@ const SALES_PROCEDURES = {
     { lawId: IPPAN, num: "38", label: "周知の義務(一般則第38条)" },
     { lawId: IPPAN, num: "40", label: "販売業者等に係る技術上の基準の遵守(一般則第40条)" },
     { lawId: IPPAN, num: "41", label: "販売するガスの種類の変更届出(一般則第41条)" },
+    { lawId: IPPAN, num: "72", label: "条件付き：販売主任者の選任等(一般則第72条、法第28条第1項)", procedureId: "personnel-sales",
+      condition: "対象ガス：アセチレン、アルシン、アンモニア、塩素、クロルメチル、五フッ化ヒ素、五フッ化リン、酸素、三フッ化窒素、三フッ化ホウ素、三フッ化リン、シアン化水素、ジシラン、四フッ化硫黄、四フッ化ケイ素、ジボラン、水素、セレン化水素、ホスフィン、メタン、モノゲルマン、モノシラン。販売するガスに上記を含む場合に必要です。ただし、スクーバダイビング呼吸用で酸素の容量が全容量の40％未満のもの、および保安管理組織を整備した圧縮水素スタンドで自動車用に販売する圧縮水素は除かれます。" },
     { lawId: IPPAN, num: "44", label: "廃止の届出(一般則第44条)" },
   ],
   refrigeration: [
@@ -1465,7 +1470,7 @@ const IPPAN_STORAGE_PROCEDURES = {
   permit: [
     { lawId: IPPAN, num: "20", label: "第一種貯蔵所設置許可申請(一般則第20条)" },
     { lawId: IPPAN, num: "31", label: "完成検査の申請等(一般則第31条)" },
-    { lawId: ACT, num: "16", label: "技術基準の遵守・維持(一般則第21条〜第23条)" },
+    { lawId: IPPAN, num: "21", label: "技術基準の遵守・維持(一般則第21条〜第23条)" },
     { lawId: IPPAN, num: "27", label: "変更工事の許可申請、または軽微な変更工事の届出(一般則第27条・第28条)" },
     { lawId: IPPAN, num: "24", label: "承継の届出(一般則第24条)" },
     { lawId: IPPAN, num: "95", label: "帳簿の記載・保存(一般則第95条)" },
@@ -1488,7 +1493,7 @@ const EKISEKI_STORAGE_PROCEDURES = {
   permit: [
     { lawId: EKISEKI, num: "21", label: "第一種貯蔵所設置許可申請(液石則第21条)" },
     { lawId: EKISEKI, num: "32", label: "完成検査の申請等(液石則第32条)" },
-    { lawId: ACT, num: "16", label: "技術基準の遵守・維持(液石則第22条〜第24条)" },
+    { lawId: EKISEKI, num: "22", label: "技術基準の遵守・維持(液石則第22条〜第24条)" },
     { lawId: EKISEKI, num: "28", label: "変更工事の許可申請、または軽微な変更工事の届出(液石則第28条・第29条)" },
     { lawId: EKISEKI, num: "25", label: "承継の届出(液石則第25条)" },
     { lawId: EKISEKI, num: "93", label: "帳簿の記載・保存(液石則第93条)" },
@@ -1544,7 +1549,7 @@ function getStepsForGasCategory(actionType, gasCategoryId, answers = {}) {
   if (actionType === "consumption") return getConsumptionSteps(gasCategoryId, safeAnswers);
   if (gasCategoryId === "general") return getGeneralSteps(safeAnswers);
   if (gasCategoryId === "refrigeration") return getRefrigerationSteps(safeAnswers);
-  if (gasCategoryId === "lpgas") return getLpgasSteps();
+  if (gasCategoryId === "lpgas") return getLpgasSteps(safeAnswers);
   return [];
 }
 
@@ -1565,10 +1570,6 @@ function evaluateDiagnosis(actionType, gasCategoryId, answers = {}) {
   }
 }
 
-const DISCLAIMER =
-  "このツールは公開されている条文に基づく参考情報を機械的に整理して表示するものであり、正式な該非判断ではありません。" +
-  "実際の許可・届出の要否や手続きについては、必ず事業所の所在地を管轄する都道府県(高圧ガス担当窓口)にご確認ください。";
-
 // 技術上の基準の細部(例示基準)や運用解釈(基本通達)は随時改正されるため、本文を
 // 取り込まず、経済産業省の一覧ページへの案内にとどめる。
 const METI_REFERENCE = {
@@ -1577,47 +1578,10 @@ const METI_REFERENCE = {
     "技術上の基準の具体的な内容(例示基準)や条文の運用解釈(基本通達)は随時改正されます。最新の内容は経済産業省「高圧ガス保安法等」のページでご確認ください。",
 };
 
-// 実際に事業者が提出する申請書様式(Word形式)・必要書類は、奈良県総務部知事公室消防救急課保安係の
-// 行為別ページに掲載されている(様式番号自体は法令原文にも現れるが、随時改定されるためリンク誘導のみとする)。
-// 各ページとも一般則/液石則/冷凍則による様式の区分けはしておらず、行為(製造/貯蔵/消費/販売)単位のみの構成。
-// 2026-07-20にページ構成を確認済み: https://www.pref.nara.lg.jp/n011/39583.html (総合案内)
-const NARA_PROCEDURE_REFERENCE = {
-  manufacture: {
-    url: "https://www.pref.nara.lg.jp/n011/39584.html",
-    label:
-      "製造・保安検査・完成検査等の申請書様式(Word形式)や必要書類は、奈良県「高圧ガスの製造、保安検査、完成検査等の手続き」のページでご確認・ダウンロードいただけます。",
-  },
-  storage: {
-    url: "https://www.pref.nara.lg.jp/n011/39585.html",
-    label:
-      "貯蔵所設置許可・容器検査所等の申請書様式(Word形式)や必要書類は、奈良県「高圧ガスの貯蔵、容器検査所等の手続き」のページでご確認・ダウンロードいただけます。",
-  },
-  consumption: {
-    url: "https://www.pref.nara.lg.jp/n011/39587.html",
-    label:
-      "特定高圧ガス消費等の申請書様式(Word形式)や必要書類は、奈良県「特定高圧ガス消費等の手続き」のページでご確認・ダウンロードいただけます。",
-  },
-  sales: {
-    url: "https://www.pref.nara.lg.jp/n011/39586.html",
-    label:
-      "販売事業届等の申請書様式(Word形式)や必要書類は、奈良県「高圧ガスの販売等の手続き」のページでご確認・ダウンロードいただけます。",
-  },
-};
-
-// 承継届・代表者/社名変更届・廃止届は行為を問わず様式がこのページにまとまっている。
-const NARA_COMMON_REFERENCE = {
-  url: "https://www.pref.nara.lg.jp/n011/39588.html",
-  label: "承継・代表者/社名変更・廃止に関する届出様式は、奈良県「代表者・社名変更等の手続き」のページでご確認・ダウンロードいただけます。",
-};
-
 export {
   ACTION_TYPES,
-  GAS_CATEGORIES,
   getCategoriesForAction,
   getStepsForGasCategory,
   evaluateDiagnosis,
-  DISCLAIMER,
   METI_REFERENCE,
-  NARA_PROCEDURE_REFERENCE,
-  NARA_COMMON_REFERENCE,
 };

@@ -5,35 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>高圧ガス手続きナビ | 奈良県向け</title>
   <style>
-:root {
-  color-scheme: light dark;
-  --bg: #f5f6f4;
-  --panel-bg: #ffffff;
-  --border: #d8dcd4;
-  --text: #1f2a20;
-  --text-muted: #5c6b5e;
-  --accent: #2f6b3a;
-  --accent-contrast: #ffffff;
-  --chip-bg: #eef3ec;
-  --danger: #a5342a;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #141814;
-    --panel-bg: #1b201b;
-    --border: #333c33;
-    --text: #e7ece6;
-    --text-muted: #a3ada2;
-    --accent: #6bb37a;
-    --accent-contrast: #0d140e;
-    --chip-bg: #232b23;
-    --danger: #e08579;
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  }
-}
-
 * {
   box-sizing: border-box;
 }
@@ -61,12 +32,6 @@ a {
   font-size: 1.4rem;
 }
 
-.app-sub {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
 .app-layout {
   display: grid;
   grid-template-columns: 1fr 320px;
@@ -75,12 +40,6 @@ a {
   margin: 16px auto;
   padding: 0 16px;
   align-items: start;
-}
-
-@media (max-width: 860px) {
-  .app-layout {
-    grid-template-columns: 1fr;
-  }
 }
 
 .main-panel {
@@ -118,17 +77,6 @@ a {
   color: var(--accent);
   font-weight: 700;
   background: var(--chip-bg);
-}
-
-.disclaimer {
-  margin: 0 16px 12px;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
-  border-radius: 0 8px 8px 0;
-  background: var(--chip-bg);
-  color: var(--text-muted);
-  font-size: 0.8rem;
 }
 
 .diag-help {
@@ -187,26 +135,6 @@ a {
   border: 1px solid var(--border);
 }
 
-.verdict-banner.permit {
-  background: color-mix(in srgb, #c0392b 12%, var(--panel-bg));
-  border-color: #c0392b;
-}
-
-.verdict-banner.notification {
-  background: color-mix(in srgb, #2f6b8f 12%, var(--panel-bg));
-  border-color: #2f6b8f;
-}
-
-.verdict-banner.none {
-  background: color-mix(in srgb, var(--accent) 12%, var(--panel-bg));
-  border-color: var(--accent);
-}
-
-.verdict-banner.other_law {
-  background: color-mix(in srgb, #8a6d3b 12%, var(--panel-bg));
-  border-color: #8a6d3b;
-}
-
 .verdict-title {
   font-weight: 700;
   font-size: 1.05rem;
@@ -215,16 +143,6 @@ a {
 
 .verdict-summary {
   color: var(--text-muted);
-}
-
-.result-block {
-  margin: 14px 0;
-}
-
-.result-block h3 {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  margin: 0 0 8px;
 }
 
 .citation-card {
@@ -352,8 +270,7 @@ a {
 }
 
 .loading,
-.error-box,
-.empty-box {
+.error-box {
   padding: 24px 8px;
   color: var(--text-muted);
   text-align: center;
@@ -625,7 +542,7 @@ button { color: var(--text); }
 button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #be7510; outline-offset: 3px; }
 a { text-underline-offset: .2em; overflow-wrap: anywhere; }
 p { margin: .6em 0; }
-h2, h3 { line-height: 1.55; }
+h2, h3, h4 { line-height: 1.55; }
 [hidden] { display: none !important; }
 .skip-link { position: absolute; left: 16px; top: -100px; z-index: 10; background: white; padding: 8px 16px; }
 .skip-link:focus { top: 8px; }
@@ -646,7 +563,7 @@ h2, h3 { line-height: 1.55; }
 .stage .stage { padding: 0; }
 .stage h2 { margin: 0 0 20px; color: var(--text); font-size: 26px; font-weight: 700; }
 .stage h2:focus { outline: none; }
-.stage h3 { color: var(--text); font-size: 20px; margin: 0 0 12px; }
+.stage :is(h3, h4) { color: var(--text); font-size: 20px; margin: 0 0 12px; }
 .home-intro { margin: 6px 0 30px; }
 .home-intro h2 { font-size: 36px; white-space: pre-line; letter-spacing: .01em; line-height: 1.5; margin-bottom: 12px; }
 .home-lead { color: var(--text-muted); font-size: 18px; }
@@ -699,21 +616,23 @@ select { padding: 8px 10px; border: 1px solid #91a297; border-radius: 5px; backg
 .procedure-row .pick-sub { color: var(--text-muted); }
 .procedure-meta { margin: 0 0 6px; font-size: 14px; }
 .verdict-banner { border-radius: 5px; padding: 20px 24px; margin-bottom: 24px; }
-.verdict-banner.permit, .verdict-banner.notification, .verdict-banner.none { background: var(--chip-bg); border-color: #95b09f; }
-.verdict-banner.needs_confirmation, .verdict-banner.invalid, .verdict-banner.other_law { background: #fff6e6; border-color: #b68127; }
+.verdict-banner.permit { background: #e7f2ed; color: #174a38; border-color: #628973; }
+.verdict-banner.notification { background: #eaf2fc; color: #163d66; border-color: #6686ac; }
+.verdict-banner.none { background: #f0f2f4; color: #36414b; border-color: #8c959d; }
+.verdict-banner.needs_confirmation, .verdict-banner.invalid, .verdict-banner.other_law { background: #fff4d6; color: #674600; border-color: #b68127; }
 .verdict-title { font-size: 21px; }
-.verdict-summary { color: var(--text); }
+.stage .verdict-banner .verdict-title, .verdict-banner .verdict-summary { color: inherit; }
 .note-box { font-size: 16px; border-radius: 4px; line-height: 1.85; padding: 16px 18px; margin: 16px 0; }
 .procedure-guide { margin: 28px 0; }
-.procedure-guide h2 { font-size: 25px; margin-bottom: 12px; }
+.stage .procedure-guide .procedure-title { font-size: 25px; margin-bottom: 12px; }
 .deadline-box { border-left: 4px solid var(--accent); background: var(--chip-bg); padding: 16px 20px; margin: 20px 0; }
 .deadline-box > p { font-size: 20px; font-weight: 700; margin: 4px 0 0; }
 .contact-step { padding: 18px 20px; background: #fff6e6; border-left: 4px solid #ad781d; margin: 20px 0; }
-.contact-step h3 { font-size: 18px; margin-bottom: 6px; }
+.contact-step :is(h3, h4) { font-size: 18px; margin-bottom: 6px; }
 .guide-section { margin-top: 32px; }
 .guide-jumps { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 16px 0; }
 .guide-jumps a { min-height: 44px; display: inline-flex; align-items: center; }
-.guide-section h3 { padding-bottom: 12px; border-bottom: 2px solid var(--accent); }
+.guide-section :is(h3, h4) { padding-bottom: 12px; border-bottom: 2px solid var(--accent); }
 .check-progress { font-size: 16px; color: var(--accent); font-weight: 600; margin: 20px 0 8px; }
 .document-list { list-style: none; padding: 0; margin: 0; }
 .document-row { padding: 17px 0; border-bottom: 1px solid var(--border); }
@@ -754,7 +673,8 @@ select { padding: 8px 10px; border: 1px solid #91a297; border-radius: 5px; backg
 .app-footer { max-width: 1136px; margin: 24px auto 40px; padding: 0 24px; color: var(--text-muted); font-size: 14px; }
 .storage-status { margin: 8px 36px; padding: 14px; background: #fff6e6; color: #684305; }
 .toast { border-radius: 6px; max-width: calc(100vw - 32px); width: max-content; font-size: 16px; z-index: 30; }
-.print-context { display: none; }
+.print-context, .print-only { display: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 @media (max-width: 640px) {
   .app-header { padding: 16px; }
   .header-inner { display: block; }
@@ -799,11 +719,11 @@ select { padding: 8px 10px; border: 1px solid #91a297; border-radius: 5px; backg
   .main-panel { border: 0; }
   .stage, .stage .stage { padding: 0; }
   .stage h2 { font-size: 16pt; }
-  .stage h3 { font-size: 13pt; }
-  .print-context { display: block; }
+  .stage :is(h3, h4), .stage .procedure-guide .procedure-title { font-size: 13pt; }
+  .print-context, .print-only { display: block; }
   .procedure-guide { margin: 16px 0; }
   .document-row, .submission-list dt, .submission-list dd, .download-link, .contact-step, .deadline-box, .answer-row { break-inside: avoid; }
-  .guide-section h3 { break-after: avoid; }
+  .guide-section :is(h3, h4) { break-after: avoid; }
   .support-text, .document-help, .document-alternatives, .guide-applicability, .check-progress { font-size: 10pt; }
   .document-check strong { font-size: 11pt; }
   .document-row { padding: 8px 0; }
@@ -812,7 +732,7 @@ select { padding: 8px 10px; border: 1px solid #91a297; border-radius: 5px; backg
   .download-link { padding: 6px; border: 0; }
   .download-link::after { content: " " attr(href); display: block; font-size: 8pt; overflow-wrap: anywhere; font-weight: normal; }
   .deadline-box, .contact-step, .verdict-banner, .note-box { background: white; padding: 10px; }
-  .procedure-guide::after { content: "案内データ確認日：2026-09-19 / 奈良県の公開案内に基づく参考情報"; display: block; font-size: 9pt; margin-top: 12px; }
+  .guide-print-date { font-size: 9pt; margin-top: 12px; }
 }
   </style>
 </head>
@@ -820,7 +740,7 @@ select { padding: 8px 10px; border: 1px solid #91a297; border-radius: 5px; backg
   <a class="skip-link" href="#stage">本文へ移動</a>
   <header class="app-header">
     <div class="header-inner"><div><p class="app-region">奈良県の事業者向け</p><h1>高圧ガス手続きナビ</h1></div>
-    <a href="https://www.pref.nara.lg.jp/n011/39583.html" target="_blank" rel="noopener noreferrer">奈良県の公式案内 ↗</a></div>
+    <a href="https://www.pref.nara.lg.jp/n011/39583.html" target="_blank" rel="noopener noreferrer">奈良県の公式案内 ↗<span class="sr-only">(新しいタブで開きます)</span></a></div>
   </header>
 
   <div class="app-layout">
@@ -845,7 +765,7 @@ select { padding: 8px 10px; border: 1px solid #91a297; border-radius: 5px; backg
     </details>
   </div>
 
-  <footer class="app-footer"><p>奈良県の手続き案内を整理した参考ツールです。県の公式サイトではありません。</p><p>対象：一般則・液石則・冷凍則。条文閲覧では容器則にも対応。<a href="https://laws.e-gov.go.jp/" target="_blank" rel="noopener noreferrer">法令出典：e-Gov法令検索 ↗</a></p></footer>
+  <footer class="app-footer"><p>奈良県の手続き案内を整理した参考ツールです。県の公式サイトではありません。</p><p>対象：一般則・液石則・冷凍則。条文閲覧では容器則にも対応。<a href="https://laws.e-gov.go.jp/" target="_blank" rel="noopener noreferrer">法令出典：e-Gov法令検索 ↗<span class="sr-only">(新しいタブで開きます)</span></a></p></footer>
   <div id="toast" class="toast" role="status" hidden></div>
   <noscript>このツールの利用にはJavaScriptを有効にしてください。上部の「奈良県の公式案内」からも手続き・様式を確認できます。</noscript>
 
@@ -949,7 +869,9 @@ let dbPromise = null;
 
 function openDb() {
   if (dbPromise) return dbPromise;
-  dbPromise = new Promise((resolve, reject) => {
+  let failed = false;
+  const attempt = new Promise((resolve, reject) => {
+    const fail = error => { failed = true; reject(error); };
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
@@ -965,10 +887,15 @@ function openDb() {
         store.createIndex("timestamp", "timestamp");
       }
     };
-    req.onsuccess = () => { req.result.onversionchange = () => { req.result.close(); dbPromise = null; }; resolve(req.result); };
-    req.onerror = () => reject(req.error);
-    req.onblocked = () => reject(new Error("別のタブを閉じて再読み込みしてください。"));
+    req.onsuccess = () => {
+      if (failed) { req.result.close(); return; }
+      req.result.onversionchange = () => { req.result.close(); dbPromise = null; };
+      resolve(req.result);
+    };
+    req.onerror = () => fail(req.error);
+    req.onblocked = () => fail(new Error("別のタブを閉じて再読み込みしてください。"));
   });
+  dbPromise = attempt.catch(error => { dbPromise = null; throw error; });
   return dbPromise;
 }
 
@@ -1012,20 +939,25 @@ async function readDraft() {
 async function writeDraft(value) {
   const store = await tx(STORE_DRAFT, "readwrite");
   return new Promise((resolve, reject) => {
-    store.put(value, "current");
+    const bounded = value.nav ? { ...value, nav: { ...value.nav, preparations: trimPreparations(value.nav.preparations) } } : value;
+    store.put(bounded, "current");
     store.transaction.oncomplete = () => resolve();
     store.transaction.onabort = () => reject(store.transaction.error || new Error("下書きを保存できませんでした。"));
     store.transaction.onerror = () => reject(store.transaction.error);
   });
 }
 
-async function clearCachedLaw(lawId) {
-  const store = await tx(STORE_LAW_CACHE, "readwrite");
-  return new Promise((resolve, reject) => {
-    const req = store.delete(lawId);
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
-  });
+// 同じ案件の全手続き・全書類をまとめて保持する。法令キャッシュ・旧版領域は触らない。
+function trimPreparations(preparations = {}, limit = 50) {
+  const cases = new Map();
+  for (const [index, [key, value]] of Object.entries(preparations).entries()) {
+    const id = key.split(":")[0];
+    const order = Number.isFinite(value.lastUsedAt) ? value.lastUsedAt : 0;
+    const previous = cases.get(id);
+    if (!previous || order >= previous.order) cases.set(id, { order, index });
+  }
+  const keep = new Set([...cases].sort((a, b) => b[1].order - a[1].order || b[1].index - a[1].index).slice(0, limit).map(([id]) => id));
+  return Object.fromEntries(Object.entries(preparations).filter(([key]) => keep.has(key.split(":")[0])));
 }
 
 // --- 照会履歴 ---
@@ -1039,7 +971,21 @@ async function addHistoryEntry(entry) {
       ...entry,
       timestamp: new Date().toISOString(),
     });
-    req.onsuccess = () => resolve(req.result);
+    let id;
+    req.onsuccess = () => {
+      id = req.result;
+      let count = 0;
+      const scan = store.index("timestamp").openCursor(null, "prev");
+      scan.onsuccess = () => {
+        const cursor = scan.result;
+        if (!cursor) return;
+        if (++count > MAX_HISTORY) cursor.delete();
+        cursor.continue();
+      };
+    };
+    store.transaction.oncomplete = () => resolve(id);
+    store.transaction.onabort = () => reject(store.transaction.error || new Error("履歴を保存できませんでした。"));
+    store.transaction.onerror = () => reject(store.transaction.error);
     req.onerror = () => reject(req.error);
   });
 }
@@ -1239,7 +1185,7 @@ function findArticleByNum(mainProvisionNode, num) {
 // e-Gov法令標準XMLスキーマの主要タグ(Paragraph/Item/Subitem1-3/List/Table等)を
 // 明示的に扱い、未対応タグはテキストのみ安全に抽出するフォールバックを持つ。
 
-function escapeHtml(str) {
+function renderEscapeHtml(str) {
   return String(str)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -1248,16 +1194,16 @@ function escapeHtml(str) {
     .replaceAll("'", "&#39;");
 }
 
-function findChild(node, tag) {
+function renderFindChild(node, tag) {
   if (!node || !Array.isArray(node.children)) return null;
   return node.children.find((c) => c && c.tag === tag) || null;
 }
-function findChildren(node, tag) {
+function renderFindChildren(node, tag) {
   if (!node || !Array.isArray(node.children)) return [];
   return node.children.filter((c) => c && c.tag === tag);
 }
 function textOf(node, tag) {
-  const c = findChild(node, tag);
+  const c = renderFindChild(node, tag);
   return c ? extractText(c).trim() : "";
 }
 
@@ -1268,9 +1214,9 @@ function renderArticle(articleNode) {
   let html = '<div class="article">';
   html += '<div class="article-head">';
   if (caption) {
-    html += `<span class="article-caption">${escapeHtml(caption)}</span>`;
+    html += `<span class="article-caption">${renderEscapeHtml(caption)}</span>`;
   }
-  html += `<span class="article-title">${escapeHtml(title)}</span>`;
+  html += `<span class="article-title">${renderEscapeHtml(title)}</span>`;
   html += "</div>";
 
   for (const child of articleNode.children || []) {
@@ -1291,34 +1237,34 @@ function renderArticle(articleNode) {
 function renderParagraph(p) {
   const numText = textOf(p, "ParagraphNum"); // 第1項は空、第2項以降は全角数字
   const caption = textOf(p, "ParagraphCaption");
-  const sentenceNode = findChild(p, "ParagraphSentence");
+  const sentenceNode = renderFindChild(p, "ParagraphSentence");
   const sentenceText = sentenceNode ? extractSentenceText(sentenceNode) : "";
 
   let html = '<div class="paragraph">';
   if (caption) {
-    html += `<div class="paragraph-caption">${escapeHtml(caption)}</div>`;
+    html += `<div class="paragraph-caption">${renderEscapeHtml(caption)}</div>`;
   }
   html += '<div class="paragraph-line">';
-  html += `<span class="para-num">${escapeHtml(numText)}</span>`;
-  html += `<span class="para-text">${escapeHtml(sentenceText)}</span>`;
+  html += `<span class="para-num">${renderEscapeHtml(numText)}</span>`;
+  html += `<span class="para-text">${renderEscapeHtml(sentenceText)}</span>`;
   html += "</div>";
 
-  const items = findChildren(p, "Item");
+  const items = renderFindChildren(p, "Item");
   if (items.length > 0) {
     html += '<div class="item-list">' + items.map(renderItem).join("") + "</div>";
   }
 
-  const lists = findChildren(p, "List");
+  const lists = renderFindChildren(p, "List");
   if (lists.length > 0) {
     html += lists.map(renderList).join("");
   }
 
-  const tables = findChildren(p, "TableStruct");
+  const tables = renderFindChildren(p, "TableStruct");
   if (tables.length > 0) {
     html += tables.map(renderTableStruct).join("");
   }
 
-  const remarks = findChildren(p, "Remarks");
+  const remarks = renderFindChildren(p, "Remarks");
   if (remarks.length > 0) {
     html += remarks.map(renderRemarks).join("");
   }
@@ -1329,18 +1275,18 @@ function renderParagraph(p) {
 
 function renderItem(item) {
   const title = textOf(item, "ItemTitle");
-  const sentenceNode = findChild(item, "ItemSentence");
+  const sentenceNode = renderFindChild(item, "ItemSentence");
   const sentenceText = sentenceNode ? extractSentenceText(sentenceNode) : "";
 
   let html = '<div class="item">';
   html += '<div class="item-line">';
-  html += `<span class="item-title">${escapeHtml(title)}</span>`;
-  html += `<span class="item-text">${escapeHtml(sentenceText)}</span>`;
+  html += `<span class="item-title">${renderEscapeHtml(title)}</span>`;
+  html += `<span class="item-text">${renderEscapeHtml(sentenceText)}</span>`;
   html += "</div>";
 
   html += renderSubitems(item, 1);
 
-  const tables = findChildren(item, "TableStruct");
+  const tables = renderFindChildren(item, "TableStruct");
   if (tables.length > 0) {
     html += tables.map(renderTableStruct).join("");
   }
@@ -1351,7 +1297,7 @@ function renderItem(item) {
 
 function renderSubitems(node, level) {
   const tag = `Subitem${level}`;
-  const subs = findChildren(node, tag);
+  const subs = renderFindChildren(node, tag);
   if (subs.length === 0) return "";
 
   const titleTag = `${tag}Title`;
@@ -1360,12 +1306,12 @@ function renderSubitems(node, level) {
   let html = `<div class="subitem-list level-${level}">`;
   for (const sub of subs) {
     const title = textOf(sub, titleTag);
-    const sentenceNode = findChild(sub, sentenceTag);
+    const sentenceNode = renderFindChild(sub, sentenceTag);
     const sentenceText = sentenceNode ? extractSentenceText(sentenceNode) : "";
     html += `<div class="subitem level-${level}">`;
     html += '<div class="item-line">';
-    html += `<span class="item-title">${escapeHtml(title)}</span>`;
-    html += `<span class="item-text">${escapeHtml(sentenceText)}</span>`;
+    html += `<span class="item-title">${renderEscapeHtml(title)}</span>`;
+    html += `<span class="item-text">${renderEscapeHtml(sentenceText)}</span>`;
     html += "</div>";
     html += renderSubitems(sub, level + 1);
     html += "</div>";
@@ -1375,47 +1321,47 @@ function renderSubitems(node, level) {
 }
 
 function renderList(listNode) {
-  const sentences = findChildren(listNode, "ListSentence");
+  const sentences = renderFindChildren(listNode, "ListSentence");
   if (sentences.length === 0) {
-    return `<div class="list-block">${escapeHtml(extractText(listNode).trim())}</div>`;
+    return `<div class="list-block">${renderEscapeHtml(extractText(listNode).trim())}</div>`;
   }
   return (
     '<div class="list-block">' +
-    sentences.map((s) => `<div class="list-line">${escapeHtml(extractSentenceText(s))}</div>`).join("") +
+    sentences.map((s) => `<div class="list-line">${renderEscapeHtml(extractSentenceText(s))}</div>`).join("") +
     "</div>"
   );
 }
 
 function renderRemarks(remarksNode) {
   const label = textOf(remarksNode, "RemarksLabel") || "備考";
-  const paragraphs = findChildren(remarksNode, "Paragraph");
+  const paragraphs = renderFindChildren(remarksNode, "Paragraph");
   let html = '<div class="remarks">';
-  html += `<div class="remarks-label">${escapeHtml(label)}</div>`;
+  html += `<div class="remarks-label">${renderEscapeHtml(label)}</div>`;
   if (paragraphs.length > 0) {
     html += paragraphs.map(renderParagraph).join("");
   } else {
-    html += `<div class="remarks-text">${escapeHtml(extractText(remarksNode).trim())}</div>`;
+    html += `<div class="remarks-text">${renderEscapeHtml(extractText(remarksNode).trim())}</div>`;
   }
   html += "</div>";
   return html;
 }
 
 function renderTableStruct(tableStructNode) {
-  const table = findChild(tableStructNode, "Table");
+  const table = renderFindChild(tableStructNode, "Table");
   if (!table) {
-    return `<div class="table-fallback">${escapeHtml(extractText(tableStructNode).trim())}</div>`;
+    return `<div class="table-fallback">${renderEscapeHtml(extractText(tableStructNode).trim())}</div>`;
   }
-  const rows = findChildren(table, "TableRow");
+  const rows = renderFindChildren(table, "TableRow");
   let html = '<table class="law-table"><tbody>';
   for (const row of rows) {
     html += "<tr>";
-    const cols = findChildren(row, "TableColumn");
+    const cols = renderFindChildren(row, "TableColumn");
     for (const col of cols) {
       const attr = col.attr || {};
       const attrs = [];
-      if (attr.colspan) attrs.push(`colspan="${escapeHtml(attr.colspan)}"`);
-      if (attr.rowspan) attrs.push(`rowspan="${escapeHtml(attr.rowspan)}"`);
-      html += `<td ${attrs.join(" ")}>${escapeHtml(extractSentenceText(col))}</td>`;
+      if (attr.colspan) attrs.push(`colspan="${renderEscapeHtml(attr.colspan)}"`);
+      if (attr.rowspan) attrs.push(`rowspan="${renderEscapeHtml(attr.rowspan)}"`);
+      html += `<td ${attrs.join(" ")}>${renderEscapeHtml(extractSentenceText(col))}</td>`;
     }
     html += "</tr>";
   }
@@ -1428,7 +1374,7 @@ function renderTableStruct(tableStructNode) {
 function renderGenericBlock(node) {
   const text = extractText(node).trim();
   if (!text) return "";
-  return `<div class="generic-block">${escapeHtml(text)}</div>`;
+  return `<div class="generic-block">${renderEscapeHtml(text)}</div>`;
 }
 
 /* =========================================================
@@ -1437,7 +1383,7 @@ function renderGenericBlock(node) {
 
 // 「設問モード」の分岐ロジック。
 //
-// パイロット範囲: 一般則・冷凍則・液石則それぞれが管轄する「製造」。
+// 対象: 一般則・冷凍則・液石則の製造・貯蔵・販売・消費。申請資料は procedures.js の台帳を参照。
 //
 // 各法令の許可・届出基準はすべて高圧ガス保安法第5条に由来するが、
 // 政令(施行令)・省令(各則)で具体的な数値・算式が個別に定められている。
@@ -1509,7 +1455,7 @@ function normalizeDiagnosisResult(result) {
   };
 }
 
-const GAS_CATEGORIES = [
+const MANUFACTURE_CATEGORIES = [
   {
     id: "general",
     label: "一般の高圧ガス(不活性・可燃性・毒性ガスなど)",
@@ -1567,7 +1513,7 @@ function getCategoriesForAction(actionType) {
   if (actionType === "sales") return SALES_CATEGORIES;
   if (actionType === "storage") return STORAGE_CATEGORIES;
   if (actionType === "consumption") return CONSUMPTION_CATEGORIES;
-  return GAS_CATEGORIES;
+  return MANUFACTURE_CATEGORIES;
 }
 
 /* ---------- 共通設問 ---------- */
@@ -1881,7 +1827,8 @@ const LPGAS_CONSUMER_SUPPLY_STEP = {
   ],
 };
 
-function getLpgasSteps() {
+function getLpgasSteps(answers) {
+  if (answers.lpgasConsumerSupply !== "no") return [LPGAS_CONSUMER_SUPPLY_STEP];
   return [LPGAS_CONSUMER_SUPPLY_STEP, LPGAS_CAPACITY_STEP, BUSINESS_STEP];
 }
 
@@ -1900,7 +1847,7 @@ function evaluateLpgas(answers) {
         "液化石油ガス法上の一般消費者等に供給するための充塡は、高圧ガス保安法第5条第1項第1号のかっこ書きにより、同号の製造許可・届出の対象外となる場合があります。",
       citations: [
         { lawId: ACT, num: "5", label: "高圧ガス保安法 第5条第1項第1号(液化石油ガスの適用除外)" },
-        { lawId: LPG_ACT, num: "2_2", label: "液化石油ガス法 第2条第2項(一般消費者等)" },
+        { lawId: LPG_ACT, num: "2", label: "液化石油ガス法 第2条第2項(一般消費者等)" },
       ],
       procedures: [],
       note:
@@ -2045,7 +1992,7 @@ function evaluateSales(gasCategoryId, answers) {
           "液化石油ガス法上の販売事業登録が必要です。",
         citations: [
           baseCitation,
-          { lawId: LPG_ACT, num: "2_2", label: "液化石油ガス法 第2条第2項(一般消費者等)" },
+          { lawId: LPG_ACT, num: "2", label: "液化石油ガス法 第2条第2項(一般消費者等)" },
           { lawId: LPG_ACT, num: "3", label: "液化石油ガス法 第3条(販売事業の登録)" },
         ],
         procedures: [],
@@ -2273,8 +2220,10 @@ function getStorageSteps(gasCategoryId, answers) {
   }
 
   steps.push(STORAGE_GAS_SCOPE_STEP);
-  steps.push(STORAGE_THIRD_GAS_STEP);
-  if (answers.storageThirdGas !== "no") return steps;
+  if (["otherOnly", "mixed"].includes(answers.storageGasScope)) {
+    steps.push(STORAGE_THIRD_GAS_STEP);
+    if (answers.storageThirdGas !== "no") return steps;
+  }
   if (answers.storageGasScope === "type1only") {
     steps.push(makeStorageBandStep(3000, "不活性ガス等(第一種ガス)"));
   } else if (answers.storageGasScope === "otherOnly") {
@@ -2351,11 +2300,11 @@ function evaluateStorage(gasCategoryId, answers) {
     return invalidDiagnosis("貯蔵するガスの種類を確認できないため判定できません。");
   }
 
-  if (!isChoice(answers.storageThirdGas, ["yes", "no", "unknown"])) {
+  if (answers.storageGasScope !== "type1only" && !isChoice(answers.storageThirdGas, ["yes", "no", "unknown"])) {
     return invalidDiagnosis("第三種ガスを含むか確認できないため判定できません。");
   }
 
-  if (answers.storageThirdGas !== "no") {
+  if (answers.storageGasScope !== "type1only" && answers.storageThirdGas !== "no") {
     return invalidDiagnosis(
       "第三種ガスを含む貯蔵は施行令第5条の組合せ区分が異なるため、自動的に不要とは判定しません。都道府県窓口で確認してください。"
     );
@@ -2687,7 +2636,7 @@ function evaluateConsumption(gasCategoryId, answers) {
           "消費者の対象外です。液化石油ガス法上の規制をご確認ください。",
         citations: [
           ...citations,
-          { lawId: LPG_ACT, num: "2_2", label: "液化石油ガス法 第2条第2項(一般消費者等)" },
+          { lawId: LPG_ACT, num: "2", label: "液化石油ガス法 第2条第2項(一般消費者等)" },
         ],
         procedures: [],
         note:
@@ -2879,6 +2828,8 @@ const SALES_PROCEDURES = {
     { lawId: IPPAN, num: "38", label: "周知の義務(一般則第38条)" },
     { lawId: IPPAN, num: "40", label: "販売業者等に係る技術上の基準の遵守(一般則第40条)" },
     { lawId: IPPAN, num: "41", label: "販売するガスの種類の変更届出(一般則第41条)" },
+    { lawId: IPPAN, num: "72", label: "条件付き：販売主任者の選任等(一般則第72条、法第28条第1項)", procedureId: "personnel-sales",
+      condition: "対象ガス：アセチレン、アルシン、アンモニア、塩素、クロルメチル、五フッ化ヒ素、五フッ化リン、酸素、三フッ化窒素、三フッ化ホウ素、三フッ化リン、シアン化水素、ジシラン、四フッ化硫黄、四フッ化ケイ素、ジボラン、水素、セレン化水素、ホスフィン、メタン、モノゲルマン、モノシラン。販売するガスに上記を含む場合に必要です。ただし、スクーバダイビング呼吸用で酸素の容量が全容量の40％未満のもの、および保安管理組織を整備した圧縮水素スタンドで自動車用に販売する圧縮水素は除かれます。" },
     { lawId: IPPAN, num: "44", label: "廃止の届出(一般則第44条)" },
   ],
   refrigeration: [
@@ -2902,7 +2853,7 @@ const IPPAN_STORAGE_PROCEDURES = {
   permit: [
     { lawId: IPPAN, num: "20", label: "第一種貯蔵所設置許可申請(一般則第20条)" },
     { lawId: IPPAN, num: "31", label: "完成検査の申請等(一般則第31条)" },
-    { lawId: ACT, num: "16", label: "技術基準の遵守・維持(一般則第21条〜第23条)" },
+    { lawId: IPPAN, num: "21", label: "技術基準の遵守・維持(一般則第21条〜第23条)" },
     { lawId: IPPAN, num: "27", label: "変更工事の許可申請、または軽微な変更工事の届出(一般則第27条・第28条)" },
     { lawId: IPPAN, num: "24", label: "承継の届出(一般則第24条)" },
     { lawId: IPPAN, num: "95", label: "帳簿の記載・保存(一般則第95条)" },
@@ -2925,7 +2876,7 @@ const EKISEKI_STORAGE_PROCEDURES = {
   permit: [
     { lawId: EKISEKI, num: "21", label: "第一種貯蔵所設置許可申請(液石則第21条)" },
     { lawId: EKISEKI, num: "32", label: "完成検査の申請等(液石則第32条)" },
-    { lawId: ACT, num: "16", label: "技術基準の遵守・維持(液石則第22条〜第24条)" },
+    { lawId: EKISEKI, num: "22", label: "技術基準の遵守・維持(液石則第22条〜第24条)" },
     { lawId: EKISEKI, num: "28", label: "変更工事の許可申請、または軽微な変更工事の届出(液石則第28条・第29条)" },
     { lawId: EKISEKI, num: "25", label: "承継の届出(液石則第25条)" },
     { lawId: EKISEKI, num: "93", label: "帳簿の記載・保存(液石則第93条)" },
@@ -2981,7 +2932,7 @@ function getStepsForGasCategory(actionType, gasCategoryId, answers = {}) {
   if (actionType === "consumption") return getConsumptionSteps(gasCategoryId, safeAnswers);
   if (gasCategoryId === "general") return getGeneralSteps(safeAnswers);
   if (gasCategoryId === "refrigeration") return getRefrigerationSteps(safeAnswers);
-  if (gasCategoryId === "lpgas") return getLpgasSteps();
+  if (gasCategoryId === "lpgas") return getLpgasSteps(safeAnswers);
   return [];
 }
 
@@ -3002,10 +2953,6 @@ function evaluateDiagnosis(actionType, gasCategoryId, answers = {}) {
   }
 }
 
-const DISCLAIMER =
-  "このツールは公開されている条文に基づく参考情報を機械的に整理して表示するものであり、正式な該非判断ではありません。" +
-  "実際の許可・届出の要否や手続きについては、必ず事業所の所在地を管轄する都道府県(高圧ガス担当窓口)にご確認ください。";
-
 // 技術上の基準の細部(例示基準)や運用解釈(基本通達)は随時改正されるため、本文を
 // 取り込まず、経済産業省の一覧ページへの案内にとどめる。
 const METI_REFERENCE = {
@@ -3014,46 +2961,13 @@ const METI_REFERENCE = {
     "技術上の基準の具体的な内容(例示基準)や条文の運用解釈(基本通達)は随時改正されます。最新の内容は経済産業省「高圧ガス保安法等」のページでご確認ください。",
 };
 
-// 実際に事業者が提出する申請書様式(Word形式)・必要書類は、奈良県総務部知事公室消防救急課保安係の
-// 行為別ページに掲載されている(様式番号自体は法令原文にも現れるが、随時改定されるためリンク誘導のみとする)。
-// 各ページとも一般則/液石則/冷凍則による様式の区分けはしておらず、行為(製造/貯蔵/消費/販売)単位のみの構成。
-// 2026-07-20にページ構成を確認済み: https://www.pref.nara.lg.jp/n011/39583.html (総合案内)
-const NARA_PROCEDURE_REFERENCE = {
-  manufacture: {
-    url: "https://www.pref.nara.lg.jp/n011/39584.html",
-    label:
-      "製造・保安検査・完成検査等の申請書様式(Word形式)や必要書類は、奈良県「高圧ガスの製造、保安検査、完成検査等の手続き」のページでご確認・ダウンロードいただけます。",
-  },
-  storage: {
-    url: "https://www.pref.nara.lg.jp/n011/39585.html",
-    label:
-      "貯蔵所設置許可・容器検査所等の申請書様式(Word形式)や必要書類は、奈良県「高圧ガスの貯蔵、容器検査所等の手続き」のページでご確認・ダウンロードいただけます。",
-  },
-  consumption: {
-    url: "https://www.pref.nara.lg.jp/n011/39587.html",
-    label:
-      "特定高圧ガス消費等の申請書様式(Word形式)や必要書類は、奈良県「特定高圧ガス消費等の手続き」のページでご確認・ダウンロードいただけます。",
-  },
-  sales: {
-    url: "https://www.pref.nara.lg.jp/n011/39586.html",
-    label:
-      "販売事業届等の申請書様式(Word形式)や必要書類は、奈良県「高圧ガスの販売等の手続き」のページでご確認・ダウンロードいただけます。",
-  },
-};
-
-// 承継届・代表者/社名変更届・廃止届は行為を問わず様式がこのページにまとまっている。
-const NARA_COMMON_REFERENCE = {
-  url: "https://www.pref.nara.lg.jp/n011/39588.html",
-  label: "承継・代表者/社名変更・廃止に関する届出様式は、奈良県「代表者・社名変更等の手続き」のページでご確認・ダウンロードいただけます。",
-};
-
 /* =========================================================
    procedures.js
    ========================================================= */
 
 // 奈良県の公開案内・添付書類一覧と各規則を照合した手続き台帳。
 // 確認日と版は条文APIの取得日とは独立して管理する。自動更新を意味しない。
-const PROCEDURE_VERSION = "2026-09-19.1";
+const PROCEDURE_VERSION = "2026-09-23.1";
 const PROCEDURE_CHECKED_AT = "2026-09-19";
 const REGULATION_LABELS = { general: "一般則", lpgas: "液石則", refrigeration: "冷凍則" };
 const ACTIVITY_LABELS = { manufacture: "製造", storage: "貯蔵", sales: "販売", consumption: "消費" };
@@ -3091,6 +3005,7 @@ const procForm = (folder, file, label = "申請・届出様式（Word）") => pr
 const procIdentity = procDoc("identity", "申請者を確認する書類", "oneOf", "法人：発行後3か月以内の登記簿謄本。個人：発行後3か月以内・マイナンバーなしの住民票。", { alternatives: ["法人：登記簿謄本", "個人：住民票"] });
 const procDelegation = procDoc("delegation", "委任状", "conditional", "申請・届出の代表者欄が代表取締役以外の場合。", { fact: "delegate" });
 const procExtra = procDoc("additional", "施設の技術基準に応じた補足図面・資料", "conditional", "設備の種類・工事内容により必要。公式一覧と技術基準を照合してください。");
+const procNoFee = "不要(届出・報告の手数料はかかりません)";
 const procFee = "有料。奈良県手数料条例（平成12年条例第33号）による。設備・処理能力・申請区分で金額が異なります。申請前の連絡時に区分と金額を確定し、奈良県収入証紙を申請書裏面に貼付してください。";
 const procContact = "県が事前連絡を求めています。許可・受理番号、ガス名、能力、施設図面、実施予定日を準備し、申請・工事の前に内容を説明してください。";
 const procRegistry = [];
@@ -3099,7 +3014,7 @@ function registerProcedure(id, activity, purpose, title, form, options = {}) {
     procedureId: id, activity, purpose, title, regulations: activity === "storage" || activity === "consumption" ? procGL : procAllRegs,
     applicability: "対象の許可・届出区分と発生条件を確認して使用してください。",
     deadline: "遅滞なく", forms: form ? [form] : [],
-    documents: [procDoc("form", title)], fee: "届出・報告の手数料は不要です。",
+    documents: [procDoc("form", title)], fee: procNoFee,
     source: NARA_PAGES[activity], checkedAt: PROCEDURE_CHECKED_AT, basis: "高圧ガス保安法・関係規則／奈良県の申請案内",
     ...options,
   });
@@ -3138,7 +3053,7 @@ for (const [kind, title, file, deadline, status] of [
   status, deadline, documents: manufactureDocuments(kind), contact: procContact,
   applicability: status === "permit" ? "第一種製造者。軽微変更は各規則の要件を満たす工事に限ります。" : "第二種製造者。規模等の変更で第一種に移る場合は新たな許可の確認が必要です。",
   forms: [procForm(409, file), procFile("県の添付書類一覧（Excel）", 409, `${file}.xlsx`)],
-  fee: kind.endsWith("permit") ? procFee : "不要", basis: kind === "permit" || kind === "notification" ? "法第5条、一般則・液石則・冷凍則第3条・第4条" : "法第14条、一般則第14〜17条・液石則第15〜18条・冷凍則第16〜19条",
+  fee: kind.endsWith("permit") ? procFee : procNoFee, basis: kind === "permit" || kind === "notification" ? "法第5条、一般則・液石則・冷凍則第3条・第4条" : "法第14条、一般則第14〜17条・液石則第15〜18条・冷凍則第16〜19条",
 });
 for (const [kind, title, file, status] of [
   ["permit", "第一種貯蔵所設置許可申請", "20260129090427", "permit"],
@@ -3148,7 +3063,7 @@ for (const [kind, title, file, status] of [
   ["minor", "第一種貯蔵所軽微変更届", "20260129090427_2", "permit"],
 ]) registerProcedure(`storage-${kind}`, "storage", ["permit", "notification"].includes(kind) ? "new" : "change", title, procForm(408, file), {
   status, contact: procContact, deadline: kind === "minor" ? "工事完成後、遅滞なく" : "設置・変更の前（許可対象は許可取得後に着工）",
-  fee: kind.endsWith("permit") ? procFee : "不要", basis: "法第16条・第17条の2・第19条、一般則第20・25・27〜30条／液石則第21・26・28〜31条",
+  fee: kind.endsWith("permit") ? procFee : procNoFee, basis: "法第16条・第17条の2・第19条、一般則第20・25・27〜30条／液石則第21・26・28〜31条",
   documents: [procDoc("form", title), procDoc("detail", kind === "minor" ? "変更の概要を記載した書面" : kind.startsWith("change") ? "変更明細書" : "貯蔵計画書", "required", "貯蔵の目的、貯蔵能力、技術基準への対応を整理。変更時は変更部分を明示。"), procDoc("location", "位置・付近の状況を示す図面", kind === "minor" ? "conditional" : "required", "変更時は変更内容に対応する図面。"), procExtra],
   preparation: "県のページには貯蔵所の詳細な添付書類一覧が掲載されていません。法令上の基本書類に加え、配置・配管図、容量計算、設備仕様を準備し、事前連絡で追加資料を確定してください。",
 });
@@ -3264,10 +3179,12 @@ function diagnosisProcedureIds(activity, regulation, result) {
   if (activity === "consumption") return ["consumption-new"];
   return [`${activity}-${result.verdict}`];
 }
+function documentFactKey(document) { return document.fact || `document:${document.id}`; }
 function documentRequirement(document, facts = {}) {
-  if (document.kind !== "conditional" || !document.fact) return document.kind;
-  if (facts[document.fact] === "yes") return "required";
-  if (facts[document.fact] === "no") return "notApplicable";
+  if (document.kind !== "conditional") return document.kind;
+  const key = documentFactKey(document);
+  if (facts[key] === "yes") return "required";
+  if (facts[key] === "no") return "notApplicable";
   return "unconfirmed";
 }
 const flowChoice = (id, prompt, options, help = "") => ({ id, prompt, help, type: "choice", options: options.map(([value, label]) => ({ value, label })) });
@@ -3346,7 +3263,8 @@ function lifecycleFacts(answers = {}) {
 function minorLawLink(activity, regulation, status) {
   const nums = { manufacture: { general: status === "permit" ? "15" : "17", lpgas: status === "permit" ? "16" : "18", refrigeration: status === "permit" ? "17" : "19" }, storage: { general: status === "permit" ? "28" : "30", lpgas: status === "permit" ? "29" : "31" }, consumption: { general: "57", lpgas: "55" } };
   const num = nums[activity]?.[regulation];
-  return num ? `https://laws.e-gov.go.jp/law/${procLawIds[regulation]}#Mp-At_${num}` : NARA_PAGES.common;
+  const section = activity === "manufacture" ? "Ch_2-Se_1" : activity === "storage" ? "Ch_2-Se_2" : regulation === "general" ? "Ch_8" : "Ch_7";
+  return num ? `https://laws.e-gov.go.jp/law/${procLawIds[regulation]}#Mp-${section}-At_${num}` : NARA_PAGES.common;
 }
 
 /* =========================================================
@@ -3362,6 +3280,7 @@ function pvNode(tag, text = "", className = "") {
 function officialLink(label, url, className = "") {
   const a = pvNode("a", `${label} ↗`, className);
   a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer";
+  a.append(pvNode("span", "(新しいタブで開きます)", "sr-only"));
   return a;
 }
 function procedureListItem(procedure, onOpen) {
@@ -3371,11 +3290,11 @@ function procedureListItem(procedure, onOpen) {
   button.addEventListener("click", () => onOpen(procedure.procedureId));
   return button;
 }
-function renderProcedureGuide(procedure, { facts = {}, checks = {}, onFact, onCheck, onRelated, contextLabel = "" } = {}) {
+function renderProcedureGuide(procedure, { facts = {}, checks = {}, onFact, onCheck, onRelated, contextLabel = "", headingLevel = 2 } = {}) {
   const wrap = pvNode("article", "", "procedure-guide");
   wrap.dataset.procedureId = procedure.procedureId;
   wrap.append(pvNode("p", `${ACTIVITY_LABELS[procedure.activity] || "共通"} / ${procedure.regulations.map(r => REGULATION_LABELS[r]).join("・")}`, "procedure-meta"));
-  wrap.append(pvNode("h2", procedure.title));
+  wrap.append(pvNode(`h${headingLevel}`, procedure.title, "procedure-title"));
   if (contextLabel) wrap.append(pvNode("p", contextLabel, "print-context"));
   wrap.append(pvNode("p", procedure.applicability, "guide-applicability"));
   const deadline = pvNode("div", "", "deadline-box");
@@ -3388,12 +3307,12 @@ function renderProcedureGuide(procedure, { facts = {}, checks = {}, onFact, onCh
   wrap.append(jumps);
   if (procedure.contact) {
     const contact = pvNode("section", "", "contact-step");
-    contact.append(pvNode("h3", "最初に：事前連絡・日程調整"), pvNode("p", procedure.contact));
+    contact.append(pvNode(`h${headingLevel + 1}`, "最初に：事前連絡・日程調整"), pvNode("p", procedure.contact));
     wrap.append(contact);
   }
   const docs = pvNode("section", "", "guide-section");
   docs.id = `${procedure.procedureId}-documents`;
-  docs.append(pvNode("h3", "1. 準備する書類"), pvNode("p", "チェックは準備状況のメモです。申請の受理や書類の適合を保証するものではありません。", "support-text"));
+  docs.append(pvNode(`h${headingLevel + 1}`, "1. 準備する書類"), pvNode("p", "チェックは準備状況のメモです。申請の受理や書類の適合を保証するものではありません。", "support-text"));
   if (procedure.preparation) docs.append(pvNode("p", procedure.preparation, "note-box"));
   const progress = pvNode("p", "", "check-progress");
   progress.setAttribute("role", "status");
@@ -3423,13 +3342,14 @@ function renderProcedureGuide(procedure, { facts = {}, checks = {}, onFact, onCh
       item.alternatives.forEach(t => options.append(pvNode("li", t)));
       row.append(options);
     }
-    if (item.fact) {
+    if (item.kind === "conditional") {
+      const factKey = documentFactKey(item);
       const conditionLabel = pvNode("label", "", "condition-field no-print");
       conditionLabel.append(pvNode("span", "この条件に該当しますか？"));
       const select = pvNode("select"); select.id = `fact-${procedure.procedureId}-${item.id}`;
       for (const [v, text] of [["unknown", "未確認"], ["yes", "該当する"], ["no", "該当しない"]]) { const opt = pvNode("option", text); opt.value = v; select.append(opt); }
-      select.value = facts[item.fact] || "unknown";
-      select.addEventListener("change", () => onFact?.(item.fact, select.value, select.id));
+      select.value = facts[factKey] || "unknown";
+      select.addEventListener("change", () => onFact?.(factKey, select.value, select.id));
       conditionLabel.append(select); row.append(conditionLabel);
     }
     list.append(row);
@@ -3437,14 +3357,14 @@ function renderProcedureGuide(procedure, { facts = {}, checks = {}, onFact, onCh
   docs.append(progress, list); wrap.append(docs); updateProgress();
   const forms = pvNode("section", "", "guide-section");
   forms.id = `${procedure.procedureId}-forms`;
-  forms.append(pvNode("h3", "2. 様式・記載例を開く"));
+  forms.append(pvNode(`h${headingLevel + 1}`, "2. 様式・記載例を開く"));
   const downloads = pvNode("div", "", "download-list");
   procedure.forms.forEach(f => downloads.append(officialLink(f.label, f.url, "download-link")));
   forms.append(downloads, pvNode("p", "奈良県が公開する公式ファイルを別タブで開きます。取得にはインターネット接続が必要です。ファイルが開かない場合は、下の掲載元ページから最新版を確認してください。", "support-text"), officialLink("奈良県の掲載元ページ", procedure.source));
   wrap.append(forms);
   const submit = pvNode("section", "", "guide-section");
   submit.id = `${procedure.procedureId}-submit`;
-  submit.append(pvNode("h3", "3. 提出する"));
+  submit.append(pvNode(`h${headingLevel + 1}`, "3. 提出する"));
   const dl = pvNode("dl", "", "submission-list");
   for (const [label, value] of [["提出部数", SUBMISSION_GUIDE.copies], ["提出方法", SUBMISSION_GUIDE.method], ["郵送時", SUBMISSION_GUIDE.post], ["手数料", procedure.fee], ["提出先", `${SUBMISSION_GUIDE.office}\n${SUBMISSION_GUIDE.address}`]]) { dl.append(pvNode("dt", label), pvNode("dd", value)); }
   const phone = pvNode("a", `${SUBMISSION_GUIDE.phone}（ナビダイヤル）`); phone.href = `tel:${SUBMISSION_GUIDE.phone}`;
@@ -3452,7 +3372,7 @@ function renderProcedureGuide(procedure, { facts = {}, checks = {}, onFact, onCh
   submit.append(dl, officialLink("県の受付・提出方法の案内", NARA_PAGES.index)); wrap.append(submit);
   const source = pvNode("details", "", "support-details source-details");
   source.append(pvNode("summary", "根拠・情報の確認日"), pvNode("p", `法令上の手続き：${procedure.basis}`), pvNode("p", "添付書類一覧・提出部数・提出方法・事前連絡は奈良県の提出実務の案内です。施設条件により追加資料が必要な場合があります。"), pvNode("p", `案内データ確認日：${PROCEDURE_CHECKED_AT}。条文APIを更新しても、この案内・判定条件は自動更新されません。`), officialLink("根拠となる奈良県の案内", procedure.source));
-  wrap.append(source);
+  wrap.append(source, pvNode("p", `案内データ確認日：${PROCEDURE_CHECKED_AT} / 奈良県の公開案内に基づく参考情報`, "print-only guide-print-date"));
   if (onRelated) { const btn = pvNode("button", "変更・廃止や保安担当者の手続きも調べる", "btn-secondary no-print"); btn.type = "button"; btn.addEventListener("click", onRelated); wrap.append(btn); }
   return wrap;
 }
@@ -3507,8 +3427,9 @@ function storageWarning() {
   el.hidden = false; el.textContent = "このブラウザーでは端末内保存が使えません。案内は利用できますが、閉じる前に印刷・PDF保存してください。";
 }
 function currentDraft() {
+  navigationState.preparations = trimPreparations(navigationState.preparations);
   return { version: PROCEDURE_VERSION, savedAt: new Date().toISOString(), mode: appState.mode,
-    diag: { actionType: appState.diag.actionType, gasCategory: appState.diag.gasCategory, stepIndex: appState.diag.stepIndex, answers: appState.diag.answers, finished: Boolean(appState.diag.result) },
+    diag: { actionType: appState.diag.actionType, gasCategory: appState.diag.gasCategory, stepIndex: appState.diag.stepIndex, answers: appState.diag.answers, finished: Boolean(appState.diag.result), unconfirmedResult: appState.diag.result?.verdict === "needs_confirmation" ? appState.diag.result : null },
     nav: { purpose: navigationState.purpose, answers: navigationState.answers, stepIndex: navigationState.stepIndex, finished: Boolean(navigationState.result), selectedId: navigationState.selectedId, returnMode: navigationState.returnMode, caseId: navigationState.caseId, preparations: navigationState.preparations },
   };
 }
@@ -3726,12 +3647,16 @@ async function answerStep(step, value) {
   await finalizeDiagnosisResult();
 }
 
+function diagnosisRegulationLabel() {
+  return appState.diag.actionType === "storage" && appState.diag.gasCategory === "refrigeration" ? "冷凍用ガス(一般則)" : REGULATION_LABELS[appState.diag.gasCategory];
+}
+
 function renderDiagBreadcrumb() {
   breadcrumbEl.replaceChildren(crumbButton("ホーム", navigateHome), crumbSep(), crumbCurrent("新しく始める"));
   if (appState.diag.actionType) {
     breadcrumbEl.append(crumbSep(), crumbButton(ACTIVITY_LABELS[appState.diag.actionType], () => selectActionType(ACTION_TYPES.find(a => a.id === appState.diag.actionType))));
   }
-  if (appState.diag.gasCategory) breadcrumbEl.append(crumbSep(), crumbCurrent(REGULATION_LABELS[appState.diag.gasCategory]));
+  if (appState.diag.gasCategory) breadcrumbEl.append(crumbSep(), crumbCurrent(diagnosisRegulationLabel()));
 }
 
 function renderDiagStage() {
@@ -3944,6 +3869,10 @@ function renderCitationCard(citation) {
   toggle.setAttribute("aria-expanded", String(expanded));
   toggle.addEventListener("click", () => toggleCitation(citation));
   card.appendChild(toggle);
+  if (citation.condition) {
+    card.append(navigationText("p", citation.condition, "note-box"));
+    if (citation.procedureId) card.append(navigationButton("該当する場合の様式・必要書類", () => openProcedure(citation.procedureId), "btn-link"));
+  }
 
   if (expanded) {
     const body = document.createElement("div");
@@ -4121,6 +4050,7 @@ function renderAnswerSummary(lifecycle) {
   const steps = lifecycle ? getLifecycleSteps(state.purpose, state.answers) : getStepsForGasCategory(state.actionType, state.gasCategory, state.answers);
   const details = document.createElement("details"); details.className = "support-details answer-summary"; details.dataset.disclosure = lifecycle ? "flow-answers" : "new-answers";
   details.append(navigationText("summary", "回答内容を確認・修正する"));
+  if (!lifecycle && state.gasCategory) details.append(navigationText("p", `${ACTIVITY_LABELS[state.actionType]} / ${diagnosisRegulationLabel()}`));
   for (const [index, step] of steps.entries()) {
     if (!(step.id in state.answers)) continue;
     const row = navigationText("div", "", "answer-row");
@@ -4139,12 +4069,13 @@ function renderGuide(procedure) {
   const context = isLifecycle ? navigationState.answers : appState.mode === "diagnosis" ? { activity: appState.diag.actionType, regulation: appState.diag.gasCategory, answers: appState.diag.answers } : {};
   const scope = `${navigationState.caseId}:${procedure.procedureId}:${JSON.stringify(context)}`;
   const state = navigationState.preparations[scope] ||= { facts: {}, checks: {} };
+  state.lastUsedAt = Date.now();
   const facts = { ...(isLifecycle ? lifecycleFacts(navigationState.answers) : {}), ...state.facts };
   return renderProcedureGuide(procedure, {
-    facts, checks: state.checks,
+    facts, checks: state.checks, headingLevel: appState.mode === "detail" ? 2 : 3,
     contextLabel: isLifecycle ? `${ACTIVITY_LABELS[navigationState.answers.activity] || ""} / ${REGULATION_LABELS[navigationState.answers.regulation] || ""}` : "",
-    onFact: (key, value, focusId) => { state.facts[key] = value; for (const doc of procedure.documents) if (doc.fact === key) delete state.checks[doc.id]; render(); document.getElementById(focusId)?.focus({ preventScroll: true }); },
-    onCheck: (key, value) => { state.checks[key] = value; persistDraft(); },
+    onFact: (key, value, focusId) => { state.facts[key] = value; for (const doc of procedure.documents) if (doc.kind === "conditional" && documentFactKey(doc) === key) delete state.checks[doc.id]; render(); document.getElementById(focusId)?.focus({ preventScroll: true }); },
+    onCheck: (key, value) => { state.lastUsedAt = Date.now(); state.checks[key] = value; persistDraft(); },
     onRelated: navigateHome,
   });
 }
@@ -4172,7 +4103,7 @@ function resumeDraft() {
   }
   const n = saved.nav || {}; Object.assign(navigationState, { purpose: n.purpose, answers: n.answers || {}, stepIndex: n.stepIndex || 0, selectedId: n.selectedId, returnMode: n.returnMode, caseId: n.caseId || "restored", preparations: n.preparations || {}, result: n.finished ? evaluateLifecycle(n.purpose, n.answers) : null });
   const d = saved.diag || {};
-  Object.assign(appState.diag, { actionType: d.actionType, gasCategory: d.gasCategory, stepIndex: d.stepIndex || 0, answers: d.answers || {}, result: d.finished && d.actionType && d.gasCategory ? evaluateDiagnosis(d.actionType, d.gasCategory, d.answers) : null });
+  Object.assign(appState.diag, { actionType: d.actionType, gasCategory: d.gasCategory, stepIndex: d.stepIndex || 0, answers: d.answers || {}, result: d.unconfirmedResult?.verdict === "needs_confirmation" ? d.unconfirmedResult : d.finished && d.actionType && d.gasCategory ? evaluateDiagnosis(d.actionType, d.gasCategory, d.answers) : null });
   appState.mode = ["diagnosis", "lifecycle", "detail", "catalogue"].includes(saved.mode) ? saved.mode : "home";
   render();
 }
