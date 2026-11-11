@@ -36,7 +36,7 @@ try {
     const page = await context.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
     await context.route('https://laws.e-gov.go.jp/**', route => route.abort());
     await page.goto(url);
-    await page.getByRole('heading', { name: /必要な手続きから/ }).waitFor();
+    await page.getByRole('heading', { name: /手続きを探す/ }).waitFor();
     check(await page.locator('.purpose-option').count() === 6, 'ホームの六つの目的');
     check(!await page.locator('.history-panel').evaluate(e => e.open), '履歴は折りたたみ');
     await page.getByRole('button', { name: /^新しく始める/ }).click();
@@ -65,7 +65,7 @@ try {
     check(await page.locator('.mode-tabs').evaluate(e => getComputedStyle(e).display === 'none'), '印刷にナビ操作を含めない');
     await page.evaluate(() => window.dispatchEvent(new Event('afterprint'))); await page.emulateMedia({ media: 'screen' });
     await page.locator('.mode-tab[data-mode="home"]').click();
-    await page.getByRole('button', { name: /^施設・ガス・会社情報/ }).click();
+    await page.getByRole('button', { name: /^設備・ガス等を変更/ }).click();
     for (const text of ['製造', '一般則', '第二種製造者（届出）', '施設・設備の工事（取替え・撤去等）', '独立した設備の撤去のみ', 'はい', 'はい']) await page.getByRole('button', { name: text, exact: true }).click();
     check(await page.locator('[data-procedure-id="minor-report"]').count() === 1, '第二種の軽微変更でも県報告へ案内');
     await page.locator('.answer-summary summary').click(); await page.locator('.answer-row').filter({ hasText: '現在の許可・届出区分は？' }).getByRole('button', { name: '修正' }).click();
@@ -83,7 +83,7 @@ try {
     check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), '200%拡大で横にはみ出さない');
     await page.evaluate(() => document.documentElement.style.zoom = '1');
     await page.locator('.mode-tab[data-mode="home"]').focus(); await page.keyboard.press('Enter');
-    check(await page.getByRole('heading', { name: /必要な手続きから/ }).isVisible(), 'キーボードからホームへ移動');
+    check(await page.getByRole('heading', { name: /手続きを探す/ }).isVisible(), 'キーボードからホームへ移動');
     // 現行データとは別の架空の法令を利用し、更新失敗時のキャッシュ保全を検証。
     await context.unroute('https://laws.e-gov.go.jp/**');
     await context.route('https://laws.e-gov.go.jp/**', route => route.fulfill({ json: fixture }));
@@ -116,7 +116,7 @@ try {
   const blockedContext = await browser.newContext();
   await blockedContext.addInitScript(() => Object.defineProperty(window, 'indexedDB', { get() { throw new Error('検証用: 保存禁止'); } }));
   const blockedPage = await blockedContext.newPage(); await blockedPage.goto(published);
-  await blockedPage.getByRole('heading', { name: /必要な手続きから/ }).waitFor();
+  await blockedPage.getByRole('heading', { name: /手続きを探す/ }).waitFor();
   check(await blockedPage.locator('#storage-status').isVisible(), '保存できない場合の継続案内');
   await blockedPage.locator('.mode-tab[data-mode="catalogue"]').click(); await blockedPage.locator('.procedure-row').first().click();
   check(await blockedPage.locator('.download-link').count() > 0, '保存禁止でも手続き資料を利用できる');

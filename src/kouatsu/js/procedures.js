@@ -1,7 +1,7 @@
 // 奈良県の公開案内・添付書類一覧と各規則を照合した手続き台帳。
 // 確認日と版は条文APIの取得日とは独立して管理する。自動更新を意味しない。
 export const PROCEDURE_VERSION = "2026-09-19.1";
-export const PROCEDURE_CHECKED_AT = "2026-09-19";
+export const PROCEDURE_CHECKED_AT = "2026-11-11";
 export const REGULATION_LABELS = { general: "一般則", lpgas: "液石則", refrigeration: "冷凍則" };
 export const ACTIVITY_LABELS = { manufacture: "製造", storage: "貯蔵", sales: "販売", consumption: "消費" };
 export const PURPOSES = [

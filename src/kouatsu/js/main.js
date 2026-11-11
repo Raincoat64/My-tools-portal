@@ -1,4 +1,4 @@
-import { TARGET_LAWS, findLawMeta } from "./constants.js";
+import { TARGET_LAWS, BROWSABLE_LAWS, REVIEWED_LAWS, LAW_CHECKED_AT, lawRevisionAssessment, findLawMeta } from "./constants.js";
 import { fetchLawData } from "./api.js";
 import { buildChapters, getMainProvision, getLawTitle, findArticleByNum } from "./lawTree.js";
 import { renderArticle } from "./render.js";
@@ -54,6 +54,7 @@ const navigationState = { purpose: null, answers: {}, stepIndex: 0, result: null
 let draftReady = false;
 let saveQueue = Promise.resolve();
 const lawFetchedAt = new Map();
+const loadedLawRevisions = new Map();
 let citationRenderIndex = 0;
 
 function navigationButton(text, handler, className = "btn-secondary") {
@@ -114,19 +115,35 @@ async function loadLawData(lawMeta, { forceRefresh = false } = {}) {
   try { cached = await getCachedLaw(lawMeta.lawId); } catch { storageWarning(); }
   if (cached && !forceRefresh) {
     lawFetchedAt.set(lawMeta.lawId, cached.fetchedAt);
+    loadedLawRevisions.set(lawMeta.lawId, cached.data.revision_info);
     return cached.data;
   }
   try {
     const data = await fetchLawData(lawMeta.lawId);
     lawFetchedAt.set(lawMeta.lawId, new Date().toISOString());
     try { await putCachedLaw(lawMeta.lawId, data, data?.revision_info?.updated || null); } catch { storageWarning(); }
+    loadedLawRevisions.set(lawMeta.lawId, data.revision_info);
     return data;
   } catch (error) {
     if (!cached) throw error;
     lawFetchedAt.set(lawMeta.lawId, cached.fetchedAt);
     showToast("最新版を取得できませんでした。取得日を確認のうえ、保存済み条文を参照してください。", true);
+    loadedLawRevisions.set(lawMeta.lawId, cached.data.revision_info);
     return cached.data;
   }
+}
+
+function renderLawStatus(lawId, data) {
+  const status = navigationText("div", "", "law-status");
+  const revision = data?.revision_info || loadedLawRevisions.get(lawId);
+  const assessment = lawRevisionAssessment(lawId, revision);
+  const date = lawFetchedAt.get(lawId);
+  status.append(navigationText("span", `条文取得：${date ? new Date(date).toLocaleString("ja-JP") : "未取得"}`), navigationText("span", `案内確認：${PROCEDURE_CHECKED_AT}`));
+  if (revision?.amendment_enforcement_date) status.append(navigationText("span", `施行日：${revision.amendment_enforcement_date}`));
+  if (assessment !== "match") status.append(navigationText("span", assessment === "different" ? "確認済みの案内と条文の版が異なります。改正内容を公式原文で確認してください。" : "条文の版を照合できません。現行版はe-Govで確認してください。", "law-warning"));
+  else status.append(navigationText("span", "案内の確認済み版と一致"));
+  status.append(officialLink("e-Gov原文", `https://laws.e-gov.go.jp/law/${lawId}`));
+  return status;
 }
 
 // --- モード切替 ---
@@ -138,7 +155,7 @@ function setMode(mode) {
 
 function updateModeTabs() {
   modeTabsEl.querySelectorAll(".mode-tab").forEach((btn) => {
-    const active = btn.dataset.mode === appState.mode;
+    const active = btn.dataset.mode === appState.mode || (btn.dataset.mode === "home" && ["diagnosis", "lifecycle"].includes(appState.mode)) || (btn.dataset.mode === "catalogue" && appState.mode === "detail");
     btn.classList.toggle("active", active);
     if (active) btn.setAttribute("aria-current", "page"); else btn.removeAttribute("aria-current");
   });
@@ -150,6 +167,8 @@ modeTabsEl.querySelectorAll(".mode-tab").forEach((btn) => {
 
 function render() {
   citationRenderIndex = 0;
+  stageEl.dataset.view = appState.mode;
+  const previousScroll = stageEl.scrollTop;
   const activeId = document.activeElement?.id;
   const openDetails = [...stageEl.querySelectorAll("details[open][data-disclosure]")].map(el => el.dataset.disclosure);
   updateModeTabs();
@@ -169,8 +188,8 @@ function render() {
   }
   for (const el of stageEl.querySelectorAll("details[data-disclosure]")) if (openDetails.includes(el.dataset.disclosure)) el.open = true;
   const focusTarget = activeId && document.getElementById(activeId);
-  if (focusTarget && stageEl.contains(focusTarget)) focusTarget.focus({ preventScroll: true });
-  else { const heading = stageEl.querySelector("h2"); if (heading) { heading.tabIndex = -1; heading.focus(); } }
+  if (focusTarget && stageEl.contains(focusTarget)) { focusTarget.focus({ preventScroll: true }); stageEl.scrollTop = previousScroll; }
+  else { stageEl.scrollTop = 0; const heading = stageEl.querySelector("h2"); if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); } }
   if (appState.mode !== "home" && appState.mode !== "browse") persistDraft();
 }
 
@@ -519,7 +538,7 @@ function renderCitationCard(citation) {
       body.innerHTML = `<div class="error-box">該当条文が見つかりませんでした。</div>`;
     } else {
       body.innerHTML = renderArticle(cached.article.node);
-      body.prepend(navigationText("p", `条文取得日：${lawFetchedAt.get(citation.lawId) ? new Date(lawFetchedAt.get(citation.lawId)).toLocaleString("ja-JP") : "不明"} ／ 案内データ確認日：${PROCEDURE_CHECKED_AT}`, "support-text"));
+      body.prepend(renderLawStatus(citation.lawId));
     }
     card.appendChild(body);
   }
@@ -577,31 +596,43 @@ async function restoreDiagnosisFromHistory(entry) {
    ========================================================= */
 
 function renderNavigationHome() {
-  const wrap = document.createElement("div");
+  const wrap = navigationText("div", "", "home-view");
   const intro = navigationText("div", "", "home-intro");
-  intro.append(navigationText("h2", "必要な手続きから、\n申請の準備まで。"), navigationText("p", "質問に答えて、必要な届出・申請、様式、添付書類を確認できます。", "home-lead"));
+  intro.append(navigationText("h2", "手続きを探す"), navigationText("p", "行いたいこと、または手続き名から選んでください。", "home-lead"));
   wrap.append(intro);
   if (navigationState.saved && (navigationState.saved.diag?.actionType || navigationState.saved.nav?.purpose || navigationState.saved.nav?.selectedId)) {
     const resume = navigationText("div", "", "resume-strip");
-    resume.append(navigationText("span", `保存した回答・準備状況があります（${new Date(navigationState.saved.savedAt).toLocaleString("ja-JP")}）`), navigationButton("続きから再開", resumeDraft));
-    wrap.append(resume);
+    resume.append(navigationText("span", `保存した回答・準備状況（${new Date(navigationState.saved.savedAt).toLocaleString("ja-JP")}）`), navigationButton("続きから再開", resumeDraft));
+    intro.append(resume);
   }
+  const columns = navigationText("div", "", "home-columns");
   const entry = navigationText("section", "", "home-entry");
-  entry.append(navigationText("h3", "質問に答えて探す"), navigationText("p", "今、行いたいことを選んでください。", "support-text"));
+  entry.append(navigationText("h3", "目的から選ぶ"));
   const purposes = navigationText("div", "", "purpose-grid");
   for (const purpose of PURPOSES) {
-    const b = navigationButton("", () => beginPurpose(purpose.id), `purpose-option${purpose.id === "new" ? " primary-purpose" : ""}`);
-    b.append(navigationText("span", purpose.label, "pick-title"), navigationText("span", purpose.help, "pick-sub"), navigationText("span", "→", "purpose-arrow"));
-    purposes.append(b);
+    const button = navigationButton("", () => beginPurpose(purpose.id), `purpose-option${purpose.id === "new" ? " primary-purpose" : ""}`);
+    const shortLabel = { change: "設備・ガス等を変更する", inspection: "検査・製造開始の手続き", personnel: "保安担当者・規程の届出" }[purpose.id] || purpose.label;
+    button.append(navigationText("span", shortLabel, "pick-title"), navigationText("span", purpose.help, "pick-sub"));
+    const arrow = navigationText("span", "→", "purpose-arrow"); arrow.setAttribute("aria-hidden", "true"); button.append(arrow);
+    purposes.append(button);
   }
-  entry.append(purposes); wrap.append(entry);
+  entry.append(purposes); columns.append(entry);
+  const side = navigationText("div", "", "home-side");
   const direct = navigationText("section", "", "home-search");
-  direct.append(navigationText("h3", "手続き名・様式から探す"), navigationText("p", "手続きが分かっている方は、名前からすぐに資料を開けます。"));
-  direct.append(renderSearchForm(() => setMode("catalogue")));
-  wrap.append(direct);
+  direct.append(navigationText("h3", "手続き名・様式から検索"), renderSearchForm(() => setMode("catalogue")));
+  side.append(direct);
+  const reference = navigationText("section", "", "home-reference");
+  reference.append(navigationText("h3", "法令・基準を確認"));
+  const links = navigationText("div", "", "reference-links");
+  links.append(navigationButton("法令の条文を開く →", () => setMode("browse"), "btn-link"), officialLink("例示基準・運用解釈（経済産業省）", METI_REFERENCE.url), officialLink("奈良県の申請案内", NARA_PAGES.index));
+  reference.append(links); side.append(reference); columns.append(side); wrap.append(columns);
   const support = document.createElement("details"); support.className = "support-details";
-  support.append(navigationText("summary", "対象範囲・情報の確認日"), navigationText("p", `案内データ確認日：${PROCEDURE_CHECKED_AT}。奈良県の製造・貯蔵・販売・消費を対象とします。申請の送信機能はありません。コンビナート則・特別な認定制度等の個別判断は対象外です。`), navigationText("p", "県が事前連絡や検査日程調整を求める手続きは、その工程を案内します。条文の取得日と、固定の案内・判定条件の確認日は別です。"), officialLink("奈良県消防救急課の申請案内", NARA_PAGES.index));
-  wrap.append(support);
+  support.append(navigationText("summary", "対象範囲・情報の確認日"), navigationText("p", `案内データ確認日：${PROCEDURE_CHECKED_AT}。一般則・液石則・冷凍則の製造・貯蔵・販売・消費を対象とします。コンビナート則・特別な認定制度等の個別判断は対象外です。`), navigationText("p", `法令の現行版確認：${LAW_CHECKED_AT}。条文を取得しても、固定の案内・判定条件は自動更新されません。`));
+  const revisions = navigationText("ul", "", "law-review-list");
+  for (const law of REVIEWED_LAWS) {
+    const item = document.createElement("li"); item.append(officialLink(law.shortName, `https://laws.e-gov.go.jp/law/${law.lawId}`), document.createTextNode(`${law.enforcementDate}施行版`)); revisions.append(item);
+  }
+  support.append(revisions); wrap.append(support);
   return wrap;
 }
 
@@ -616,7 +647,7 @@ function renderSearchForm(onSubmit) {
 }
 
 function renderCatalogue() {
-  const wrap = document.createElement("div");
+  const wrap = navigationText("div", "", "catalogue-view");
   breadcrumbEl.append(crumbSep(), crumbCurrent("手続き・様式を探す"));
   wrap.append(navigationText("h2", "手続き・様式を探す"), renderSearchForm(render));
   const filters = navigationText("div", "", "filter-row");
@@ -825,7 +856,7 @@ async function selectArticle(article) {
 }
 
 async function restoreArticleFromHistory(entry) {
-  const lawMeta = TARGET_LAWS.find((l) => l.lawId === entry.lawId);
+  const lawMeta = BROWSABLE_LAWS.find((l) => l.lawId === entry.lawId);
   if (!lawMeta) {
     showToast("対象法令の情報が見つかりませんでした。", true);
     return;
@@ -924,7 +955,7 @@ function renderBrowseBreadcrumb() {
 function renderBrowseStage() {
   stageEl.innerHTML = "";
   const b = appState.browse;
-  if (b.law && lawFetchedAt.has(b.law.lawId)) stageEl.append(navigationText("p", `条文取得日：${new Date(lawFetchedAt.get(b.law.lawId)).toLocaleString("ja-JP")} ／ 案内データ確認日：${PROCEDURE_CHECKED_AT}`, "support-text"));
+  if (b.law) stageEl.append(renderLawStatus(b.law.lawId, b.lawData));
 
   if (!b.law) {
     stageEl.appendChild(renderLawStage());
@@ -949,12 +980,12 @@ function renderLawStage() {
   const wrap = document.createElement("div");
   wrap.className = "stage";
   const h2 = document.createElement("h2");
-  h2.textContent = "対象法令を選択してください";
+  h2.textContent = "法令・例示基準";
   wrap.appendChild(h2);
 
   const grid = document.createElement("div");
   grid.className = "card-grid";
-  for (const law of TARGET_LAWS) {
+  for (const law of BROWSABLE_LAWS) {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "pick-card";
@@ -963,6 +994,9 @@ function renderLawStage() {
     grid.appendChild(card);
   }
   wrap.appendChild(grid);
+  const references = navigationText("section", "", "support-details");
+  references.append(navigationText("h3", "例示基準・運用解釈"), officialLink("経済産業省の公式掲載ページ", METI_REFERENCE.url), navigationText("p", "例示基準の現行資料は掲載元で確認してください。"));
+  wrap.append(references);
   return wrap;
 }
 
@@ -1153,6 +1187,8 @@ function showLegacyHistoryNotice() {
 }
 
 async function initializeNavigator() {
+  document.getElementById("review-date").textContent = PROCEDURE_CHECKED_AT;
+  document.getElementById("review-date").dateTime = PROCEDURE_CHECKED_AT;
   showLegacyHistoryNotice();
   try { navigationState.saved = await readDraft(); } catch { storageWarning(); }
   draftReady = true; render(); renderHistory();

@@ -3,852 +3,356 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="奈良県の高圧ガス手続き、公式様式、必要書類とe-Govの根拠条文を確認する参考ツール。" />
   <title>高圧ガス手続きナビ | 奈良県向け</title>
   <style>
 :root {
-  color-scheme: light dark;
-  --bg: #f5f6f4;
-  --panel-bg: #ffffff;
-  --border: #d8dcd4;
-  --text: #1f2a20;
-  --text-muted: #5c6b5e;
-  --accent: #2f6b3a;
-  --accent-contrast: #ffffff;
-  --chip-bg: #eef3ec;
-  --danger: #a5342a;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #141814;
-    --panel-bg: #1b201b;
-    --border: #333c33;
-    --text: #e7ece6;
-    --text-muted: #a3ada2;
-    --accent: #6bb37a;
-    --accent-contrast: #0d140e;
-    --chip-bg: #232b23;
-    --danger: #e08579;
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  }
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.7;
-}
-
-a {
-  color: var(--accent);
-}
-
-.app-header {
-  padding: 20px 24px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel-bg);
-}
-
-.app-header h1 {
-  margin: 0 0 6px;
-  font-size: 1.4rem;
-}
-
-.app-sub {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.app-layout {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 16px;
-  max-width: 1280px;
-  margin: 16px auto;
-  padding: 0 16px;
-  align-items: start;
-}
-
-@media (max-width: 860px) {
-  .app-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-.main-panel {
-  background: var(--panel-bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: var(--shadow);
-  min-height: 60vh;
-  overflow: hidden;
-}
-
-.mode-tabs {
-  display: flex;
-  gap: 2px;
-  padding: 10px 10px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.mode-tab {
-  border: none;
-  background: none;
-  font: inherit;
-  font-size: 0.92rem;
-  color: var(--text-muted);
-  padding: 10px 16px;
-  cursor: pointer;
-  border-radius: 8px 8px 0 0;
-}
-
-.mode-tab:hover {
-  background: var(--chip-bg);
-}
-
-.mode-tab.active {
-  color: var(--accent);
-  font-weight: 700;
-  background: var(--chip-bg);
-}
-
-.disclaimer {
-  margin: 0 16px 12px;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
-  border-radius: 0 8px 8px 0;
-  background: var(--chip-bg);
-  color: var(--text-muted);
-  font-size: 0.8rem;
-}
-
-.diag-help {
-  color: var(--text-muted);
-  font-size: 0.82rem;
-  margin: -6px 0 12px;
-}
-
-.diag-number-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 14px;
-}
-
-.diag-number-row input[type="number"] {
-  font: inherit;
-  font-size: 1rem;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--panel-bg);
-  color: var(--text);
-  width: 160px;
-}
-
-.diag-number-row .unit {
-  color: var(--text-muted);
-}
-
-.diag-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.btn-primary {
-  font: inherit;
-  padding: 8px 18px;
-  border: none;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--accent-contrast);
-  cursor: pointer;
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.verdict-banner {
-  padding: 14px 16px;
-  border-radius: 10px;
-  margin-bottom: 14px;
-  border: 1px solid var(--border);
-}
-
-.verdict-banner.permit {
-  background: color-mix(in srgb, #c0392b 12%, var(--panel-bg));
-  border-color: #c0392b;
-}
-
-.verdict-banner.notification {
-  background: color-mix(in srgb, #2f6b8f 12%, var(--panel-bg));
-  border-color: #2f6b8f;
-}
-
-.verdict-banner.none {
-  background: color-mix(in srgb, var(--accent) 12%, var(--panel-bg));
-  border-color: var(--accent);
-}
-
-.verdict-banner.other_law {
-  background: color-mix(in srgb, #8a6d3b 12%, var(--panel-bg));
-  border-color: #8a6d3b;
-}
-
-.verdict-title {
-  font-weight: 700;
-  font-size: 1.05rem;
-  margin-bottom: 4px;
-}
-
-.verdict-summary {
-  color: var(--text-muted);
-}
-
-.result-block {
-  margin: 14px 0;
-}
-
-.result-block h3 {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  margin: 0 0 8px;
-}
-
-.citation-card {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  margin-bottom: 8px;
-  overflow: hidden;
-}
-
-.citation-toggle {
-  width: 100%;
-  text-align: left;
-  background: var(--panel-bg);
-  border: none;
-  font: inherit;
-  padding: 10px 12px;
-  cursor: pointer;
-  color: var(--text);
-}
-
-.citation-toggle:hover {
-  background: var(--chip-bg);
-}
-
-.citation-body {
-  padding: 4px 12px 12px;
-  border-top: 1px solid var(--border);
-}
-
-.note-box {
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--chip-bg);
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  margin: 10px 0;
-}
-
-.breadcrumb {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.9rem;
-}
-
-.breadcrumb button {
-  background: none;
-  border: none;
-  color: var(--accent);
-  cursor: pointer;
-  font: inherit;
-  padding: 4px 6px;
-  border-radius: 6px;
-}
-
-.breadcrumb button:hover {
-  background: var(--chip-bg);
-}
-
-.breadcrumb .crumb-current {
-  color: var(--text-muted);
-  padding: 4px 6px;
-}
-
-.breadcrumb .crumb-sep {
-  color: var(--text-muted);
-}
-
-.stage {
-  padding: 16px;
-}
-
-.stage h2 {
-  margin: 0 0 12px;
-  font-size: 1rem;
-  color: var(--text-muted);
-}
-
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
-}
-
-.pick-card {
-  text-align: left;
-  border: 1px solid var(--border);
-  background: var(--panel-bg);
-  border-radius: 8px;
-  padding: 12px 14px;
-  cursor: pointer;
-  font: inherit;
-  color: var(--text);
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.pick-card:hover {
-  border-color: var(--accent);
-  background: var(--chip-bg);
-}
-
-.pick-card .pick-title {
-  font-weight: 600;
-  display: block;
-}
-
-.pick-card .pick-sub {
-  display: block;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-
-.pick-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.pick-list .pick-card {
-  padding: 10px 14px;
-}
-
-.loading,
-.error-box,
-.empty-box {
-  padding: 24px 8px;
-  color: var(--text-muted);
-  text-align: center;
-}
-
-.error-box {
-  color: var(--danger);
-}
-
-.toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 8px;
-}
-
-.btn-link {
-  background: none;
-  border: none;
-  color: var(--accent);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.82rem;
-  padding: 4px 6px;
-}
-
-.btn-link:hover {
-  text-decoration: underline;
-}
-
-/* --- 条文表示 --- */
-
-.article {
-  padding: 4px 4px 20px;
-}
-
-.article-head {
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid var(--accent);
-}
-
-.article-caption {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.article-title {
-  display: block;
-  font-size: 1.15rem;
-  font-weight: 700;
-}
-
-.paragraph {
-  margin: 10px 0;
-}
-
-.paragraph-caption {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.paragraph-line {
-  display: flex;
-  gap: 6px;
-  align-items: baseline;
-}
-
-.para-num {
-  min-width: 1.6em;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.para-text,
-.item-text,
-.list-line {
-  white-space: pre-wrap;
-}
-
-.item-list,
-.subitem-list {
-  margin: 4px 0 4px 1.8em;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.subitem-list.level-2 {
-  margin-left: 1.6em;
-}
-
-.subitem-list.level-3 {
-  margin-left: 1.6em;
-}
-
-.item-line {
-  display: flex;
-  gap: 6px;
-  align-items: baseline;
-}
-
-.item-title {
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.list-block {
-  margin: 6px 0 6px 1.8em;
-  color: var(--text);
-}
-
-.remarks {
-  margin: 10px 0 10px 1.2em;
-  padding: 8px 12px;
-  border-left: 3px solid var(--border);
-  background: var(--chip-bg);
-  border-radius: 0 6px 6px 0;
-}
-
-.remarks-label {
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.generic-block {
-  margin: 6px 0;
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-.law-table {
-  border-collapse: collapse;
-  margin: 10px 0 10px 1.2em;
-  font-size: 0.88rem;
-}
-
-.law-table td {
-  border: 1px solid var(--border);
-  padding: 4px 8px;
-  vertical-align: top;
-}
-
-/* --- 履歴パネル --- */
-
-.history-panel {
-  background: var(--panel-bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: var(--shadow);
-  padding: 14px;
-  max-height: 80vh;
-  overflow-y: auto;
-  position: sticky;
-  top: 16px;
-}
-
-.history-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.history-header h2 {
-  margin: 0;
-  font-size: 0.95rem;
-}
-
-.history-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.history-item {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
-  cursor: pointer;
-  font-size: 0.82rem;
-  position: relative;
-}
-
-.history-item:hover {
-  border-color: var(--accent);
-  background: var(--chip-bg);
-}
-
-.history-item .h-law {
-  display: inline-block;
-  font-size: 0.72rem;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--chip-bg);
-  color: var(--accent);
-  margin-bottom: 4px;
-}
-
-.history-item .h-title {
-  display: block;
-  font-weight: 600;
-}
-
-.history-item .h-time {
-  display: block;
-  color: var(--text-muted);
-  font-size: 0.72rem;
-  margin-top: 2px;
-}
-
-.history-item .h-delete {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 0.75rem;
-  padding: 2px 4px;
-}
-
-.history-item .h-delete:hover {
-  color: var(--danger);
-}
-
-.history-empty {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-.toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--text);
-  color: var(--bg);
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-size: 0.85rem;
-  box-shadow: var(--shadow);
-}
-
-/* 手続きナビ：申請準備を主役にする、明るい業務画面。 */
-:root {
   color-scheme: light;
-  --bg: #f3f5f4;
+  --bg: #f4f6f8;
   --panel-bg: #fff;
-  --border: #cbd5ce;
-  --text: #182d25;
-  --text-muted: #52645a;
-  --accent: #216047;
+  --border: #dce2e8;
+  --text: #202e3d;
+  --text-muted: #586779;
+  --accent: #215e53;
   --accent-contrast: #fff;
-  --chip-bg: #edf4ef;
-  --danger: #a12e26;
+  --chip-bg: #edf5f2;
+  --danger: #b33131;
+  --warning-bg: #fff7e8;
+  --warning-text: #78500b;
   --shadow: none;
 }
-body { font-family: "Yu Gothic UI", "Meiryo", system-ui, sans-serif; font-size: 16px; line-height: 1.8; }
-button, input, select { font: inherit; }
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark; --bg: #141c23; --panel-bg: #1b2630; --border: #364451; --text: #e7edf3; --text-muted: #afbdc9; --accent: #8cd0ba; --accent-contrast: #122a23; --chip-bg: #223a35; --danger: #ffaaa3; --warning-bg: #3b3020; --warning-text: #f2ce8c; }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: "Yu Gothic UI", "Meiryo", system-ui, sans-serif; font-size: 16px; line-height: 1.65; }
+button, input, select { font: inherit; color: inherit; }
 button, select, input:not([type="checkbox"]), summary { min-height: 44px; }
 button, a, summary, input, select { -webkit-tap-highlight-color: transparent; }
-button { color: var(--text); }
-button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #be7510; outline-offset: 3px; }
-a { text-underline-offset: .2em; overflow-wrap: anywhere; }
-p { margin: .6em 0; }
-h2, h3 { line-height: 1.55; }
-[hidden] { display: none !important; }
-.skip-link { position: absolute; left: 16px; top: -100px; z-index: 10; background: white; padding: 8px 16px; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .5; }
+button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #b67512; outline-offset: 3px; }
+a { color: var(--accent); text-underline-offset: .2em; overflow-wrap: anywhere; }
+p { margin: .55em 0; }
+h1, h2, h3 { line-height: 1.5; }
+.skip-link { position: absolute; left: 16px; top: -100px; z-index: 50; background: var(--panel-bg); padding: 8px 16px; }
 .skip-link:focus { top: 8px; }
-.app-header { padding: 22px 24px; border-top: 5px solid var(--accent); }
-.header-inner { max-width: 1080px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
-.app-region { margin: 0 0 2px; font-size: 14px; color: var(--text-muted); }
-.app-header h1 { font-size: 25px; margin: 0; letter-spacing: .02em; }
-.header-inner > a { font-size: 15px; }
-.app-layout { display: block; max-width: 1136px; margin: 24px auto; padding: 0 24px; }
-.main-panel { border-radius: 8px; min-height: 0; overflow: visible; }
-.mode-tabs { padding: 0 24px; gap: 20px; flex-wrap: wrap; }
-.mode-tab { font-size: 16px; padding: 16px 4px 13px; border-radius: 0; border-bottom: 3px solid transparent; }
-.mode-tab.active { border-bottom-color: var(--accent); background: transparent; }
-.mode-tab:hover { background: transparent; color: var(--accent); }
-.breadcrumb { padding: 8px 28px; border-bottom: 0; font-size: 15px; gap: 4px; }
-.breadcrumb button { min-height: 44px; padding: 6px 4px; }
-.stage { padding: 12px 36px 36px; min-width: 0; }
+.app-header { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 28px; background: var(--panel-bg); border-bottom: 1px solid var(--border); }
+.header-brand { display: flex; align-items: center; gap: 12px; }
+.brand-mark { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 9px; background: var(--accent); color: var(--accent-contrast); font-size: 20px; font-weight: 700; }
+.app-header h1 { margin: 0; font-size: 21px; letter-spacing: .025em; }
+.app-region { margin: 0; color: var(--text-muted); font-size: 12px; }
+.official-header-link { font-size: 14px; padding: 8px 0; }
+.app-layout { display: grid; grid-template-columns: 216px minmax(0, 1fr); max-width: 1920px; margin: auto; }
+.app-sidebar { min-width: 0; padding: 24px 16px 16px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 20px; }
+.mode-tabs { display: flex; flex-direction: column; gap: 6px; }
+.mode-tab { border: 1px solid transparent; background: transparent; border-radius: 6px; text-align: left; padding: 10px 12px; color: var(--text-muted); font-size: 15px; white-space: nowrap; }
+.mode-tab:hover { background: var(--panel-bg); color: var(--accent); }
+.mode-tab.active { background: var(--chip-bg); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 28%, var(--border)); font-weight: 700; }
+.nav-symbol { width: 22px; display: inline-block; font-size: 20px; line-height: 1; vertical-align: -1px; margin-right: 6px; }
+.sidebar-meta { margin-top: auto; padding: 16px 12px 0; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 12px; display: flex; flex-direction: column; gap: 2px; }
+.sidebar-meta time { font-size: 14px; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
+.main-panel { min-width: 0; display: flex; flex-direction: column; background: var(--panel-bg); }
+.breadcrumb { flex-shrink: 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding: 4px 28px; min-height: 48px; font-size: 13px; border-bottom: 1px solid var(--border); }
+.breadcrumb button { border: 0; background: transparent; color: var(--accent); padding: 4px; font-size: inherit; min-height: 36px; }
+.breadcrumb button:hover { text-decoration: underline; }
+.crumb-current, .crumb-sep { color: var(--text-muted); }
+.crumb-current { padding: 4px; }
+.stage { min-width: 0; padding: 24px 32px 32px; scroll-padding-block: 20px; scrollbar-gutter: stable; }
 .stage .stage { padding: 0; }
-.stage h2 { margin: 0 0 20px; color: var(--text); font-size: 26px; font-weight: 700; }
+.stage h2 { margin: 0 0 16px; font-size: 24px; letter-spacing: .015em; }
 .stage h2:focus { outline: none; }
-.stage h3 { color: var(--text); font-size: 20px; margin: 0 0 12px; }
-.home-intro { margin: 6px 0 30px; }
-.home-intro h2 { font-size: 36px; white-space: pre-line; letter-spacing: .01em; line-height: 1.5; margin-bottom: 12px; }
-.home-lead { color: var(--text-muted); font-size: 18px; }
-.home-entry { margin-bottom: 32px; }
-.home-entry > h3 { margin-bottom: 0; }
-.purpose-grid { margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
-.purpose-option { position: relative; background: transparent; border: 0; border-bottom: 1px solid var(--border); text-align: left; padding: 20px 32px 20px 0; cursor: pointer; line-height: 1.7; }
-.purpose-option:hover { background: var(--chip-bg); }
-.purpose-option .pick-title { display: block; font-weight: 700; font-size: 18px; }
-.purpose-option .pick-sub { display: block; color: var(--text-muted); font-size: 15px; margin-top: 5px; }
-.purpose-arrow { position: absolute; right: 4px; top: 20px; font-size: 22px; color: var(--accent); }
-.primary-purpose { color: var(--accent); }
-.home-search { background: var(--chip-bg); padding: 24px; border-radius: 6px; margin: 32px 0; }
-.home-search h3 { margin-bottom: 4px; }
-.search-form { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: center; margin-top: 18px; }
-.search-form label { grid-column: 1 / -1; font-weight: 600; }
-.search-form input { min-width: 0; width: 100%; padding: 10px 12px; border: 1px solid #91a297; border-radius: 5px; background: #fff; color: var(--text); }
-.btn-primary, .btn-secondary { min-height: 44px; padding: 10px 20px; border-radius: 5px; line-height: 1.5; font-size: 16px; }
-.btn-primary { border: 1px solid var(--accent); }
-.btn-primary:hover { background: #174d38; }
-.btn-secondary { border: 1px solid #91a297; background: white; color: var(--accent); cursor: pointer; }
+.stage h3 { margin: 0 0 10px; font-size: 18px; }
+.stage > div:not(.home-view):not(.catalogue-view) { max-width: 1440px; margin-inline: auto; }
+.home-intro { margin-bottom: 22px; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 20px; align-items: center; }
+.home-intro h2, .home-intro .home-lead { grid-column: 1; }
+.home-intro .resume-strip { grid-column: 2; grid-row: 1 / 3; margin: 0; padding: 6px 12px; font-size: 12px; }
+.home-intro .resume-strip .btn-secondary { font-size: 13px; padding-inline: 12px; }
+.home-intro h2 { font-size: 25px; margin-bottom: 5px; }
+.home-lead { margin: 0; }
+.home-lead, .support-text, .guide-applicability { color: var(--text-muted); font-size: 14px; }
+.home-columns { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr); gap: 28px; align-items: start; }
+.home-entry > h3, .home-search h3, .home-reference h3 { font-size: 16px; margin-bottom: 12px; }
+.purpose-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.purpose-option { position: relative; text-align: left; padding: 18px 32px 18px 16px; background: var(--panel-bg); border: 1px solid var(--border); border-radius: 7px; line-height: 1.6; min-height: 112px; }
+.purpose-option:hover { border-color: var(--accent); background: var(--chip-bg); }
+.pick-title { display: block; font-weight: 700; }
+.purpose-option .pick-title { font-size: 16px; }
+.pick-sub { display: block; color: var(--text-muted); font-size: 14px; margin-top: 6px; }
+.purpose-arrow { position: absolute; top: 18px; right: 12px; color: var(--accent); }
+.primary-purpose .pick-title { color: var(--accent); }
+.home-side { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.home-search { padding: 20px; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; }
+.search-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+.search-form label { grid-column: 1 / -1; font-size: 14px; color: var(--text-muted); }
+.search-form input { width: 100%; min-width: 0; padding: 8px 12px; border: 1px solid #8c9ca9; border-radius: 5px; background: var(--panel-bg); }
+.home-search .search-form { grid-template-columns: minmax(0, 1fr) auto; }
+.home-search .btn-primary { justify-self: stretch; }
+.btn-primary, .btn-secondary { padding: 9px 18px; border-radius: 5px; font-size: 15px; line-height: 1.5; border: 1px solid var(--accent); }
+.btn-primary { background: var(--accent); color: var(--accent-contrast); }
+.btn-primary:hover { filter: brightness(.9); }
+.btn-secondary { background: var(--panel-bg); color: var(--accent); }
 .btn-secondary:hover { background: var(--chip-bg); }
-.btn-link { font-size: 16px; min-height: 44px; padding: 8px; }
-.pick-list { gap: 12px; margin: 20px 0; max-width: 850px; }
-.pick-card, .pick-list .pick-card { padding: 18px 20px; border-radius: 5px; line-height: 1.7; }
-.pick-card .pick-title { font-size: 18px; }
-.pick-card .pick-sub { font-size: 16px; margin-top: 6px; }
-.card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.diag-help { font-size: 16px; margin: 0 0 20px; max-width: 850px; line-height: 1.9; }
-.diag-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 26px 0 14px; }
-.diag-number-row { flex-wrap: wrap; }
-.diag-number-row input[type="number"] { width: 220px; max-width: 100%; font-size: 20px; }
-.flow-progress { list-style: none; padding: 0; display: flex; margin: 0 0 28px; gap: 24px; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 15px; }
-.flow-progress li { padding: 0 0 12px; }
+.btn-link { padding: 6px 4px; border: 0; background: transparent; color: var(--accent); font-size: 14px; }
+.btn-link:hover { text-decoration: underline; }
+.home-reference { padding: 0 4px; }
+.reference-links { display: flex; flex-direction: column; gap: 0; }
+.reference-links > a { display: flex; align-items: center; min-height: 44px; font-size: 14px; }
+.home-reference .btn-link { display: block; text-align: left; }
+.home-view > .support-details { margin-top: 18px; }
+.resume-strip { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 10px 14px; margin-bottom: 18px; border: 1px solid var(--border); border-left: 3px solid var(--accent); background: var(--chip-bg); font-size: 14px; }
+.support-details { border-top: 1px solid var(--border); margin: 20px 0 0; padding-top: 6px; }
+.support-details summary { cursor: pointer; font-weight: 600; padding-block: 8px; font-size: 14px; }
+.support-details > p { color: var(--text-muted); font-size: 14px; max-width: 80ch; }
+.law-review-list { padding-left: 20px; font-size: 14px; }
+.law-review-list a { margin-right: 8px; }
+.app-footer { display: flex; justify-content: space-between; gap: 16px; padding: 6px 24px; color: var(--text-muted); font-size: 11px; border-top: 1px solid var(--border); }
+.history-panel { border-top: 1px solid var(--border); padding: 10px 4px 0; min-height: 0; }
+.history-panel summary { cursor: pointer; font-size: 13px; font-weight: 600; padding-block: 8px; }
+.history-header { display: flex; justify-content: space-between; align-items: center; }
+.history-header h2 { font-size: 13px; margin: 0; }
+.history-header .btn-link { font-size: 12px; }
+.history-list { margin: 0; padding: 0; list-style: none; max-height: 260px; overflow-y: auto; }
+.history-item { display: flex; border-bottom: 1px solid var(--border); }
+.history-open { flex: 1; min-width: 0; border: 0; background: transparent; text-align: left; padding: 10px 0; }
+.history-open:hover { color: var(--accent); }
+.h-title, .h-time, .h-law { display: block; font-size: 12px; overflow-wrap: anywhere; }
+.h-title { font-weight: 600; }
+.h-time, .h-law, .history-empty { color: var(--text-muted); font-size: 11px; }
+.h-delete { flex-shrink: 0; border: 0; background: transparent; color: var(--text-muted); font-size: 20px; min-width: 32px; }
+.h-delete:hover { color: var(--danger); }
+.card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.pick-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 18px 0; max-width: 1100px; }
+.pick-card { padding: 16px 18px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel-bg); text-align: left; line-height: 1.6; }
+.pick-card:hover { border-color: var(--accent); background: var(--chip-bg); }
+.diag-help { color: var(--text-muted); max-width: 85ch; font-size: 15px; margin-bottom: 20px; white-space: pre-line; }
+.diag-number-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.diag-number-row input { width: 200px; max-width: 100%; padding: 8px 12px; border: 1px solid #8c9ca9; border-radius: 5px; background: var(--panel-bg); font-size: 20px; }
+.diag-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }
+.flow-progress { list-style: none; padding: 0; display: flex; gap: 28px; margin: 0 0 24px; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 14px; }
+.flow-progress li { padding-bottom: 10px; }
 .flow-progress [aria-current] { border-bottom: 3px solid var(--accent); color: var(--accent); font-weight: 700; }
-.progress-label { font-size: 16px; font-weight: 600; color: var(--accent); margin: 0 0 14px; }
-.support-details { border-top: 1px solid var(--border); margin: 24px 0 0; padding: 12px 0; }
-.support-details summary, .history-panel summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
-.support-details > p { max-width: 850px; }
-.support-text, .guide-applicability, .procedure-meta { color: var(--text-muted); font-size: 16px; }
-.resume-strip { padding: 14px 18px; border-left: 4px solid var(--accent); background: var(--chip-bg); display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 28px; }
-.filter-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; margin: 22px 0; }
-.filter-row label { display: flex; flex-direction: column; gap: 5px; min-width: 150px; max-width: 100%; }
-select { padding: 8px 10px; border: 1px solid #91a297; border-radius: 5px; background: white; color: var(--text); max-width: 100%; }
-.procedure-list { border-top: 1px solid var(--border); }
-.procedure-row { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; padding: 20px 8px; cursor: pointer; line-height: 1.7; }
-.procedure-row:hover { background: var(--chip-bg); }
-.procedure-row span { display: block; }
-.procedure-row .pick-title { font-size: 19px; font-weight: 700; color: var(--accent); margin: 4px 0; }
-.procedure-row .pick-sub { color: var(--text-muted); }
-.procedure-meta { margin: 0 0 6px; font-size: 14px; }
-.verdict-banner { border-radius: 5px; padding: 20px 24px; margin-bottom: 24px; }
-.verdict-banner.permit, .verdict-banner.notification, .verdict-banner.none { background: var(--chip-bg); border-color: #95b09f; }
-.verdict-banner.needs_confirmation, .verdict-banner.invalid, .verdict-banner.other_law { background: #fff6e6; border-color: #b68127; }
-.verdict-title { font-size: 21px; }
-.verdict-summary { color: var(--text); }
-.note-box { font-size: 16px; border-radius: 4px; line-height: 1.85; padding: 16px 18px; margin: 16px 0; }
-.procedure-guide { margin: 28px 0; }
-.procedure-guide h2 { font-size: 25px; margin-bottom: 12px; }
-.deadline-box { border-left: 4px solid var(--accent); background: var(--chip-bg); padding: 16px 20px; margin: 20px 0; }
-.deadline-box > p { font-size: 20px; font-weight: 700; margin: 4px 0 0; }
-.contact-step { padding: 18px 20px; background: #fff6e6; border-left: 4px solid #ad781d; margin: 20px 0; }
-.contact-step h3 { font-size: 18px; margin-bottom: 6px; }
-.guide-section { margin-top: 32px; }
-.guide-jumps { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 16px 0; }
-.guide-jumps a { min-height: 44px; display: inline-flex; align-items: center; }
-.guide-section h3 { padding-bottom: 12px; border-bottom: 2px solid var(--accent); }
-.check-progress { font-size: 16px; color: var(--accent); font-weight: 600; margin: 20px 0 8px; }
-.document-list { list-style: none; padding: 0; margin: 0; }
-.document-row { padding: 17px 0; border-bottom: 1px solid var(--border); }
-.document-check { display: flex; gap: 14px; align-items: start; cursor: pointer; min-height: 44px; }
-.document-check input { flex-shrink: 0; width: 22px; height: 22px; margin: 5px 0 0; accent-color: var(--accent); }
-.document-check > span { display: block; }
-.document-check strong { display: block; font-weight: 600; font-size: 17px; }
-.requirement { display: block; font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 2px; }
-.requirement.conditional, .requirement.unconfirmed { color: #865600; }
-.document-help { margin: 6px 0 0 36px; font-size: 16px; color: var(--text-muted); }
-.document-alternatives { margin: 8px 0 4px 36px; padding-left: 22px; font-size: 16px; }
-.condition-field { margin: 12px 0 0 36px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-.not-applicable { background: #f5f6f5; padding-left: 8px; }
+.progress-label { color: var(--accent); font-size: 14px; font-weight: 600; margin: 0 0 12px; }
+.filter-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin: 16px 0; }
+.filter-row label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; min-width: 140px; }
+select { padding: 7px 10px; border: 1px solid #8c9ca9; background: var(--panel-bg); border-radius: 5px; max-width: 100%; }
+.procedure-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin-top: 12px; }
+.procedure-row { display: block; width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel-bg); text-align: left; line-height: 1.6; }
+.procedure-row:hover { background: var(--chip-bg); border-color: var(--accent); }
+.procedure-row .pick-title { font-size: 16px; color: var(--accent); }
+.procedure-row .pick-sub { font-size: 13px; }
+.procedure-meta { display: block; color: var(--text-muted); font-size: 12px; margin: 0 0 6px; }
+.verdict-banner, .note-box, .deadline-box, .contact-step { padding: 14px 18px; margin: 16px 0; border: 1px solid var(--border); border-radius: 5px; background: var(--chip-bg); }
+.verdict-banner { margin-top: 0; }
+.verdict-banner.needs_confirmation, .verdict-banner.invalid, .verdict-banner.other_law, .contact-step { background: var(--warning-bg); color: var(--warning-text); }
+.verdict-title { font-size: 20px; font-weight: 700; }
+.verdict-summary { margin-top: 4px; }
+.note-box { color: var(--text-muted); font-size: 14px; }
+.deadline-box { border-left: 3px solid var(--accent); }
+.deadline-box strong { font-size: 12px; color: var(--text-muted); }
+.deadline-box > p { margin: 4px 0 0; font-weight: 700; font-size: 17px; }
+.procedure-guide { margin: 20px 0; }
+.procedure-guide h2 { font-size: 23px; margin-bottom: 8px; }
+.guide-layout { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr); gap: 28px; align-items: start; }
+.guide-side { min-width: 0; padding: 18px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
+.guide-section { min-width: 0; scroll-margin-top: 18px; }
+.guide-section h3 { padding-bottom: 10px; margin-bottom: 12px; border-bottom: 1px solid var(--border); font-size: 17px; }
+.guide-side .guide-section + .guide-section { margin-top: 24px; }
+.contact-step h3 { font-size: 15px; margin-bottom: 6px; }
+.contact-step p { font-size: 14px; }
+.guide-side .contact-step { margin-top: 0; padding: 12px; }
+.guide-jumps { display: flex; flex-wrap: wrap; gap: 6px 24px; margin-bottom: 16px; }
+.guide-jumps a { display: inline-flex; align-items: center; min-height: 40px; font-size: 14px; }
+.document-list { margin: 0; padding: 0; list-style: none; }
+.document-row { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.document-check { display: flex; gap: 12px; align-items: start; min-height: 44px; cursor: pointer; }
+.document-check input { flex-shrink: 0; width: 20px; height: 20px; margin: 3px 0 0; accent-color: var(--accent); }
+.document-check > span { min-width: 0; }
+.document-check strong { display: block; font-weight: 600; font-size: 16px; }
+.requirement { display: block; color: var(--accent); font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+.requirement.conditional, .requirement.unconfirmed { color: var(--warning-text); }
+.document-help, .document-alternatives { color: var(--text-muted); font-size: 14px; margin: 6px 0 0 32px; }
+.document-alternatives { padding-left: 20px; }
+.condition-field { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 0 32px; font-size: 14px; }
+.not-applicable { background: var(--bg); }
 .not-applicable .requirement { color: var(--text-muted); }
-.download-list { display: flex; gap: 12px; flex-wrap: wrap; }
-.download-link { display: block; padding: 12px 16px; border: 1px solid #91a297; border-radius: 5px; text-decoration: none; font-weight: 600; background: var(--chip-bg); }
-.download-link:hover { background: #ddece2; }
-.submission-list { display: grid; grid-template-columns: 120px minmax(0, 1fr); margin: 0; }
-.submission-list dt, .submission-list dd { border-bottom: 1px solid var(--border); margin: 0; padding: 14px 8px; white-space: pre-line; }
-.submission-list dt { color: var(--text-muted); font-weight: 600; }
-.answer-row { border-bottom: 1px solid var(--border); padding: 10px 0; }
-.answer-row p { margin: 0; color: var(--text-muted); }
+.check-progress { color: var(--accent); font-size: 14px; font-weight: 600; }
+.download-list { display: flex; flex-direction: column; gap: 8px; }
+.download-link { display: flex; align-items: center; padding: 10px 12px; min-height: 44px; border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border)); border-radius: 5px; background: var(--panel-bg); font-size: 14px; font-weight: 600; text-decoration: none; }
+.download-link:hover { background: var(--chip-bg); }
+.submission-list { display: grid; grid-template-columns: 74px minmax(0, 1fr); margin: 0 0 10px; font-size: 13px; }
+.submission-list dt, .submission-list dd { margin: 0; padding: 10px 0; border-bottom: 1px solid var(--border); white-space: pre-line; }
+.submission-list dt { color: var(--text-muted); }
+.submission-list dd { padding-left: 10px; min-width: 0; overflow-wrap: anywhere; }
+.guide-side > .guide-section > a { font-size: 13px; }
+.answer-row { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.answer-row p { color: var(--text-muted); margin: 0; }
 .answer-row strong { margin-right: 16px; }
-.citation-card { border-radius: 4px; }
-.citation-toggle { font-size: 16px; }
-.citation-body { overflow-x: auto; }
-.article-caption, .paragraph-caption, .remarks-label, .generic-block, .law-table { font-size: 16px; }
-.law-table { max-width: 100%; margin-left: 0; overflow-wrap: anywhere; }
-.article { overflow-x: auto; }
-.history-panel { position: static; margin-top: 24px; padding: 12px 24px; max-height: none; border-radius: 6px; }
-.history-list { max-height: 420px; overflow: auto; }
-.history-item { display: flex; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; padding: 0; }
-.history-open { flex: 1; border: 0; background: transparent; text-align: left; padding: 14px 8px; min-width: 0; cursor: pointer; }
-.history-item .h-delete { position: static; min-width: 44px; min-height: 44px; font-size: 24px; }
-.history-item .h-title { font-size: 16px; }
-.history-item .h-time, .history-item .h-law { font-size: 14px; }
-.history-empty { font-size: 16px; }
-.app-footer { max-width: 1136px; margin: 24px auto 40px; padding: 0 24px; color: var(--text-muted); font-size: 14px; }
-.storage-status { margin: 8px 36px; padding: 14px; background: #fff6e6; color: #684305; }
-.toast { border-radius: 6px; max-width: calc(100vw - 32px); width: max-content; font-size: 16px; z-index: 30; }
+.citation-card { border: 1px solid var(--border); border-radius: 5px; overflow: hidden; margin: 8px 0; }
+.citation-toggle { width: 100%; text-align: left; padding: 10px 12px; border: 0; background: var(--panel-bg); font-size: 15px; }
+.citation-toggle:hover { background: var(--chip-bg); }
+.citation-body { padding: 12px; border-top: 1px solid var(--border); overflow-x: auto; }
+.article { padding: 4px 0 20px; max-width: 105ch; overflow-x: auto; }
+.article-head { padding-bottom: 10px; margin-bottom: 12px; border-bottom: 2px solid var(--accent); }
+.article-caption { display: block; color: var(--text-muted); font-size: 14px; }
+.article-title { display: block; font-weight: 700; font-size: 22px; }
+.paragraph { margin: 12px 0; }
+.paragraph-line, .item-line { display: flex; gap: 8px; align-items: baseline; }
+.para-num { flex-shrink: 0; min-width: 1.6em; color: var(--text-muted); }
+.para-text, .item-text, .list-line { white-space: pre-wrap; min-width: 0; overflow-wrap: anywhere; }
+.item-title { flex-shrink: 0; color: var(--text-muted); }
+.item-list, .subitem-list { margin: 6px 0 6px 1.6em; display: flex; flex-direction: column; gap: 6px; }
+.list-block { margin: 8px 0 8px 1.6em; }
+.remarks { padding: 10px 12px; margin: 12px 0; border-left: 3px solid var(--border); background: var(--bg); }
+.remarks-label { font-weight: 600; }
+.generic-block, .paragraph-caption { color: var(--text-muted); font-size: 14px; margin: 6px 0; }
+.law-table { border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+.law-table td { border: 1px solid var(--border); padding: 6px 10px; vertical-align: top; }
+.toolbar { display: flex; justify-content: flex-end; }
+.law-status { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 10px 14px; margin-bottom: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; font-size: 13px; color: var(--text-muted); }
+.law-status .law-warning { color: var(--warning-text); font-weight: 600; flex-basis: 100%; }
+.result-block { margin: 18px 0; }
+.loading, .empty-box, .error-box { padding: 24px; color: var(--text-muted); }
+.error-box { color: var(--danger); }
+.storage-status { padding: 10px 18px; margin: 8px 24px; background: var(--warning-bg); color: var(--warning-text); font-size: 14px; }
+#legacy-history-notice { margin: 8px 24px; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 32px); width: max-content; padding: 10px 18px; border-radius: 6px; background: var(--text); color: var(--bg); font-size: 14px; z-index: 40; }
 .print-context { display: none; }
-@media (max-width: 640px) {
-  .app-header { padding: 16px; }
-  .header-inner { display: block; }
-  .app-header h1 { font-size: 23px; }
-  .header-inner > a { display: inline-block; margin-top: 8px; }
-  .app-layout { padding: 0 12px; margin: 12px auto; }
-  .stage { padding: 12px 20px 24px; }
-  .stage h2 { font-size: 23px; }
-  .home-intro h2 { font-size: 28px; }
-  .home-lead { font-size: 16px; }
-  .home-intro { margin-bottom: 24px; }
-  .mode-tabs { padding: 0 12px; gap: 14px; }
-  .mode-tab { font-size: 14px; padding: 12px 0 10px; }
-  .breadcrumb { padding: 6px 16px; }
-  .purpose-grid, .card-grid { grid-template-columns: 1fr; }
-  .purpose-option { padding: 17px 26px 17px 0; }
-  .home-search { padding: 18px; margin-top: 24px; }
-  .search-form { grid-template-columns: 1fr; }
-  .search-form button { width: 100%; }
-  .flow-progress { gap: 14px; font-size: 14px; }
+@media screen and (min-width: 1100px) and (min-height: 600px) {
+  body { height: 100vh; height: 100dvh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; }
+  .app-layout { width: 100%; height: 100%; min-height: 0; }
+  .app-sidebar { overflow-y: auto; }
+  .main-panel { min-height: 0; }
+  .stage { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+}
+@media screen and (max-height: 850px) and (min-width: 1100px) {
+  .app-header { min-height: 68px; padding-block: 8px; }
+  .stage { padding: 18px 26px 24px; }
+  .stage[data-view="home"] { padding-bottom: 12px; }
+  .home-intro { margin-bottom: 16px; }
+  .home-intro h2 { font-size: 23px; }
+  .purpose-option { padding-block: 12px; min-height: 92px; }
+  .purpose-option .pick-sub { font-size: 13px; }
+  .home-columns { gap: 22px; }
+  .home-view > .support-details { margin-top: 14px; }
+}
+@media screen and (max-width: 1250px) {
+  .app-layout { grid-template-columns: 192px minmax(0, 1fr); }
+  .app-sidebar { padding-inline: 10px; }
+  .stage { padding-inline: 24px; }
+  .home-columns { grid-template-columns: minmax(0, 1.5fr) minmax(260px, 1fr); gap: 20px; }
+  .guide-layout { gap: 20px; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); }
+}
+@media screen and (max-width: 1099px) {
+  .app-layout { grid-template-columns: 170px minmax(0, 1fr); }
+  .home-columns, .guide-layout { grid-template-columns: 1fr; }
+  .home-intro { display: block; }
+  .home-intro .resume-strip { margin-top: 12px; }
+  .home-side { display: grid; grid-template-columns: 1fr 1fr; margin-top: 4px; }
+  .app-sidebar { padding-inline: 8px; }
+  .mode-tab { font-size: 14px; padding-inline: 8px; }
+  .nav-symbol { display: none; }
+  .guide-side { padding: 16px; }
+}
+@media screen and (max-width: 760px) {
+  .app-header { padding: 12px 16px; align-items: start; gap: 12px; }
+  .app-header h1 { font-size: 18px; }
+  .brand-mark { width: 32px; height: 32px; font-size: 17px; }
+  .header-brand { gap: 8px; }
+  .official-header-link { font-size: 11px; padding-block: 4px; white-space: nowrap; }
+  .app-layout { display: flex; flex-direction: column; }
+  .app-sidebar { display: contents; }
+  .mode-tabs { flex-direction: row; gap: 0; background: var(--panel-bg); border-bottom: 1px solid var(--border); padding: 4px 10px; }
+  .mode-tab { flex: 1; text-align: center; font-size: 13px; padding: 8px 2px; white-space: normal; }
+  .history-panel { order: 3; margin: 12px 16px; }
+  .history-list { max-height: 240px; }
+  .sidebar-meta { display: none; }
+  .main-panel { order: 2; }
+  .breadcrumb { padding-inline: 16px; }
+  .stage { padding: 20px 18px 24px; }
+  .stage h2 { font-size: 21px; }
+  .home-intro h2 { font-size: 23px; }
+  .home-columns, .home-side, .purpose-grid, .card-grid, .pick-list, .procedure-list { grid-template-columns: 1fr; }
+  .purpose-option { min-height: 88px; padding-block: 14px; }
+  .pick-list { gap: 10px; }
+  .flow-progress { gap: 14px; font-size: 12px; }
   .flow-progress li { flex: 1; }
+  .home-search { padding: 16px; }
+  .search-form, .home-search .search-form { grid-template-columns: 1fr; }
+  .search-form button { width: 100%; }
   .filter-row { display: grid; grid-template-columns: 1fr; }
   .filter-row label { min-width: 0; }
-  .submission-list { grid-template-columns: 1fr; }
-  .submission-list dt { border: 0; padding-bottom: 0; }
-  .submission-list dd { padding-top: 3px; }
-  .download-list { display: block; }
-  .download-link { margin-bottom: 12px; }
-  .deadline-box > p { font-size: 18px; }
+  .guide-layout { gap: 20px; }
+  .guide-side { padding: 14px; }
   .document-help, .condition-field, .document-alternatives { margin-left: 0; }
-  .storage-status { margin: 8px 20px; }
+  .document-alternatives { padding-left: 20px; }
+  .storage-status, #legacy-history-notice { margin: 8px 16px; }
+  .app-footer { display: block; padding: 12px 16px; }
+  .app-footer span { display: block; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
 @media print {
   @page { size: A4; margin: 14mm; }
+  :root { color-scheme: light; --text: #000; --text-muted: #333; --panel-bg: #fff; --border: #bbb; --accent: #174b40; }
   body { background: white; color: #000; font-size: 11pt; }
-  .no-print, .mode-tabs, .breadcrumb, .skip-link, .toast, .header-inner > a, .support-details:not(.answer-summary), .app-footer, .storage-status, .flow-progress { display: none !important; }
-  .app-header { padding: 0 0 10px; border-top: 0; }
-  .app-region { font-size: 10pt; }
+  .no-print, .app-sidebar, .mode-tabs, .breadcrumb, .skip-link, .toast, .official-header-link, .support-details:not(.answer-summary), .app-footer, .storage-status, .flow-progress, .brand-mark { display: none !important; }
+  .app-header { min-height: 0; padding: 0 0 10px; border: 0; }
+  .app-region { font-size: 9pt; }
   .app-header h1 { font-size: 18pt; }
-  .app-layout { max-width: none; margin: 12px 0; padding: 0; }
-  .main-panel { border: 0; }
-  .stage, .stage .stage { padding: 0; }
+  .app-layout { display: block; max-width: none; margin: 10px 0; }
+  .main-panel { display: block; }
+  .stage, .stage .stage { padding: 0; overflow: visible; }
   .stage h2 { font-size: 16pt; }
   .stage h3 { font-size: 13pt; }
+  .guide-layout { display: block; }
+  .guide-side { padding: 0; background: white; border: 0; }
+  .guide-section { margin-top: 20px; }
   .print-context { display: block; }
   .procedure-guide { margin: 16px 0; }
   .document-row, .submission-list dt, .submission-list dd, .download-link, .contact-step, .deadline-box, .answer-row { break-inside: avoid; }
   .guide-section h3 { break-after: avoid; }
   .support-text, .document-help, .document-alternatives, .guide-applicability, .check-progress { font-size: 10pt; }
   .document-check strong { font-size: 11pt; }
-  .document-row { padding: 8px 0; }
+  .document-row { padding: 7px 0; }
   .document-check { min-height: 0; }
   .document-check input { width: 14px; height: 14px; }
-  .download-link { padding: 6px; border: 0; }
+  .download-link { padding: 6px; border: 0; display: block; }
   .download-link::after { content: " " attr(href); display: block; font-size: 8pt; overflow-wrap: anywhere; font-weight: normal; }
-  .deadline-box, .contact-step, .verdict-banner, .note-box { background: white; padding: 10px; }
-  .procedure-guide::after { content: "案内データ確認日：2026-09-19 / 奈良県の公開案内に基づく参考情報"; display: block; font-size: 9pt; margin-top: 12px; }
+  .deadline-box, .contact-step, .verdict-banner, .note-box { background: white; color: #000; padding: 10px; }
+  .submission-list { font-size: 10pt; }
 }
   </style>
 </head>
 <body>
   <a class="skip-link" href="#stage">本文へ移動</a>
   <header class="app-header">
-    <div class="header-inner"><div><p class="app-region">奈良県の事業者向け</p><h1>高圧ガス手続きナビ</h1></div>
-    <a href="https://www.pref.nara.lg.jp/n011/39583.html" target="_blank" rel="noopener noreferrer">奈良県の公式案内 ↗</a></div>
+    <div class="header-brand"><span class="brand-mark" aria-hidden="true">高</span><div><h1>高圧ガス手続きナビ</h1><p class="app-region">奈良県向け・参考ツール</p></div></div>
+    <a class="official-header-link" href="https://www.pref.nara.lg.jp/n011/39583.html" target="_blank" rel="noopener noreferrer">奈良県の公式案内 ↗</a>
   </header>
-
   <div class="app-layout">
-    <main class="main-panel">
+    <aside class="app-sidebar no-print" aria-label="ナビゲーション">
       <nav class="mode-tabs" id="mode-tabs" aria-label="メインメニュー">
-        <button type="button" class="mode-tab" data-mode="home">ホーム</button>
-        <button type="button" class="mode-tab" data-mode="catalogue">手続き・様式を探す</button>
-        <button type="button" class="mode-tab" data-mode="browse">条文を調べる</button>
+        <button type="button" class="mode-tab" data-mode="home"><span class="nav-symbol" aria-hidden="true">⌂</span>目的から探す</button>
+        <button type="button" class="mode-tab" data-mode="catalogue"><span class="nav-symbol" aria-hidden="true">≡</span>手続き・様式</button>
+        <button type="button" class="mode-tab" data-mode="browse"><span class="nav-symbol" aria-hidden="true">§</span>法令・例示基準</button>
       </nav>
+      <details class="history-panel"><summary>この端末の照会履歴</summary>
+        <div class="history-header"><h2>照会履歴</h2><button id="clear-history-btn" class="btn-link" type="button">すべて削除</button></div>
+        <ul class="history-list" id="history-list"></ul>
+      </details>
+      <div class="sidebar-meta"><span>案内確認日</span><time id="review-date"></time><a href="https://laws.e-gov.go.jp/" target="_blank" rel="noopener noreferrer">法令出典：e-Gov ↗</a></div>
+    </aside>
+    <main class="main-panel">
       <nav class="breadcrumb" id="breadcrumb" aria-label="選択パンくず"></nav>
       <p id="storage-status" class="storage-status" role="status" hidden></p>
       <p id="legacy-history-notice" class="note-box no-print" role="status" hidden></p>
-      <section class="stage" id="stage" tabindex="-1"></section>
+      <section class="stage" id="stage" tabindex="-1" aria-label="手続き・法令の表示"></section>
     </main>
-
-    <details class="history-panel no-print"><summary>この端末の照会履歴</summary>
-      <div class="history-header">
-        <h2>照会履歴</h2>
-        <button id="clear-history-btn" class="btn-link" type="button">すべて削除</button>
-      </div>
-      <ul class="history-list" id="history-list"></ul>
-    </details>
   </div>
-
-  <footer class="app-footer"><p>奈良県の手続き案内を整理した参考ツールです。県の公式サイトではありません。</p><p>対象：一般則・液石則・冷凍則。条文閲覧では容器則にも対応。<a href="https://laws.e-gov.go.jp/" target="_blank" rel="noopener noreferrer">法令出典：e-Gov法令検索 ↗</a></p></footer>
+  <footer class="app-footer"><span>県の公式サイトではありません。</span><span>一般則・液石則・冷凍則 ／ 条文閲覧：容器則・法・施行令</span></footer>
   <div id="toast" class="toast" role="status" hidden></div>
-  <noscript>このツールの利用にはJavaScriptを有効にしてください。上部の「奈良県の公式案内」からも手続き・様式を確認できます。</noscript>
-
+  <noscript>JavaScriptを有効にしてください。「奈良県の公式案内」からも手続き・様式を確認できます。</noscript>
   <script>
 "use strict";
 
@@ -908,6 +412,73 @@ function findLawMeta(lawId) {
 }
 
 const API_BASE = "https://laws.e-gov.go.jp/api/2";
+
+// 固定の案内・設問と照合した施行済みの版。取得しただけで案内を更新しない。
+const LAW_CHECKED_AT = "2026-11-11";
+const REVIEWED_LAWS = [
+  {
+    "lawId": "326AC0000000204",
+    "shortName": "法",
+    "title": "高圧ガス保安法",
+    "revisionId": "326AC0000000204_20251001_507AC0000000044",
+    "enforcementDate": "2025-10-01"
+  },
+  {
+    "lawId": "409CO0000000020",
+    "shortName": "施行令",
+    "title": "高圧ガス保安法施行令",
+    "revisionId": "409CO0000000020_20231221_505CO0000000276",
+    "enforcementDate": "2023-12-21"
+  },
+  {
+    "lawId": "341M50000400053",
+    "shortName": "一般則",
+    "title": "一般高圧ガス保安規則",
+    "revisionId": "341M50000400053_20251001_507M60000400065",
+    "enforcementDate": "2025-10-01"
+  },
+  {
+    "lawId": "341M50000400052",
+    "shortName": "液石則",
+    "title": "液化石油ガス保安規則",
+    "revisionId": "341M50000400052_20251001_507M60000400065",
+    "enforcementDate": "2025-10-01"
+  },
+  {
+    "lawId": "341M50000400051",
+    "shortName": "冷凍則",
+    "title": "冷凍保安規則",
+    "revisionId": "341M50000400051_20260612_508M60000400056",
+    "enforcementDate": "2026-06-12"
+  },
+  {
+    "lawId": "341M50000400050",
+    "shortName": "容器則",
+    "title": "容器保安規則",
+    "revisionId": "341M50000400050_20260612_508M60000400056",
+    "enforcementDate": "2026-06-12"
+  },
+  {
+    "lawId": "342AC0000000149",
+    "shortName": "液化石油ガス法",
+    "title": "液化石油ガスの保安の確保及び取引の適正化に関する法律",
+    "revisionId": "342AC0000000149_20251225_506AC0000000067",
+    "enforcementDate": "2025-12-25"
+  },
+  {
+    "lawId": "343CO0000000014",
+    "shortName": "液化石油ガス法施行令",
+    "title": "液化石油ガスの保安の確保及び取引の適正化に関する法律施行令",
+    "revisionId": "343CO0000000014_20251225_506CO0000000374",
+    "enforcementDate": "2025-12-25"
+  }
+];
+const BROWSABLE_LAWS = [...TARGET_LAWS, ...REFERENCE_LAWS.filter(law => ["326AC0000000204", "409CO0000000020"].includes(law.lawId))];
+function lawRevisionAssessment(lawId, revision) {
+  const reviewed = REVIEWED_LAWS.find(law => law.lawId === lawId);
+  if (!reviewed || !revision?.law_revision_id || !revision.current_revision_status) return "unverified";
+  return reviewed.revisionId === revision.law_revision_id && revision.current_revision_status === "CurrentEnforced" ? "match" : "different";
+}
 
 /* =========================================================
    api.js
@@ -3054,7 +2625,7 @@ const NARA_COMMON_REFERENCE = {
 // 奈良県の公開案内・添付書類一覧と各規則を照合した手続き台帳。
 // 確認日と版は条文APIの取得日とは独立して管理する。自動更新を意味しない。
 const PROCEDURE_VERSION = "2026-09-19.1";
-const PROCEDURE_CHECKED_AT = "2026-09-19";
+const PROCEDURE_CHECKED_AT = "2026-11-11";
 const REGULATION_LABELS = { general: "一般則", lpgas: "液石則", refrigeration: "冷凍則" };
 const ACTIVITY_LABELS = { manufacture: "製造", storage: "貯蔵", sales: "販売", consumption: "消費" };
 const PURPOSES = [
@@ -3386,14 +2957,16 @@ function renderProcedureGuide(procedure, { facts = {}, checks = {}, onFact, onCh
     const link = pvNode("a", label); link.href = `#${procedure.procedureId}-${key}`; jumps.append(link);
   }
   wrap.append(jumps);
+  const layout = pvNode("div", "", "guide-layout");
+  const sidebar = pvNode("aside", "", "guide-side"); sidebar.setAttribute("aria-label", "様式・提出方法");
   if (procedure.contact) {
     const contact = pvNode("section", "", "contact-step");
-    contact.append(pvNode("h3", "最初に：事前連絡・日程調整"), pvNode("p", procedure.contact));
+    contact.append(pvNode("h3", "事前連絡・日程調整"), pvNode("p", procedure.contact));
     wrap.append(contact);
   }
   const docs = pvNode("section", "", "guide-section");
   docs.id = `${procedure.procedureId}-documents`;
-  docs.append(pvNode("h3", "1. 準備する書類"), pvNode("p", "チェックは準備状況のメモです。申請の受理や書類の適合を保証するものではありません。", "support-text"));
+  docs.append(pvNode("h3", "1. 準備する書類"), pvNode("p", "チェックは、この端末に保存する準備メモです。", "support-text"));
   if (procedure.preparation) docs.append(pvNode("p", procedure.preparation, "note-box"));
   const progress = pvNode("p", "", "check-progress");
   progress.setAttribute("role", "status");
@@ -3434,14 +3007,14 @@ function renderProcedureGuide(procedure, { facts = {}, checks = {}, onFact, onCh
     }
     list.append(row);
   }
-  docs.append(progress, list); wrap.append(docs); updateProgress();
+  docs.append(progress, list); layout.append(docs); updateProgress();
   const forms = pvNode("section", "", "guide-section");
   forms.id = `${procedure.procedureId}-forms`;
   forms.append(pvNode("h3", "2. 様式・記載例を開く"));
   const downloads = pvNode("div", "", "download-list");
   procedure.forms.forEach(f => downloads.append(officialLink(f.label, f.url, "download-link")));
-  forms.append(downloads, pvNode("p", "奈良県が公開する公式ファイルを別タブで開きます。取得にはインターネット接続が必要です。ファイルが開かない場合は、下の掲載元ページから最新版を確認してください。", "support-text"), officialLink("奈良県の掲載元ページ", procedure.source));
-  wrap.append(forms);
+  forms.append(downloads, pvNode("p", "公式ファイルを別タブで開きます。開かない場合は掲載元を確認してください。", "support-text"), officialLink("奈良県の掲載元ページ", procedure.source));
+  sidebar.append(forms);
   const submit = pvNode("section", "", "guide-section");
   submit.id = `${procedure.procedureId}-submit`;
   submit.append(pvNode("h3", "3. 提出する"));
@@ -3449,10 +3022,12 @@ function renderProcedureGuide(procedure, { facts = {}, checks = {}, onFact, onCh
   for (const [label, value] of [["提出部数", SUBMISSION_GUIDE.copies], ["提出方法", SUBMISSION_GUIDE.method], ["郵送時", SUBMISSION_GUIDE.post], ["手数料", procedure.fee], ["提出先", `${SUBMISSION_GUIDE.office}\n${SUBMISSION_GUIDE.address}`]]) { dl.append(pvNode("dt", label), pvNode("dd", value)); }
   const phone = pvNode("a", `${SUBMISSION_GUIDE.phone}（ナビダイヤル）`); phone.href = `tel:${SUBMISSION_GUIDE.phone}`;
   const phoneValue = pvNode("dd"); phoneValue.append(phone); dl.append(pvNode("dt", "電話"), phoneValue);
-  submit.append(dl, officialLink("県の受付・提出方法の案内", NARA_PAGES.index)); wrap.append(submit);
+  submit.append(dl, officialLink("県の受付・提出方法の案内", NARA_PAGES.index)); sidebar.append(submit);
+  layout.append(sidebar); wrap.append(layout);
   const source = pvNode("details", "", "support-details source-details");
   source.append(pvNode("summary", "根拠・情報の確認日"), pvNode("p", `法令上の手続き：${procedure.basis}`), pvNode("p", "添付書類一覧・提出部数・提出方法・事前連絡は奈良県の提出実務の案内です。施設条件により追加資料が必要な場合があります。"), pvNode("p", `案内データ確認日：${PROCEDURE_CHECKED_AT}。条文APIを更新しても、この案内・判定条件は自動更新されません。`), officialLink("根拠となる奈良県の案内", procedure.source));
   wrap.append(source);
+  wrap.append(pvNode("p", `案内データ確認日：${PROCEDURE_CHECKED_AT} / 奈良県の公開案内に基づく参考情報`, "print-context"));
   if (onRelated) { const btn = pvNode("button", "変更・廃止や保安担当者の手続きも調べる", "btn-secondary no-print"); btn.type = "button"; btn.addEventListener("click", onRelated); wrap.append(btn); }
   return wrap;
 }
@@ -3493,6 +3068,7 @@ const navigationState = { purpose: null, answers: {}, stepIndex: 0, result: null
 let draftReady = false;
 let saveQueue = Promise.resolve();
 const lawFetchedAt = new Map();
+const loadedLawRevisions = new Map();
 let citationRenderIndex = 0;
 
 function navigationButton(text, handler, className = "btn-secondary") {
@@ -3553,19 +3129,35 @@ async function loadLawData(lawMeta, { forceRefresh = false } = {}) {
   try { cached = await getCachedLaw(lawMeta.lawId); } catch { storageWarning(); }
   if (cached && !forceRefresh) {
     lawFetchedAt.set(lawMeta.lawId, cached.fetchedAt);
+    loadedLawRevisions.set(lawMeta.lawId, cached.data.revision_info);
     return cached.data;
   }
   try {
     const data = await fetchLawData(lawMeta.lawId);
     lawFetchedAt.set(lawMeta.lawId, new Date().toISOString());
     try { await putCachedLaw(lawMeta.lawId, data, data?.revision_info?.updated || null); } catch { storageWarning(); }
+    loadedLawRevisions.set(lawMeta.lawId, data.revision_info);
     return data;
   } catch (error) {
     if (!cached) throw error;
     lawFetchedAt.set(lawMeta.lawId, cached.fetchedAt);
     showToast("最新版を取得できませんでした。取得日を確認のうえ、保存済み条文を参照してください。", true);
+    loadedLawRevisions.set(lawMeta.lawId, cached.data.revision_info);
     return cached.data;
   }
+}
+
+function renderLawStatus(lawId, data) {
+  const status = navigationText("div", "", "law-status");
+  const revision = data?.revision_info || loadedLawRevisions.get(lawId);
+  const assessment = lawRevisionAssessment(lawId, revision);
+  const date = lawFetchedAt.get(lawId);
+  status.append(navigationText("span", `条文取得：${date ? new Date(date).toLocaleString("ja-JP") : "未取得"}`), navigationText("span", `案内確認：${PROCEDURE_CHECKED_AT}`));
+  if (revision?.amendment_enforcement_date) status.append(navigationText("span", `施行日：${revision.amendment_enforcement_date}`));
+  if (assessment !== "match") status.append(navigationText("span", assessment === "different" ? "確認済みの案内と条文の版が異なります。改正内容を公式原文で確認してください。" : "条文の版を照合できません。現行版はe-Govで確認してください。", "law-warning"));
+  else status.append(navigationText("span", "案内の確認済み版と一致"));
+  status.append(officialLink("e-Gov原文", `https://laws.e-gov.go.jp/law/${lawId}`));
+  return status;
 }
 
 // --- モード切替 ---
@@ -3577,7 +3169,7 @@ function setMode(mode) {
 
 function updateModeTabs() {
   modeTabsEl.querySelectorAll(".mode-tab").forEach((btn) => {
-    const active = btn.dataset.mode === appState.mode;
+    const active = btn.dataset.mode === appState.mode || (btn.dataset.mode === "home" && ["diagnosis", "lifecycle"].includes(appState.mode)) || (btn.dataset.mode === "catalogue" && appState.mode === "detail");
     btn.classList.toggle("active", active);
     if (active) btn.setAttribute("aria-current", "page"); else btn.removeAttribute("aria-current");
   });
@@ -3589,6 +3181,8 @@ modeTabsEl.querySelectorAll(".mode-tab").forEach((btn) => {
 
 function render() {
   citationRenderIndex = 0;
+  stageEl.dataset.view = appState.mode;
+  const previousScroll = stageEl.scrollTop;
   const activeId = document.activeElement?.id;
   const openDetails = [...stageEl.querySelectorAll("details[open][data-disclosure]")].map(el => el.dataset.disclosure);
   updateModeTabs();
@@ -3608,8 +3202,8 @@ function render() {
   }
   for (const el of stageEl.querySelectorAll("details[data-disclosure]")) if (openDetails.includes(el.dataset.disclosure)) el.open = true;
   const focusTarget = activeId && document.getElementById(activeId);
-  if (focusTarget && stageEl.contains(focusTarget)) focusTarget.focus({ preventScroll: true });
-  else { const heading = stageEl.querySelector("h2"); if (heading) { heading.tabIndex = -1; heading.focus(); } }
+  if (focusTarget && stageEl.contains(focusTarget)) { focusTarget.focus({ preventScroll: true }); stageEl.scrollTop = previousScroll; }
+  else { stageEl.scrollTop = 0; const heading = stageEl.querySelector("h2"); if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); } }
   if (appState.mode !== "home" && appState.mode !== "browse") persistDraft();
 }
 
@@ -3958,7 +3552,7 @@ function renderCitationCard(citation) {
       body.innerHTML = `<div class="error-box">該当条文が見つかりませんでした。</div>`;
     } else {
       body.innerHTML = renderArticle(cached.article.node);
-      body.prepend(navigationText("p", `条文取得日：${lawFetchedAt.get(citation.lawId) ? new Date(lawFetchedAt.get(citation.lawId)).toLocaleString("ja-JP") : "不明"} ／ 案内データ確認日：${PROCEDURE_CHECKED_AT}`, "support-text"));
+      body.prepend(renderLawStatus(citation.lawId));
     }
     card.appendChild(body);
   }
@@ -4016,31 +3610,43 @@ async function restoreDiagnosisFromHistory(entry) {
    ========================================================= */
 
 function renderNavigationHome() {
-  const wrap = document.createElement("div");
+  const wrap = navigationText("div", "", "home-view");
   const intro = navigationText("div", "", "home-intro");
-  intro.append(navigationText("h2", "必要な手続きから、\n申請の準備まで。"), navigationText("p", "質問に答えて、必要な届出・申請、様式、添付書類を確認できます。", "home-lead"));
+  intro.append(navigationText("h2", "手続きを探す"), navigationText("p", "行いたいこと、または手続き名から選んでください。", "home-lead"));
   wrap.append(intro);
   if (navigationState.saved && (navigationState.saved.diag?.actionType || navigationState.saved.nav?.purpose || navigationState.saved.nav?.selectedId)) {
     const resume = navigationText("div", "", "resume-strip");
-    resume.append(navigationText("span", `保存した回答・準備状況があります（${new Date(navigationState.saved.savedAt).toLocaleString("ja-JP")}）`), navigationButton("続きから再開", resumeDraft));
-    wrap.append(resume);
+    resume.append(navigationText("span", `保存した回答・準備状況（${new Date(navigationState.saved.savedAt).toLocaleString("ja-JP")}）`), navigationButton("続きから再開", resumeDraft));
+    intro.append(resume);
   }
+  const columns = navigationText("div", "", "home-columns");
   const entry = navigationText("section", "", "home-entry");
-  entry.append(navigationText("h3", "質問に答えて探す"), navigationText("p", "今、行いたいことを選んでください。", "support-text"));
+  entry.append(navigationText("h3", "目的から選ぶ"));
   const purposes = navigationText("div", "", "purpose-grid");
   for (const purpose of PURPOSES) {
-    const b = navigationButton("", () => beginPurpose(purpose.id), `purpose-option${purpose.id === "new" ? " primary-purpose" : ""}`);
-    b.append(navigationText("span", purpose.label, "pick-title"), navigationText("span", purpose.help, "pick-sub"), navigationText("span", "→", "purpose-arrow"));
-    purposes.append(b);
+    const button = navigationButton("", () => beginPurpose(purpose.id), `purpose-option${purpose.id === "new" ? " primary-purpose" : ""}`);
+    const shortLabel = { change: "設備・ガス等を変更する", inspection: "検査・製造開始の手続き", personnel: "保安担当者・規程の届出" }[purpose.id] || purpose.label;
+    button.append(navigationText("span", shortLabel, "pick-title"), navigationText("span", purpose.help, "pick-sub"));
+    const arrow = navigationText("span", "→", "purpose-arrow"); arrow.setAttribute("aria-hidden", "true"); button.append(arrow);
+    purposes.append(button);
   }
-  entry.append(purposes); wrap.append(entry);
+  entry.append(purposes); columns.append(entry);
+  const side = navigationText("div", "", "home-side");
   const direct = navigationText("section", "", "home-search");
-  direct.append(navigationText("h3", "手続き名・様式から探す"), navigationText("p", "手続きが分かっている方は、名前からすぐに資料を開けます。"));
-  direct.append(renderSearchForm(() => setMode("catalogue")));
-  wrap.append(direct);
+  direct.append(navigationText("h3", "手続き名・様式から検索"), renderSearchForm(() => setMode("catalogue")));
+  side.append(direct);
+  const reference = navigationText("section", "", "home-reference");
+  reference.append(navigationText("h3", "法令・基準を確認"));
+  const links = navigationText("div", "", "reference-links");
+  links.append(navigationButton("法令の条文を開く →", () => setMode("browse"), "btn-link"), officialLink("例示基準・運用解釈（経済産業省）", METI_REFERENCE.url), officialLink("奈良県の申請案内", NARA_PAGES.index));
+  reference.append(links); side.append(reference); columns.append(side); wrap.append(columns);
   const support = document.createElement("details"); support.className = "support-details";
-  support.append(navigationText("summary", "対象範囲・情報の確認日"), navigationText("p", `案内データ確認日：${PROCEDURE_CHECKED_AT}。奈良県の製造・貯蔵・販売・消費を対象とします。申請の送信機能はありません。コンビナート則・特別な認定制度等の個別判断は対象外です。`), navigationText("p", "県が事前連絡や検査日程調整を求める手続きは、その工程を案内します。条文の取得日と、固定の案内・判定条件の確認日は別です。"), officialLink("奈良県消防救急課の申請案内", NARA_PAGES.index));
-  wrap.append(support);
+  support.append(navigationText("summary", "対象範囲・情報の確認日"), navigationText("p", `案内データ確認日：${PROCEDURE_CHECKED_AT}。一般則・液石則・冷凍則の製造・貯蔵・販売・消費を対象とします。コンビナート則・特別な認定制度等の個別判断は対象外です。`), navigationText("p", `法令の現行版確認：${LAW_CHECKED_AT}。条文を取得しても、固定の案内・判定条件は自動更新されません。`));
+  const revisions = navigationText("ul", "", "law-review-list");
+  for (const law of REVIEWED_LAWS) {
+    const item = document.createElement("li"); item.append(officialLink(law.shortName, `https://laws.e-gov.go.jp/law/${law.lawId}`), document.createTextNode(`${law.enforcementDate}施行版`)); revisions.append(item);
+  }
+  support.append(revisions); wrap.append(support);
   return wrap;
 }
 
@@ -4055,7 +3661,7 @@ function renderSearchForm(onSubmit) {
 }
 
 function renderCatalogue() {
-  const wrap = document.createElement("div");
+  const wrap = navigationText("div", "", "catalogue-view");
   breadcrumbEl.append(crumbSep(), crumbCurrent("手続き・様式を探す"));
   wrap.append(navigationText("h2", "手続き・様式を探す"), renderSearchForm(render));
   const filters = navigationText("div", "", "filter-row");
@@ -4264,7 +3870,7 @@ async function selectArticle(article) {
 }
 
 async function restoreArticleFromHistory(entry) {
-  const lawMeta = TARGET_LAWS.find((l) => l.lawId === entry.lawId);
+  const lawMeta = BROWSABLE_LAWS.find((l) => l.lawId === entry.lawId);
   if (!lawMeta) {
     showToast("対象法令の情報が見つかりませんでした。", true);
     return;
@@ -4363,7 +3969,7 @@ function renderBrowseBreadcrumb() {
 function renderBrowseStage() {
   stageEl.innerHTML = "";
   const b = appState.browse;
-  if (b.law && lawFetchedAt.has(b.law.lawId)) stageEl.append(navigationText("p", `条文取得日：${new Date(lawFetchedAt.get(b.law.lawId)).toLocaleString("ja-JP")} ／ 案内データ確認日：${PROCEDURE_CHECKED_AT}`, "support-text"));
+  if (b.law) stageEl.append(renderLawStatus(b.law.lawId, b.lawData));
 
   if (!b.law) {
     stageEl.appendChild(renderLawStage());
@@ -4388,12 +3994,12 @@ function renderLawStage() {
   const wrap = document.createElement("div");
   wrap.className = "stage";
   const h2 = document.createElement("h2");
-  h2.textContent = "対象法令を選択してください";
+  h2.textContent = "法令・例示基準";
   wrap.appendChild(h2);
 
   const grid = document.createElement("div");
   grid.className = "card-grid";
-  for (const law of TARGET_LAWS) {
+  for (const law of BROWSABLE_LAWS) {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "pick-card";
@@ -4402,6 +4008,9 @@ function renderLawStage() {
     grid.appendChild(card);
   }
   wrap.appendChild(grid);
+  const references = navigationText("section", "", "support-details");
+  references.append(navigationText("h3", "例示基準・運用解釈"), officialLink("経済産業省の公式掲載ページ", METI_REFERENCE.url), navigationText("p", "例示基準の現行資料は掲載元で確認してください。"));
+  wrap.append(references);
   return wrap;
 }
 
@@ -4592,6 +4201,8 @@ function showLegacyHistoryNotice() {
 }
 
 async function initializeNavigator() {
+  document.getElementById("review-date").textContent = PROCEDURE_CHECKED_AT;
+  document.getElementById("review-date").dateTime = PROCEDURE_CHECKED_AT;
   showLegacyHistoryNotice();
   try { navigationState.saved = await readDraft(); } catch { storageWarning(); }
   draftReady = true; render(); renderHistory();

@@ -62,7 +62,7 @@ node tests/kouatsu-browser-smoke.mjs
 
 ## 出典
 
-案内データ確認日：2026-09-19。詳細は `docs/procedure-sources.md` と `docs/diagnosis-audit.md`。
+案内再確認日：2026-11-11。現行版と今回の確認範囲は `docs/current-review-20261111.md`。初回の詳細は `docs/procedure-sources.md` と `docs/diagnosis-audit.md`。
 
 [奈良県消防救急課の高圧ガス手続き案内](https://www.pref.nara.lg.jp/n011/39583.html)と[e-Gov法令検索](https://laws.e-gov.go.jp/)を根拠にしています。
 
@@ -75,3 +75,9 @@ node tests/kouatsu-browser-smoke.mjs
 公開HTMLはこのディレクトリから生成します。`python scripts/build_kouatsu.py --check`で生成一致を確認し、ポータルのService Workerのシェルキャッシュ版も更新してPRから反映してください。Pages設定はmain/rootとHTTPSを維持します。Service Workerは自分のscopeのシェルだけを世代更新し、他のツールのランタイムキャッシュと保存データを削除しません。
 
 公開前に診断・台帳、配布HTML、`node tests/kouatsu-pages-smoke.mjs`でサブパス・旧SWからの更新・オフライン動作を確認します。後者も同じPlaywright／ブラウザー環境変数を使用します。公開後はPagesの成功commitと配布HTMLのSHA-256を照合してください。問題時はこの更新のコミットをrevertして再公開できます。
+
+## 16:9画面向けの表示（2026-11-11）
+
+1366×768・1920×1080を基準とし、ホームの目的選択・検索・法令参照を横に配置します。1100px以上かつ高さ600px以上ではメニューを固定し、長い本文は作業領域内でスクロールします。狭い画面や大きな拡大表示では通常の縦配置へ戻り、内容は省略しません。印刷では全内容を一列で出力します。
+
+法令照合情報は `js/constants.js` の `REVIEWED_LAWS`。取得データの履歴IDと施行状況が一致する場合に限り一致表示します。条文の取得・キャッシュ更新は固定の診断条件を書き換えません。
