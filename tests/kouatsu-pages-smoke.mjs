@@ -60,12 +60,12 @@ try {
     const changed=new Promise(resolve=>navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true}));
     const registration=await navigator.serviceWorker.getRegistration();await registration.update();await changed;
   });
-  check(await page.evaluate(async()=> (await caches.keys()).some(k=>k.endsWith(':shell-v14'))),'旧SWから新世代へ更新');
+  check(await page.evaluate(async()=> (await caches.keys()).some(k=>k.endsWith(':shell-v15'))),'旧SWから新世代へ更新');
   await page.reload();
   const card=page.locator('a.pick-card[href="./tools/kouatsu-gas-law-viewer.html"]');
   check((await card.innerText()).includes('高圧ガス手続きナビ（奈良県向け）'),'ポータルの新版カード');
   await card.click();
-  await page.getByRole('heading',{name:/必要な手続きから/}).waitFor();
+  await page.getByRole('heading',{name:/手続きを探す/}).waitFor();
   check(page.url()===toolUrl,'既存の公開URLを維持');
   check(await page.locator('#legacy-history-notice').isVisible(),'旧履歴への再回答案内');
   check(await page.evaluate(()=>localStorage.getItem('kouatsu-navigator-history'))===oldHistory,'旧履歴は変換・削除しない');
@@ -77,7 +77,7 @@ try {
   check(await page.evaluate(async()=>{const names=(await caches.keys()).filter(k=>k.startsWith('my-tools-portal:'));for(const name of names){if(await (await caches.open(name)).match('/another-tool/resource.txt'))return false;}return true;}),'scope外の応答をキャッシュしない');
   await context.setOffline(true);
   await page.reload();
-  await page.getByRole('heading',{name:/必要な手続きから/}).waitFor();
+  await page.getByRole('heading',{name:/手続きを探す/}).waitFor();
   check(await page.locator('#legacy-history-notice').isVisible(),'オフライン再訪も新版を表示');
   await page.locator('.mode-tab[data-mode="catalogue"]').click();
   await page.locator('.procedure-row').first().click();

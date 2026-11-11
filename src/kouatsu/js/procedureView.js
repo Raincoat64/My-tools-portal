@@ -33,14 +33,16 @@ export function renderProcedureGuide(procedure, { facts = {}, checks = {}, onFac
     const link = pvNode("a", label); link.href = `#${procedure.procedureId}-${key}`; jumps.append(link);
   }
   wrap.append(jumps);
+  const layout = pvNode("div", "", "guide-layout");
+  const sidebar = pvNode("aside", "", "guide-side"); sidebar.setAttribute("aria-label", "様式・提出方法");
   if (procedure.contact) {
     const contact = pvNode("section", "", "contact-step");
-    contact.append(pvNode("h3", "最初に：事前連絡・日程調整"), pvNode("p", procedure.contact));
+    contact.append(pvNode("h3", "事前連絡・日程調整"), pvNode("p", procedure.contact));
     wrap.append(contact);
   }
   const docs = pvNode("section", "", "guide-section");
   docs.id = `${procedure.procedureId}-documents`;
-  docs.append(pvNode("h3", "1. 準備する書類"), pvNode("p", "チェックは準備状況のメモです。申請の受理や書類の適合を保証するものではありません。", "support-text"));
+  docs.append(pvNode("h3", "1. 準備する書類"), pvNode("p", "チェックは、この端末に保存する準備メモです。", "support-text"));
   if (procedure.preparation) docs.append(pvNode("p", procedure.preparation, "note-box"));
   const progress = pvNode("p", "", "check-progress");
   progress.setAttribute("role", "status");
@@ -81,14 +83,14 @@ export function renderProcedureGuide(procedure, { facts = {}, checks = {}, onFac
     }
     list.append(row);
   }
-  docs.append(progress, list); wrap.append(docs); updateProgress();
+  docs.append(progress, list); layout.append(docs); updateProgress();
   const forms = pvNode("section", "", "guide-section");
   forms.id = `${procedure.procedureId}-forms`;
   forms.append(pvNode("h3", "2. 様式・記載例を開く"));
   const downloads = pvNode("div", "", "download-list");
   procedure.forms.forEach(f => downloads.append(officialLink(f.label, f.url, "download-link")));
-  forms.append(downloads, pvNode("p", "奈良県が公開する公式ファイルを別タブで開きます。取得にはインターネット接続が必要です。ファイルが開かない場合は、下の掲載元ページから最新版を確認してください。", "support-text"), officialLink("奈良県の掲載元ページ", procedure.source));
-  wrap.append(forms);
+  forms.append(downloads, pvNode("p", "公式ファイルを別タブで開きます。開かない場合は掲載元を確認してください。", "support-text"), officialLink("奈良県の掲載元ページ", procedure.source));
+  sidebar.append(forms);
   const submit = pvNode("section", "", "guide-section");
   submit.id = `${procedure.procedureId}-submit`;
   submit.append(pvNode("h3", "3. 提出する"));
@@ -96,10 +98,12 @@ export function renderProcedureGuide(procedure, { facts = {}, checks = {}, onFac
   for (const [label, value] of [["提出部数", SUBMISSION_GUIDE.copies], ["提出方法", SUBMISSION_GUIDE.method], ["郵送時", SUBMISSION_GUIDE.post], ["手数料", procedure.fee], ["提出先", `${SUBMISSION_GUIDE.office}\n${SUBMISSION_GUIDE.address}`]]) { dl.append(pvNode("dt", label), pvNode("dd", value)); }
   const phone = pvNode("a", `${SUBMISSION_GUIDE.phone}（ナビダイヤル）`); phone.href = `tel:${SUBMISSION_GUIDE.phone}`;
   const phoneValue = pvNode("dd"); phoneValue.append(phone); dl.append(pvNode("dt", "電話"), phoneValue);
-  submit.append(dl, officialLink("県の受付・提出方法の案内", NARA_PAGES.index)); wrap.append(submit);
+  submit.append(dl, officialLink("県の受付・提出方法の案内", NARA_PAGES.index)); sidebar.append(submit);
+  layout.append(sidebar); wrap.append(layout);
   const source = pvNode("details", "", "support-details source-details");
   source.append(pvNode("summary", "根拠・情報の確認日"), pvNode("p", `法令上の手続き：${procedure.basis}`), pvNode("p", "添付書類一覧・提出部数・提出方法・事前連絡は奈良県の提出実務の案内です。施設条件により追加資料が必要な場合があります。"), pvNode("p", `案内データ確認日：${PROCEDURE_CHECKED_AT}。条文APIを更新しても、この案内・判定条件は自動更新されません。`), officialLink("根拠となる奈良県の案内", procedure.source));
   wrap.append(source);
+  wrap.append(pvNode("p", `案内データ確認日：${PROCEDURE_CHECKED_AT} / 奈良県の公開案内に基づく参考情報`, "print-context"));
   if (onRelated) { const btn = pvNode("button", "変更・廃止や保安担当者の手続きも調べる", "btn-secondary no-print"); btn.type = "button"; btn.addEventListener("click", onRelated); wrap.append(btn); }
   return wrap;
 }
